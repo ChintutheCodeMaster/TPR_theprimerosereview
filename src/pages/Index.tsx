@@ -4,9 +4,11 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { EssayPreview } from "@/components/EssayPreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { Plus, Users, FileText, Calendar, TrendingUp } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
   // Mock data for demonstration
   const mockStudents = [
     {
@@ -101,7 +103,7 @@ const Index = () => {
               <Users className="h-5 w-5 text-primary" />
               Students Needing Attention
             </h2>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/add-student')}>
               <Plus className="h-4 w-4 mr-2" />
               Add Student
             </Button>
@@ -124,7 +126,7 @@ const Index = () => {
               <FileText className="h-5 w-5 text-primary" />
               Essays for Review
             </h2>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/review-essays')}>
               View All
             </Button>
           </div>
@@ -144,11 +146,11 @@ const Index = () => {
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Button variant="outline" className="h-20 flex-col gap-2">
+          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate('/add-student')}>
             <Users className="h-6 w-6" />
             Add Student
           </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2">
+          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate('/review-essays')}>
             <FileText className="h-6 w-6" />
             Review Essays
           </Button>
