@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -19,14 +20,15 @@ interface NavigationProps {
 
 export const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
   const [notifications] = useState(3);
+  const navigate = useNavigate();
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'students', label: 'Students', icon: Users },
-    { id: 'essays', label: 'Essays', icon: FileText },
-    { id: 'applications', label: 'Applications', icon: Calendar },
-    { id: 'recommendations', label: 'Recommendations', icon: GraduationCap },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/' },
+    { id: 'students', label: 'Students', icon: Users, path: '/students' },
+    { id: 'essays', label: 'Essays', icon: FileText, path: '/essays' },
+    { id: 'applications', label: 'Applications', icon: Calendar, path: '/applications' },
+    { id: 'recommendations', label: 'Recommendations', icon: GraduationCap, path: '/recommendations' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages' },
   ];
 
   return (
@@ -60,7 +62,10 @@ export const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
                     ? "bg-gradient-primary text-primary-foreground shadow-card" 
                     : "hover:bg-card-hover text-foreground hover:text-primary"
                 }`}
-                onClick={() => onViewChange(item.id)}
+                onClick={() => {
+                  onViewChange(item.id);
+                  navigate(item.path);
+                }}
               >
                 <Icon className="h-5 w-5" />
                 {item.label}
