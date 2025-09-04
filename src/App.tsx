@@ -17,6 +17,7 @@ import StudentPersonalArea from "./pages/StudentPersonalArea";
 import AddStudent from "./pages/AddStudent";
 import ReviewEssays from "./pages/ReviewEssays";
 import CheckDeadlines from "./pages/CheckDeadlines";
+import ViewReports from "./pages/ViewReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => {
                   <Route path="/add-student" element={<AddStudent />} />
                   <Route path="/review-essays" element={<ReviewEssays />} />
                   <Route path="/check-deadlines" element={<CheckDeadlines />} />
+                  <Route path="/view-reports" element={<ViewReports />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

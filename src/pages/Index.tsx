@@ -158,7 +158,7 @@ const Index = () => {
             <Calendar className="h-6 w-6" />
             Check Deadlines
           </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2">
+          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate('/view-reports')}>
             <TrendingUp className="h-6 w-6" />
             View Reports
           </Button>
