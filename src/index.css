@@ -2,57 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Primrose Review CRM Design System - Academic elegance with modern AI-powered feel */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core academic palette */
+    --background: 218 45% 98%;
+    --foreground: 230 45% 12%;
 
+    /* Card system with subtle elevation */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 230 45% 12%;
+    --card-hover: 220 40% 98%;
 
+    /* Popover and modal surfaces */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 230 45% 12%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary academic blue - trustworthy and professional */
+    --primary: 230 55% 28%;
+    --primary-foreground: 0 0% 98%;
+    --primary-light: 230 45% 85%;
+    --primary-glow: 230 55% 45%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary warm purple - supportive and encouraging */
+    --secondary: 270 35% 92%;
+    --secondary-foreground: 270 45% 25%;
+    --secondary-accent: 270 45% 35%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted academic grays */
+    --muted: 220 25% 94%;
+    --muted-foreground: 220 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent colors for highlights and AI features */
+    --accent: 280 45% 88%;
+    --accent-foreground: 280 45% 25%;
+    --ai-accent: 195 85% 45%;
+    --ai-glow: 195 85% 65%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors for progress tracking */
+    --success: 145 60% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 45 95% 55%;
+    --warning-foreground: 45 95% 15%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Interactive elements */
+    --border: 220 25% 88%;
+    --input: 220 25% 94%;
+    --ring: 230 55% 28%;
 
-    --radius: 0.5rem;
+    /* Modern rounded design */
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Beautiful gradients for modern appeal */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-ai: linear-gradient(135deg, hsl(var(--ai-accent)), hsl(var(--ai-glow)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Elegant shadows with academic feel */
+    --shadow-card: 0 4px 20px -4px hsl(var(--primary) / 0.1);
+    --shadow-card-hover: 0 8px 30px -6px hsl(var(--primary) / 0.15);
+    --shadow-ai: 0 4px 20px -4px hsl(var(--ai-accent) / 0.2);
+    --shadow-success: 0 4px 20px -4px hsl(var(--success) / 0.2);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Smooth transitions for polished feel */
+    --transition-all: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Sidebar with academic theme */
+    --sidebar-background: 230 45% 96%;
+    --sidebar-foreground: 230 35% 25%;
+    --sidebar-primary: 230 55% 28%;
     --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 230 35% 92%;
+    --sidebar-accent-foreground: 230 45% 25%;
+    --sidebar-border: 220 25% 88%;
+    --sidebar-ring: 230 55% 28%;
   }
 
   .dark {
