@@ -25,8 +25,6 @@ import {
   Target,
   Trophy
 } from "lucide-react";
-import { Navigation } from "@/components/Navigation";
-import { Header } from "@/components/Header";
 
 interface Student {
   id: string;
@@ -159,20 +157,13 @@ const Students = () => {
   });
 
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation activeView="students" onViewChange={() => {}} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        
-        <main className="flex-1 overflow-auto p-6">
-          <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Students</h1>
-                <p className="text-muted-foreground">Manage student profiles and track their progress</p>
-              </div>
+    <div className="p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Students</h1>
+          <p className="text-muted-foreground">Manage student profiles and track their progress</p>
+        </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
@@ -186,13 +177,13 @@ const Students = () => {
                   <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
                   AI Insights
                 </Button>
-              </div>
-            </div>
+        </div>
+      </div>
 
-            {/* Search and Filters */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row gap-4">
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-4">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -229,12 +220,12 @@ const Students = () => {
                       <Filter className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Students Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Students Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredStudents.map((student) => {
                 const StatusIcon = getStatusIcon(student.status);
                 
@@ -561,20 +552,17 @@ const Students = () => {
                   </Dialog>
                 );
               })}
-            </div>
-
-            {filteredStudents.length === 0 && (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No students found</h3>
-                  <p className="text-muted-foreground">Try adjusting your search terms or filters</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </main>
       </div>
+
+      {filteredStudents.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No students found</h3>
+            <p className="text-muted-foreground">Try adjusting your search terms or filters</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

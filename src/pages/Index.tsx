@@ -1,16 +1,12 @@
 import { useState } from "react";
-import { Navigation } from "@/components/Navigation";
-import { Header } from "@/components/Header";
-import { DashboardStats } from "@/components/DashboardStats";
 import { StudentCard } from "@/components/StudentCard";
+import { DashboardStats } from "@/components/DashboardStats";
 import { EssayPreview } from "@/components/EssayPreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Users, FileText, Calendar, TrendingUp } from "lucide-react";
 
 const Index = () => {
-  const [activeView, setActiveView] = useState('dashboard');
-
   // Mock data for demonstration
   const mockStudents = [
     {
@@ -86,8 +82,14 @@ const Index = () => {
     console.log('Viewing essay:', id);
   };
 
-  const renderDashboard = () => (
-    <div className="space-y-8">
+  return (
+    <div className="p-6 space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back to The Primrose Review CRM</p>
+      </div>
+
       <DashboardStats />
       
       {/* Recent Activity */}
@@ -160,35 +162,6 @@ const Index = () => {
           </Button>
         </div>
       </Card>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
-        {/* Sidebar Navigation */}
-        <div className="w-64 min-h-screen">
-          <Navigation activeView={activeView} onViewChange={setActiveView} />
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1">
-          <Header />
-          <main className="p-8">
-            {activeView === 'dashboard' && renderDashboard()}
-            {activeView !== 'dashboard' && (
-              <div className="text-center py-20">
-                <h2 className="text-2xl font-bold text-foreground mb-4">
-                  {activeView.charAt(0).toUpperCase() + activeView.slice(1)} View
-                </h2>
-                <p className="text-muted-foreground">
-                  This section is coming soon. The dashboard shows the core functionality.
-                </p>
-              </div>
-            )}
-          </main>
-        </div>
-      </div>
     </div>
   );
 };
