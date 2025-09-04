@@ -7,7 +7,9 @@ import {
   BarChart3, 
   MessageSquare,
   Sparkles,
-  Bell
+  Bell,
+  UserCircle,
+  BookOpen
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -33,6 +35,11 @@ const mainItems = [
   { title: "Recommendations", url: "/recommendations", icon: GraduationCap },
   { title: "Messages", url: "/messages", icon: MessageSquare, badge: 3 },
   { title: "Notifications", url: "/notifications", icon: Bell },
+];
+
+const studentItems = [
+  { title: "Student Dashboard", url: "/student-dashboard", icon: UserCircle },
+  { title: "My Work", url: "/student-personal-area", icon: BookOpen },
 ];
 
 export function AppSidebar() {
@@ -66,7 +73,7 @@ export function AppSidebar() {
 
           {/* Main Navigation */}
           <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel>Counselor</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {mainItems.map((item) => (
@@ -84,6 +91,25 @@ export function AppSidebar() {
                             )}
                           </>
                         )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Student Portal Navigation */}
+          <SidebarGroup>
+            <SidebarGroupLabel>Student Portal</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {studentItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} end className={getNavCls}>
+                        <item.icon className="h-4 w-4" />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

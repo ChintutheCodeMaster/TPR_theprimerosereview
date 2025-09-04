@@ -12,6 +12,8 @@ import Applications from "./pages/Applications";
 import Recommendations from "./pages/Recommendations";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
+import StudentDashboard from "./pages/StudentDashboard";
+import StudentPersonalArea from "./pages/StudentPersonalArea";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +46,8 @@ const App = () => {
                   <Route path="/recommendations" element={<Recommendations />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/student-dashboard" element={<StudentDashboard />} />
+                  <Route path="/student-personal-area" element={<StudentPersonalArea />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
