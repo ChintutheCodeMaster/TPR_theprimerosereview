@@ -30,6 +30,7 @@ const mainItems = [
   { title: "Applications", url: "/applications", icon: Calendar },
   { title: "Recommendations", url: "/recommendations", icon: GraduationCap },
   { title: "Messages", url: "/messages", icon: MessageSquare, badge: 3 },
+  { title: "Notifications", url: "/notifications", icon: Bell },
 ];
 
 export function AppSidebar() {
