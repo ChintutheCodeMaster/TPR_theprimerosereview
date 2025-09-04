@@ -154,7 +154,7 @@ const Index = () => {
             <FileText className="h-6 w-6" />
             Review Essays
           </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2">
+          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate('/check-deadlines')}>
             <Calendar className="h-6 w-6" />
             Check Deadlines
           </Button>
