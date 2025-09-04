@@ -1,4 +1,5 @@
 import { useState } from "react";
+import EssayDetail from "@/components/EssayDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ import {
 const ReviewEssays = () => {
   const [viewMode, setViewMode] = useState("cards");
   const [selectedEssays, setSelectedEssays] = useState<string[]>([]);
+  const [selectedEssay, setSelectedEssay] = useState<any>(null);
   const [filters, setFilters] = useState({
     search: "",
     student: "",
@@ -195,6 +197,22 @@ const ReviewEssays = () => {
     setSelectedEssays([]);
   };
 
+  const handleViewEssay = (essay: any) => {
+    setSelectedEssay(essay);
+  };
+
+  const handleCloseEssayDetail = () => {
+    setSelectedEssay(null);
+  };
+
+  const handleEssayUpdate = () => {
+    // Refresh essay data or update state
+    toast({
+      title: "Essay Updated",
+      description: "Essay changes have been saved.",
+    });
+  };
+
   const filteredEssays = essays.filter(essay => {
     return (
       (!filters.search || essay.title.toLowerCase().includes(filters.search.toLowerCase()) || 
@@ -204,6 +222,16 @@ const ReviewEssays = () => {
       (!filters.status || essay.status === filters.status)
     );
   });
+
+  if (selectedEssay) {
+    return (
+      <EssayDetail 
+        essay={selectedEssay} 
+        onClose={handleCloseEssayDetail}
+        onUpdate={handleEssayUpdate}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -425,7 +453,7 @@ const ReviewEssays = () => {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => handleViewEssay(essay)}>
                       <Eye className="h-4 w-4 mr-2" />
                       View Essay
                     </Button>
