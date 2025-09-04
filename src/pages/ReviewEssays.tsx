@@ -217,9 +217,9 @@ const ReviewEssays = () => {
     return (
       (!filters.search || essay.title.toLowerCase().includes(filters.search.toLowerCase()) || 
        essay.studentName.toLowerCase().includes(filters.search.toLowerCase())) &&
-      (!filters.student || essay.studentName === filters.student) &&
-      (!filters.essayType || essay.type === filters.essayType) &&
-      (!filters.status || essay.status === filters.status)
+      (!filters.student || filters.student === "all-students" || essay.studentName === filters.student) &&
+      (!filters.essayType || filters.essayType === "all-types" || essay.type === filters.essayType) &&
+      (!filters.status || filters.status === "all-statuses" || essay.status === filters.status)
     );
   });
 
@@ -277,7 +277,7 @@ const ReviewEssays = () => {
                 <SelectValue placeholder="All Students" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Students</SelectItem>
+                <SelectItem value="all-students">All Students</SelectItem>
                 <SelectItem value="Emma Rodriguez">Emma Rodriguez</SelectItem>
                 <SelectItem value="Michael Chen">Michael Chen</SelectItem>
                 <SelectItem value="Sofia Johnson">Sofia Johnson</SelectItem>
@@ -291,7 +291,7 @@ const ReviewEssays = () => {
                 <SelectValue placeholder="Essay Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all-types">All Types</SelectItem>
                 <SelectItem value="Common App">Common App</SelectItem>
                 <SelectItem value="Supplemental">Supplemental</SelectItem>
                 <SelectItem value="UC Application">UC Application</SelectItem>
@@ -303,7 +303,7 @@ const ReviewEssays = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="review">In Review</SelectItem>
                 <SelectItem value="needs-attention">Needs Attention</SelectItem>
@@ -317,7 +317,7 @@ const ReviewEssays = () => {
                 <SelectValue placeholder="AI Score" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Scores</SelectItem>
+                <SelectItem value="all-scores">All Scores</SelectItem>
                 <SelectItem value="85-100">Excellent (85-100)</SelectItem>
                 <SelectItem value="70-84">Good (70-84)</SelectItem>
                 <SelectItem value="0-69">Needs Work (0-69)</SelectItem>

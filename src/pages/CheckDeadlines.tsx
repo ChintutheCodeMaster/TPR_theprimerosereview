@@ -224,10 +224,10 @@ const CheckDeadlines = () => {
 
   const filteredDeadlines = deadlines.filter(deadline => {
     return (
-      (!filters.student || deadline.students.some(s => s.name.includes(filters.student))) &&
-      (!filters.school || deadline.school.toLowerCase().includes(filters.school.toLowerCase())) &&
-      (!filters.urgency || deadline.urgency === filters.urgency) &&
-      (!filters.applicationType || deadline.applicationType === filters.applicationType)
+      (!filters.student || filters.student === "all-students" || deadline.students.some(s => s.name.includes(filters.student))) &&
+      (!filters.school || filters.school === "all-schools" || deadline.school.toLowerCase().includes(filters.school.toLowerCase())) &&
+      (!filters.urgency || filters.urgency === "all-urgency" || deadline.urgency === filters.urgency) &&
+      (!filters.applicationType || filters.applicationType === "all-types" || deadline.applicationType === filters.applicationType)
     );
   });
 
@@ -345,7 +345,7 @@ const CheckDeadlines = () => {
                 <SelectValue placeholder="All Students" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Students</SelectItem>
+                <SelectItem value="all-students">All Students</SelectItem>
                 <SelectItem value="Emma">Emma Rodriguez</SelectItem>
                 <SelectItem value="Michael">Michael Chen</SelectItem>
                 <SelectItem value="Sofia">Sofia Johnson</SelectItem>
@@ -359,7 +359,7 @@ const CheckDeadlines = () => {
                 <SelectValue placeholder="All Schools" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Schools</SelectItem>
+                <SelectItem value="all-schools">All Schools</SelectItem>
                 <SelectItem value="Harvard">Harvard University</SelectItem>
                 <SelectItem value="Stanford">Stanford University</SelectItem>
                 <SelectItem value="UC Berkeley">UC Berkeley</SelectItem>
@@ -373,7 +373,7 @@ const CheckDeadlines = () => {
                 <SelectValue placeholder="All Urgency" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Urgency</SelectItem>
+                <SelectItem value="all-urgency">All Urgency</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="critical">Critical</SelectItem>
                 <SelectItem value="important">Important</SelectItem>
@@ -386,7 +386,7 @@ const CheckDeadlines = () => {
                 <SelectValue placeholder="Application Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all-types">All Types</SelectItem>
                 <SelectItem value="Early Action">Early Action</SelectItem>
                 <SelectItem value="Regular Decision">Regular Decision</SelectItem>
                 <SelectItem value="UC System">UC System</SelectItem>
