@@ -6,32 +6,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useStudentRecommendations } from "@/hooks/useRecommendationRequests";
 import { 
   FileText, 
   CheckCircle, 
   Clock,
   Send,
   User,
-  Calendar,
   Award,
   Sparkles,
   ChevronRight,
-  Eye
+  Loader2
 } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
-interface RecommendationRequest {
-  id: string;
-  refereeName: string;
-  refereeRole: string;
-  status: 'draft' | 'pending' | 'completed';
-  submittedAt?: string;
-  letterReceivedAt?: string;
-  letterContent?: string;
-}
+type RecommendationRequest = Database["public"]["Tables"]["recommendation_requests"]["Row"];
 
 const StudentRecommendationLetters = () => {
-  const { toast } = useToast();
+  const { requests, isLoading, createRequest } = useStudentRecommendations();
   const [currentStep, setCurrentStep] = useState<'list' | 'form' | 'view'>('list');
   const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
   
@@ -47,40 +39,6 @@ const StudentRecommendationLetters = () => {
     strengths: [] as string[],
     personalNotes: ''
   });
-
-  // Mock submitted requests
-  const [requests, setRequests] = useState<RecommendationRequest[]>([
-    {
-      id: '1',
-      refereeName: 'Dr. Sarah Mitchell',
-      refereeRole: 'AP Physics Teacher',
-      status: 'completed',
-      submittedAt: '2024-11-10',
-      letterReceivedAt: '2024-11-20',
-      letterContent: `Dear Admissions Committee,
-
-I am writing to provide my highest recommendation for this outstanding student, whom I have had the pleasure of teaching in AP Physics for the past two years.
-
-From the very first day of class, it was evident that this student possessed not only exceptional intellectual abilities but also a genuine passion for understanding the fundamental principles that govern our physical world. Their approach to problem-solving is both creative and methodical, demonstrating a rare combination of intuition and rigor.
-
-What sets this student apart is their remarkable ability to connect theoretical concepts to real-world applications. During our unit on electromagnetism, they designed and built a working electromagnetic motor for their final project, going far beyond the requirements to explore advanced concepts in electromagnetic induction.
-
-Beyond academics, this student has shown tremendous leadership in our school's Science Olympiad team, mentoring younger students and fostering a collaborative learning environment. Their empathy and patience in helping struggling classmates exemplify the kind of community-minded scholar any university would be fortunate to have.
-
-I recommend this student without reservation. They will undoubtedly make significant contributions to your academic community.
-
-Sincerely,
-Dr. Sarah Mitchell
-AP Physics Teacher`
-    },
-    {
-      id: '2',
-      refereeName: 'Mr. James Chen',
-      refereeRole: 'Math Department Head',
-      status: 'pending',
-      submittedAt: '2024-11-15'
-    }
-  ]);
 
   const strengthOptions = [
     'Analytical thinking',
@@ -104,54 +62,64 @@ AP Physics Teacher`
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.refereeName || !formData.refereeRole || !formData.relationshipDuration) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
       return;
     }
 
-    const newRequest: RecommendationRequest = {
-      id: Date.now().toString(),
-      refereeName: formData.refereeName,
-      refereeRole: formData.refereeRole,
-      status: 'pending',
-      submittedAt: new Date().toISOString().split('T')[0]
-    };
+    try {
+      await createRequest.mutateAsync({
+        referee_name: formData.refereeName,
+        referee_role: formData.refereeRole,
+        relationship_duration: formData.relationshipDuration,
+        relationship_capacity: formData.relationshipCapacity,
+        meaningful_project: formData.meaningfulProject,
+        best_moment: formData.bestMoment,
+        difficulties_overcome: formData.difficultiesOvercome,
+        strengths: formData.strengths,
+        personal_notes: formData.personalNotes,
+        status: 'pending',
+        student_id: '', // Will be set by the hook
+      });
 
-    setRequests(prev => [...prev, newRequest]);
-    setFormData({
-      refereeName: '',
-      refereeRole: '',
-      relationshipDuration: '',
-      relationshipCapacity: '',
-      meaningfulProject: '',
-      bestMoment: '',
-      difficultiesOvercome: '',
-      strengths: [],
-      personalNotes: ''
-    });
-    setCurrentStep('list');
-
-    toast({
-      title: "Questionnaire Submitted",
-      description: "Your information has been sent to your counselor for review.",
-    });
+      setFormData({
+        refereeName: '',
+        refereeRole: '',
+        relationshipDuration: '',
+        relationshipCapacity: '',
+        meaningfulProject: '',
+        bestMoment: '',
+        difficultiesOvercome: '',
+        strengths: [],
+        personalNotes: ''
+      });
+      setCurrentStep('list');
+    } catch (error) {
+      console.error('Error submitting:', error);
+    }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'sent':
         return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="h-3 w-3 mr-1" />Received</Badge>;
+      case 'in_progress':
+        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20"><Clock className="h-3 w-3 mr-1" />In Progress</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
       default:
         return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Draft</Badge>;
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // View Letter Content
   if (currentStep === 'view' && selectedRequest) {
@@ -166,15 +134,15 @@ AP Physics Teacher`
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-2xl">Recommendation Letter</CardTitle>
-                <p className="text-muted-foreground mt-1">From {selectedRequest.refereeName}</p>
+                <p className="text-muted-foreground mt-1">From {selectedRequest.referee_name}</p>
               </div>
               {getStatusBadge(selectedRequest.status)}
             </div>
           </CardHeader>
           <CardContent>
-            {selectedRequest.letterContent ? (
+            {selectedRequest.generated_letter ? (
               <div className="bg-muted/30 rounded-lg p-6 whitespace-pre-wrap font-serif text-foreground leading-relaxed">
-                {selectedRequest.letterContent}
+                {selectedRequest.generated_letter}
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
@@ -351,8 +319,17 @@ AP Physics Teacher`
         {/* Submit Button */}
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-6">
-            <Button onClick={handleSubmit} size="lg" className="w-full">
-              <Send className="h-5 w-5 mr-2" />
+            <Button 
+              onClick={handleSubmit} 
+              size="lg" 
+              className="w-full"
+              disabled={createRequest.isPending || !formData.refereeName || !formData.refereeRole || !formData.relationshipDuration}
+            >
+              {createRequest.isPending ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5 mr-2" />
+              )}
               Submit for Recommendation Letter
             </Button>
             <p className="text-center text-sm text-muted-foreground mt-3">
@@ -389,7 +366,7 @@ AP Physics Teacher`
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold text-foreground">{requests.length}</p>
+                <p className="text-2xl font-bold text-foreground">{requests?.length || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -404,7 +381,7 @@ AP Physics Teacher`
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {requests.filter(r => r.status === 'pending').length}
+                  {requests?.filter(r => r.status === 'pending' || r.status === 'in_progress').length || 0}
                 </p>
               </div>
             </div>
@@ -420,7 +397,7 @@ AP Physics Teacher`
               <div>
                 <p className="text-sm text-muted-foreground">Received</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {requests.filter(r => r.status === 'completed').length}
+                  {requests?.filter(r => r.status === 'sent').length || 0}
                 </p>
               </div>
             </div>
@@ -434,7 +411,7 @@ AP Physics Teacher`
           <CardTitle>Your Recommendation Letters</CardTitle>
         </CardHeader>
         <CardContent>
-          {requests.length === 0 ? (
+          {!requests || requests.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No recommendation letters yet.</p>
@@ -454,29 +431,21 @@ AP Physics Teacher`
                   }}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-muted rounded-full">
-                      <User className="h-5 w-5 text-muted-foreground" />
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{request.refereeName}</p>
-                      <p className="text-sm text-muted-foreground">{request.refereeRole}</p>
-                      {request.submittedAt && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <Calendar className="h-3 w-3" />
-                          Submitted: {request.submittedAt}
-                        </p>
-                      )}
+                      <p className="font-medium text-foreground">{request.referee_name}</p>
+                      <p className="text-sm text-muted-foreground">{request.referee_role}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Submitted</p>
+                      <p className="text-sm font-medium">{new Date(request.created_at).toLocaleDateString()}</p>
+                    </div>
                     {getStatusBadge(request.status)}
-                    {request.status === 'completed' && (
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    )}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
               ))}
