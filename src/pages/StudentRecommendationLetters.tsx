@@ -22,10 +22,84 @@ import type { Database } from "@/integrations/supabase/types";
 
 type RecommendationRequest = Database["public"]["Tables"]["recommendation_requests"]["Row"];
 
+// Mock data for demonstration
+const mockRequests: RecommendationRequest[] = [
+  {
+    id: 'mock-1',
+    student_id: 'mock-student',
+    referee_name: 'Dr. Sarah Mitchell',
+    referee_role: 'AP Physics Teacher',
+    relationship_duration: 'Grade 11-12, Advanced Physics',
+    relationship_capacity: 'Teacher and Science Club Advisor',
+    meaningful_project: 'Led independent research on renewable energy',
+    best_moment: 'Won regional science fair with solar panel project',
+    difficulties_overcome: 'Struggled initially with calculus-based physics but showed remarkable improvement',
+    strengths: ['Analytical thinking', 'Problem-solving', 'Curiosity'],
+    personal_notes: '',
+    counselor_notes: null,
+    generated_letter: `Dear Admissions Committee,
+
+It is with great enthusiasm that I write this letter of recommendation for Emma Johnson, whom I have had the privilege of teaching in Advanced Placement Physics for the past two years.
+
+Emma stands out as one of the most intellectually curious and dedicated students I have encountered in my fifteen years of teaching. Her analytical abilities are exceptional – she approaches complex physics problems with a methodical precision that belies her age, yet maintains the creative flexibility to consider unconventional solutions.
+
+What truly distinguishes Emma is her genuine passion for understanding the "why" behind scientific phenomena. During our unit on renewable energy, she independently designed and conducted an experiment on solar panel efficiency that won first place at the regional science fair. This project exemplified her ability to apply theoretical knowledge to real-world challenges.
+
+I am confident that Emma will make significant contributions to any academic community she joins. She has my highest recommendation.
+
+Sincerely,
+Dr. Sarah Mitchell
+AP Physics Teacher
+British International School of Washington`,
+    status: 'sent',
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-20T14:30:00Z'
+  },
+  {
+    id: 'mock-2',
+    student_id: 'mock-student',
+    referee_name: 'Mr. David Chen',
+    referee_role: 'Mathematics Department Head',
+    relationship_duration: 'Grade 10-12, Honors Mathematics',
+    relationship_capacity: 'Teacher and Math Olympiad Coach',
+    meaningful_project: 'Prepared for international math competition',
+    best_moment: 'Solved a particularly challenging proof during class',
+    difficulties_overcome: null,
+    strengths: ['Analytical thinking', 'Leadership', 'Discipline'],
+    personal_notes: 'Would like the letter to mention my tutoring work',
+    counselor_notes: 'Working on this - strong candidate',
+    generated_letter: null,
+    status: 'in_progress',
+    created_at: '2024-01-18T09:00:00Z',
+    updated_at: '2024-01-19T11:00:00Z'
+  },
+  {
+    id: 'mock-3',
+    student_id: 'mock-student',
+    referee_name: 'Ms. Rachel Torres',
+    referee_role: 'English Literature Teacher',
+    relationship_duration: 'Grade 11, AP English',
+    relationship_capacity: 'Teacher and Creative Writing Club Supervisor',
+    meaningful_project: null,
+    best_moment: null,
+    difficulties_overcome: null,
+    strengths: ['Creativity', 'Communication'],
+    personal_notes: '',
+    counselor_notes: null,
+    generated_letter: null,
+    status: 'pending',
+    created_at: '2024-01-20T15:00:00Z',
+    updated_at: '2024-01-20T15:00:00Z'
+  }
+];
+
 const StudentRecommendationLetters = () => {
-  const { requests, isLoading, createRequest } = useStudentRecommendations();
+  const { requests: dbRequests, isLoading, createRequest } = useStudentRecommendations();
   const [currentStep, setCurrentStep] = useState<'list' | 'form' | 'view'>('list');
   const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
+  
+  // Use mock data if no real requests exist
+  const requests = dbRequests && dbRequests.length > 0 ? dbRequests : mockRequests;
   
   // Form state
   const [formData, setFormData] = useState({
