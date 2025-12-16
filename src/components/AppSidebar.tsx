@@ -9,7 +9,8 @@ import {
   Sparkles,
   Bell,
   UserCircle,
-  BookOpen
+  BookOpen,
+  Award
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -33,6 +34,7 @@ const mainItems = [
   { title: "Essays", url: "/essays", icon: FileText },
   { title: "Applications", url: "/applications", icon: Calendar },
   { title: "Recommendations", url: "/recommendations", icon: GraduationCap },
+  { title: "Rec. Letters", url: "/recommendation-letters", icon: Award },
   { title: "Messages", url: "/messages", icon: MessageSquare, badge: 3 },
   { title: "Notifications", url: "/notifications", icon: Bell },
 ];
@@ -40,6 +42,7 @@ const mainItems = [
 const studentItems = [
   { title: "Student Dashboard", url: "/student-dashboard", icon: UserCircle },
   { title: "My Work", url: "/student-personal-area", icon: BookOpen },
+  { title: "Recommendation Letters", url: "/student-recommendation-letters", icon: Award },
 ];
 
 export function AppSidebar() {

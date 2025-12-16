@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,12 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
-  Star
+  Star,
+  Award
 } from "lucide-react";
 
 const StudentDashboard = () => {
+  const navigate = useNavigate();
   // Mock student data
   const student = {
     name: "Sarah Johnson",
@@ -239,7 +242,7 @@ const StudentDashboard = () => {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Button variant="outline" className="h-16 flex-col gap-2">
               <Upload className="h-5 w-5" />
               Upload New Essay
@@ -255,6 +258,14 @@ const StudentDashboard = () => {
             <Button variant="outline" className="h-16 flex-col gap-2">
               <MessageSquare className="h-5 w-5" />
               Message Counselor
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
+              onClick={() => navigate('/student-recommendation-letters')}
+            >
+              <Award className="h-5 w-5 text-primary" />
+              Recommendation Letters
             </Button>
           </div>
         </CardContent>

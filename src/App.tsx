@@ -18,8 +18,9 @@ import AddStudent from "./pages/AddStudent";
 import ReviewEssays from "./pages/ReviewEssays";
 import CheckDeadlines from "./pages/CheckDeadlines";
 import ViewReports from "./pages/ViewReports";
+import StudentRecommendationLetters from "./pages/StudentRecommendationLetters";
+import CounselorRecommendationLetters from "./pages/CounselorRecommendationLetters";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -48,10 +49,12 @@ const App = () => {
                   <Route path="/essays" element={<Essays />} />
                   <Route path="/applications" element={<Applications />} />
                   <Route path="/recommendations" element={<Recommendations />} />
+                  <Route path="/recommendation-letters" element={<CounselorRecommendationLetters />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/student-dashboard" element={<StudentDashboard />} />
                   <Route path="/student-personal-area" element={<StudentPersonalArea />} />
+                  <Route path="/student-recommendation-letters" element={<StudentRecommendationLetters />} />
                   <Route path="/add-student" element={<AddStudent />} />
                   <Route path="/review-essays" element={<ReviewEssays />} />
                   <Route path="/check-deadlines" element={<CheckDeadlines />} />
