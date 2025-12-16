@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useCounselorRecommendations, type RecommendationWithProfile } from "@/hooks/useRecommendationRequests";
 import {
   Select,
   SelectContent,
@@ -23,125 +24,20 @@ import {
   Search,
   Sparkles,
   Edit3,
-  Eye,
   ChevronLeft,
   Award,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
-
-interface StudentAnswer {
-  refereeName: string;
-  refereeRole: string;
-  relationshipDuration: string;
-  relationshipCapacity: string;
-  meaningfulProject: string;
-  bestMoment: string;
-  difficultiesOvercome: string;
-  strengths: string[];
-  personalNotes: string;
-}
-
-interface RecommendationRequest {
-  id: string;
-  studentName: string;
-  studentAvatar?: string;
-  refereeName: string;
-  refereeRole: string;
-  status: 'new' | 'in-progress' | 'sent';
-  submittedAt: string;
-  studentAnswers: StudentAnswer;
-  counselorNotes: string;
-  generatedLetter: string;
-}
-
-const mockRequests: RecommendationRequest[] = [
-  {
-    id: '1',
-    studentName: 'Emma Rodriguez',
-    refereeName: 'Dr. Sarah Mitchell',
-    refereeRole: 'AP Physics Teacher',
-    status: 'new',
-    submittedAt: '2024-11-20',
-    studentAnswers: {
-      refereeName: 'Dr. Sarah Mitchell',
-      refereeRole: 'AP Physics Teacher',
-      relationshipDuration: 'Dr. Mitchell has been my AP Physics teacher for the past two years (Grade 11 and 12). She also supervised my independent research project on electromagnetic induction.',
-      relationshipCapacity: 'Beyond regular classes, I worked closely with Dr. Mitchell during office hours at least twice a week. She mentored me through my science fair project and helped me develop my research methodology.',
-      meaningfulProject: 'My most meaningful project was designing and building a working electromagnetic motor for the science fair. Dr. Mitchell guided me through the theoretical foundations and helped me troubleshoot when my initial design failed. We spent many hours after school refining the project.',
-      bestMoment: 'During a class discussion on quantum mechanics, I proposed an alternative explanation for wave-particle duality that connected to concepts from our previous unit. Dr. Mitchell encouraged me to explore this further and even suggested I present my thoughts to the advanced physics seminar.',
-      difficultiesOvercome: 'I struggled significantly with thermodynamics at the start of Grade 11. Dr. Mitchell noticed my frustration and created a personalized study plan. With her support, I went from barely passing to achieving the highest score on our final thermodynamics exam.',
-      strengths: ['Analytical thinking', 'Curiosity', 'Problem-solving', 'Initiative'],
-      personalNotes: 'Dr. Mitchell knows about my goal to study physics at MIT. She has been incredibly supportive and has connected me with her former students who are now in graduate programs.'
-    },
-    counselorNotes: '',
-    generatedLetter: ''
-  },
-  {
-    id: '2',
-    studentName: 'Michael Chen',
-    refereeName: 'Mr. James Thompson',
-    refereeRole: 'English Department Head',
-    status: 'in-progress',
-    submittedAt: '2024-11-18',
-    studentAnswers: {
-      refereeName: 'Mr. James Thompson',
-      refereeRole: 'English Department Head, Creative Writing Instructor',
-      relationshipDuration: 'Mr. Thompson has been my English teacher for three years and also leads the Creative Writing Club where I serve as president.',
-      relationshipCapacity: 'Close mentoring relationship through both classes and extracurricular writing activities. He has reviewed countless drafts of my creative work and provided detailed feedback.',
-      meaningfulProject: 'We collaborated on the school literary magazine revival. I led the student team while Mr. Thompson provided editorial guidance. The magazine won a regional award.',
-      bestMoment: 'When I presented my personal narrative about my immigration experience, Mr. Thompson said it was one of the most powerful pieces he had read in his 20 years of teaching.',
-      difficultiesOvercome: 'English is my second language. Mr. Thompson helped me see this as a strength rather than a weakness, encouraging me to incorporate my bilingual perspective into my writing.',
-      strengths: ['Creativity', 'Leadership', 'Communication', 'Empathy'],
-      personalNotes: 'Mr. Thompson has helped me understand that my unique background is an asset in my writing.'
-    },
-    counselorNotes: 'Michael has shown exceptional growth. Focus on his unique perspective as a bilingual writer and his leadership in reviving the literary magazine.',
-    generatedLetter: ''
-  },
-  {
-    id: '3',
-    studentName: 'Sofia Johnson',
-    refereeName: 'Dr. Maria Garcia',
-    refereeRole: 'Biology Teacher & Research Mentor',
-    status: 'sent',
-    submittedAt: '2024-11-10',
-    studentAnswers: {
-      refereeName: 'Dr. Maria Garcia',
-      refereeRole: 'AP Biology Teacher, Research Program Coordinator',
-      relationshipDuration: 'Two years in AP Biology and one year in the research mentorship program.',
-      relationshipCapacity: 'Very close - weekly one-on-one research meetings plus regular class instruction.',
-      meaningfulProject: 'Summer research project on local wetland ecosystems. We published findings in a student journal.',
-      bestMoment: 'Presenting our research at the state science symposium. Dr. Garcia said my presentation skills rivaled graduate students.',
-      difficultiesOvercome: 'Learning to handle failure in research. My first three hypotheses were wrong, but Dr. Garcia taught me that negative results are still valuable data.',
-      strengths: ['Analytical thinking', 'Discipline', 'Curiosity', 'Teamwork'],
-      personalNotes: 'Dr. Garcia has been instrumental in my decision to pursue environmental science.'
-    },
-    counselorNotes: 'Sofia is an exceptional researcher. Highlight her resilience and scientific rigor.',
-    generatedLetter: `Dear Admissions Committee,
-
-I am writing to provide my strongest recommendation for Sofia Johnson, whom I have had the privilege of mentoring over the past two years in both AP Biology and our school's research program.
-
-Sofia first caught my attention through her insatiable curiosity and methodical approach to scientific inquiry. Unlike many students who seek quick answers, Sofia embraces the process of discovery, understanding that meaningful research requires patience, precision, and persistence.
-
-During our summer research project examining local wetland ecosystems, Sofia demonstrated exceptional scientific rigor. When her initial hypotheses proved incorrect, rather than becoming discouraged, she viewed these results as valuable data points that would guide her next steps. This resilience and intellectual maturity are rare in students her age.
-
-Her ability to communicate complex scientific concepts is equally impressive. At the state science symposium, Sofia presented our findings with a confidence and clarity that rivaled graduate-level presentations. She has a gift for making technical information accessible without sacrificing accuracy.
-
-Beyond her academic achievements, Sofia is a collaborative team member who elevates those around her. She regularly helps struggling classmates understand difficult concepts and has mentored younger students in our research program.
-
-I recommend Sofia without reservation. She possesses the intellectual curiosity, work ethic, and character that will make her an outstanding addition to your academic community.
-
-Sincerely,
-Dr. Maria Garcia
-AP Biology Teacher & Research Program Coordinator`
-  }
-];
 
 const CounselorRecommendationLetters = () => {
   const { toast } = useToast();
+  const { requests, isLoading, sendLetter, updateRequest } = useCounselorRecommendations();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<RecommendationWithProfile | null>(null);
   const [counselorNotes, setCounselorNotes] = useState("");
   const [generatedLetter, setGeneratedLetter] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -150,16 +46,19 @@ const CounselorRecommendationLetters = () => {
     switch (status) {
       case 'sent':
         return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
-      case 'in-progress':
+      case 'in_progress':
         return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20"><Edit3 className="h-3 w-3 mr-1" />In Progress</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20"><AlertCircle className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20"><AlertCircle className="h-3 w-3 mr-1" />New</Badge>;
+        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Draft</Badge>;
     }
   };
 
-  const filteredRequests = mockRequests.filter(req => {
-    const matchesSearch = req.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         req.refereeName.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredRequests = (requests || []).filter(req => {
+    const studentName = req.profiles?.full_name || '';
+    const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         req.referee_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -170,22 +69,38 @@ const CounselorRecommendationLetters = () => {
     setIsGenerating(true);
     
     try {
+      const studentAnswers = {
+        refereeName: selectedRequest.referee_name,
+        refereeRole: selectedRequest.referee_role || '',
+        relationshipDuration: selectedRequest.relationship_duration || '',
+        relationshipCapacity: selectedRequest.relationship_capacity || '',
+        meaningfulProject: selectedRequest.meaningful_project || '',
+        bestMoment: selectedRequest.best_moment || '',
+        difficultiesOvercome: selectedRequest.difficulties_overcome || '',
+        strengths: selectedRequest.strengths || [],
+        personalNotes: selectedRequest.personal_notes || '',
+      };
+
       const { data, error } = await supabase.functions.invoke('enhance-recommendation', {
         body: {
-          studentAnswers: selectedRequest.studentAnswers,
-          counselorNotes: counselorNotes || selectedRequest.counselorNotes,
-          studentName: selectedRequest.studentName,
-          refereeName: selectedRequest.refereeName,
-          refereeRole: selectedRequest.refereeRole,
+          studentAnswers,
+          counselorNotes: counselorNotes || selectedRequest.counselor_notes,
+          studentName: selectedRequest.profiles?.full_name || 'Student',
+          refereeName: selectedRequest.referee_name,
+          refereeRole: selectedRequest.referee_role,
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.letter) {
         setGeneratedLetter(data.letter);
+        // Update status to in_progress
+        await updateRequest.mutateAsync({
+          id: selectedRequest.id,
+          status: 'in_progress',
+          counselor_notes: counselorNotes || selectedRequest.counselor_notes,
+        });
         toast({
           title: "Letter Generated",
           description: "AI has generated a draft recommendation letter. Please review and edit as needed.",
@@ -205,8 +120,11 @@ const CounselorRecommendationLetters = () => {
     }
   };
 
-  const handleSendToStudent = () => {
-    if (!generatedLetter && !selectedRequest?.generatedLetter) {
+  const handleSendToStudent = async () => {
+    if (!selectedRequest) return;
+    
+    const letterToSend = generatedLetter || selectedRequest.generated_letter;
+    if (!letterToSend) {
       toast({
         title: "No Letter to Send",
         description: "Please generate or write a letter before sending.",
@@ -215,25 +133,43 @@ const CounselorRecommendationLetters = () => {
       return;
     }
 
-    toast({
-      title: "Letter Sent",
-      description: `Recommendation letter has been sent to ${selectedRequest?.studentName}.`,
-    });
-    
-    setSelectedRequest(null);
-    setGeneratedLetter("");
-    setCounselorNotes("");
+    try {
+      await sendLetter.mutateAsync({
+        id: selectedRequest.id,
+        letter: letterToSend,
+      });
+      
+      setSelectedRequest(null);
+      setGeneratedLetter("");
+      setCounselorNotes("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send letter.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Analytics
-  const totalRequests = mockRequests.length;
-  const newRequests = mockRequests.filter(r => r.status === 'new').length;
-  const inProgress = mockRequests.filter(r => r.status === 'in-progress').length;
-  const sent = mockRequests.filter(r => r.status === 'sent').length;
+  const totalRequests = requests?.length || 0;
+  const pendingRequests = requests?.filter(r => r.status === 'pending').length || 0;
+  const inProgress = requests?.filter(r => r.status === 'in_progress').length || 0;
+  const sent = requests?.filter(r => r.status === 'sent').length || 0;
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Detail View
   if (selectedRequest) {
-    const displayLetter = generatedLetter || selectedRequest.generatedLetter;
+    const displayLetter = generatedLetter || selectedRequest.generated_letter || '';
+    const studentName = selectedRequest.profiles?.full_name || 'Unknown Student';
     
     return (
       <div className="p-6 space-y-6">
@@ -245,12 +181,12 @@ const CounselorRecommendationLetters = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={selectedRequest.studentAvatar} alt={selectedRequest.studentName} />
-              <AvatarFallback>{selectedRequest.studentName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+              <AvatarImage src={selectedRequest.profiles?.avatar_url || ''} alt={studentName} />
+              <AvatarFallback>{studentName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{selectedRequest.studentName}</h1>
-              <p className="text-muted-foreground">Referee: {selectedRequest.refereeName} • {selectedRequest.refereeRole}</p>
+              <h1 className="text-2xl font-bold text-foreground">{studentName}</h1>
+              <p className="text-muted-foreground">Referee: {selectedRequest.referee_name} • {selectedRequest.referee_role}</p>
             </div>
           </div>
           {getStatusBadge(selectedRequest.status)}
@@ -272,17 +208,17 @@ const CounselorRecommendationLetters = () => {
                 
                 <div>
                   <p className="text-sm font-medium text-foreground">Referee</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.refereeName} - {selectedRequest.studentAnswers.refereeRole}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.referee_name} - {selectedRequest.referee_role}</p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-foreground">Relationship Duration & Capacity</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.relationshipDuration}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.relationship_duration || 'Not provided'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-foreground">Working Relationship</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.relationshipCapacity}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.relationship_capacity || 'Not provided'}</p>
                 </div>
               </div>
 
@@ -292,17 +228,17 @@ const CounselorRecommendationLetters = () => {
                 
                 <div>
                   <p className="text-sm font-medium text-foreground">Meaningful Project</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.meaningfulProject}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.meaningful_project || 'Not provided'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-foreground">Best Moment</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.bestMoment}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.best_moment || 'Not provided'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-foreground">Difficulties Overcome</p>
-                  <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.difficultiesOvercome}</p>
+                  <p className="text-sm text-muted-foreground">{selectedRequest.difficulties_overcome || 'Not provided'}</p>
                 </div>
               </div>
 
@@ -311,15 +247,15 @@ const CounselorRecommendationLetters = () => {
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Strengths</h3>
                 
                 <div className="flex flex-wrap gap-2">
-                  {selectedRequest.studentAnswers.strengths.map((strength, index) => (
+                  {(selectedRequest.strengths || []).map((strength, index) => (
                     <Badge key={index} variant="secondary">{strength}</Badge>
                   ))}
                 </div>
 
-                {selectedRequest.studentAnswers.personalNotes && (
+                {selectedRequest.personal_notes && (
                   <div>
                     <p className="text-sm font-medium text-foreground">Personal Notes</p>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.studentAnswers.personalNotes}</p>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.personal_notes}</p>
                   </div>
                 )}
               </div>
@@ -339,7 +275,7 @@ const CounselorRecommendationLetters = () => {
               <CardContent>
                 <Textarea
                   placeholder="Add your personal impressions, context, or framing notes..."
-                  value={counselorNotes || selectedRequest.counselorNotes}
+                  value={counselorNotes || selectedRequest.counselor_notes || ''}
                   onChange={(e) => setCounselorNotes(e.target.value)}
                   rows={4}
                 />
@@ -354,7 +290,11 @@ const CounselorRecommendationLetters = () => {
                   className="w-full"
                   disabled={isGenerating}
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
                   {isGenerating ? 'Generating...' : 'Enhance with AI'}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center mt-2">
@@ -373,19 +313,28 @@ const CounselorRecommendationLetters = () => {
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="Generate a letter using AI or write one manually..."
+                  placeholder="Generated letter will appear here, or write your own..."
                   value={displayLetter}
                   onChange={(e) => setGeneratedLetter(e.target.value)}
-                  rows={16}
+                  rows={15}
                   className="font-serif"
                 />
               </CardContent>
             </Card>
 
-            {/* Send Action */}
-            <Button onClick={handleSendToStudent} size="lg" className="w-full">
-              <Send className="h-5 w-5 mr-2" />
-              Send to Student
+            {/* Send Button */}
+            <Button 
+              onClick={handleSendToStudent} 
+              className="w-full" 
+              size="lg"
+              disabled={sendLetter.isPending}
+            >
+              {sendLetter.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send Letter to Student
             </Button>
           </div>
         </div>
@@ -400,7 +349,7 @@ const CounselorRecommendationLetters = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Recommendation Letters</h1>
-          <p className="text-muted-foreground">Review student questionnaires and create recommendation letters</p>
+          <p className="text-muted-foreground">Manage recommendation requests from your students</p>
         </div>
       </div>
 
@@ -413,13 +362,13 @@ const CounselorRecommendationLetters = () => {
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Requests</p>
+                <p className="text-sm text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold text-foreground">{totalRequests}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -427,8 +376,8 @@ const CounselorRecommendationLetters = () => {
                 <AlertCircle className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">New</p>
-                <p className="text-2xl font-bold text-foreground">{newRequests}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-foreground">{pendingRequests}</p>
               </div>
             </div>
           </CardContent>
@@ -463,12 +412,12 @@ const CounselorRecommendationLetters = () => {
         </Card>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by student or referee name..."
                 value={searchTerm}
@@ -477,13 +426,14 @@ const CounselorRecommendationLetters = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
               </SelectContent>
             </Select>
@@ -491,55 +441,56 @@ const CounselorRecommendationLetters = () => {
         </CardContent>
       </Card>
 
-      {/* Request Cards */}
-      <div className="grid gap-4">
-        {filteredRequests.map((request) => (
-          <Card 
-            key={request.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => {
-              setSelectedRequest(request);
-              setCounselorNotes(request.counselorNotes);
-              setGeneratedLetter(request.generatedLetter);
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={request.studentAvatar} alt={request.studentName} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10">
-                      {request.studentName.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-foreground">{request.studentName}</p>
-                    <p className="text-sm text-muted-foreground">{request.refereeName} • {request.refereeRole}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Calendar className="h-3 w-3" />
-                      Submitted: {request.submittedAt}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {getStatusBadge(request.status)}
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {filteredRequests.length === 0 && (
+      {/* Requests List */}
+      <div className="space-y-4">
+        {filteredRequests.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No recommendation requests found.</p>
             </CardContent>
           </Card>
+        ) : (
+          filteredRequests.map((request) => {
+            const studentName = request.profiles?.full_name || 'Unknown Student';
+            return (
+              <Card
+                key={request.id}
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  setSelectedRequest(request);
+                  setCounselorNotes(request.counselor_notes || '');
+                  setGeneratedLetter(request.generated_letter || '');
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={request.profiles?.avatar_url || ''} alt={studentName} />
+                        <AvatarFallback>{studentName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-foreground">{studentName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Referee: {request.referee_name} • {request.referee_role}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {getStatusBadge(request.status)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
