@@ -184,12 +184,14 @@ const CounselorRecommendationLetters = () => {
 
       if (data?.letter) {
         setGeneratedLetter(data.letter);
-        // Update status to in_progress
-        await updateRequest.mutateAsync({
-          id: selectedRequest.id,
-          status: 'in_progress',
-          counselor_notes: counselorNotes || selectedRequest.counselor_notes,
-        });
+        // Only update DB if it's a real request (not mock data)
+        if (!selectedRequest.id.startsWith('mock-')) {
+          await updateRequest.mutateAsync({
+            id: selectedRequest.id,
+            status: 'in_progress',
+            counselor_notes: counselorNotes || selectedRequest.counselor_notes,
+          });
+        }
         toast({
           title: "Letter Generated",
           description: "AI has generated a draft recommendation letter. Please review and edit as needed.",
@@ -223,10 +225,18 @@ const CounselorRecommendationLetters = () => {
     }
 
     try {
-      await sendLetter.mutateAsync({
-        id: selectedRequest.id,
-        letter: letterToSend,
-      });
+      // Only update DB if it's a real request (not mock data)
+      if (!selectedRequest.id.startsWith('mock-')) {
+        await sendLetter.mutateAsync({
+          id: selectedRequest.id,
+          letter: letterToSend,
+        });
+      } else {
+        toast({
+          title: "Letter Sent",
+          description: "The recommendation letter has been sent to the student.",
+        });
+      }
       
       setSelectedRequest(null);
       setGeneratedLetter("");
