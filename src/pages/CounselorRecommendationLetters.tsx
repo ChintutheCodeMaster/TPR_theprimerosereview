@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import { supabase } from "@/integrations/supabase/client";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -168,39 +169,40 @@ const CounselorRecommendationLetters = () => {
     
     setIsGenerating(true);
     
-    // Simulate AI generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const { studentAnswers } = selectedRequest;
-    const letter = `Dear Admissions Committee,
+    try {
+      const { data, error } = await supabase.functions.invoke('enhance-recommendation', {
+        body: {
+          studentAnswers: selectedRequest.studentAnswers,
+          counselorNotes: counselorNotes || selectedRequest.counselorNotes,
+          studentName: selectedRequest.studentName,
+          refereeName: selectedRequest.refereeName,
+          refereeRole: selectedRequest.refereeRole,
+        },
+      });
 
-I am writing to provide my highest recommendation for ${selectedRequest.studentName}, whom ${studentAnswers.refereeName} has had the pleasure of working with as their ${studentAnswers.refereeRole}.
+      if (error) {
+        throw error;
+      }
 
-${studentAnswers.relationshipDuration}
-
-${studentAnswers.meaningfulProject ? `One particularly noteworthy experience was ${studentAnswers.meaningfulProject}` : ''}
-
-${studentAnswers.bestMoment ? `A defining moment that showcases this student's capabilities: ${studentAnswers.bestMoment}` : ''}
-
-${studentAnswers.difficultiesOvercome ? `What truly sets this student apart is their resilience. ${studentAnswers.difficultiesOvercome}` : ''}
-
-${studentAnswers.strengths.length > 0 ? `Key strengths that I have observed include ${studentAnswers.strengths.join(', ').toLowerCase()}.` : ''}
-
-${counselorNotes ? `\nAdditional context: ${counselorNotes}` : ''}
-
-I recommend ${selectedRequest.studentName} without reservation. They will undoubtedly make significant contributions to your academic community.
-
-Sincerely,
-${studentAnswers.refereeName}
-${studentAnswers.refereeRole}`;
-
-    setGeneratedLetter(letter);
-    setIsGenerating(false);
-    
-    toast({
-      title: "Letter Generated",
-      description: "AI has generated a draft recommendation letter. Please review and edit as needed.",
-    });
+      if (data?.letter) {
+        setGeneratedLetter(data.letter);
+        toast({
+          title: "Letter Generated",
+          description: "AI has generated a draft recommendation letter. Please review and edit as needed.",
+        });
+      } else if (data?.error) {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      console.error('Error generating letter:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate letter. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSendToStudent = () => {
