@@ -31,9 +31,98 @@ import {
   Loader2
 } from "lucide-react";
 
+// Mock data for demo purposes
+const mockRequests: RecommendationWithProfile[] = [
+  {
+    id: 'mock-1',
+    student_id: 'student-1',
+    referee_name: 'Dr. Sarah Mitchell',
+    referee_role: 'AP Physics Teacher',
+    status: 'pending',
+    created_at: '2024-11-20T10:00:00Z',
+    updated_at: '2024-11-20T10:00:00Z',
+    relationship_duration: 'Dr. Mitchell has been my AP Physics teacher for the past two years (Grade 11 and 12). She also supervised my independent research project on electromagnetic induction.',
+    relationship_capacity: 'Beyond regular classes, I worked closely with Dr. Mitchell during office hours at least twice a week. She mentored me through my science fair project and helped me develop my research methodology.',
+    meaningful_project: 'My most meaningful project was designing and building a working electromagnetic motor for the science fair. Dr. Mitchell guided me through the theoretical foundations and helped me troubleshoot when my initial design failed.',
+    best_moment: 'During a class discussion on quantum mechanics, I proposed an alternative explanation for wave-particle duality that connected to concepts from our previous unit. Dr. Mitchell encouraged me to explore this further.',
+    difficulties_overcome: 'I struggled significantly with thermodynamics at the start of Grade 11. Dr. Mitchell noticed my frustration and created a personalized study plan. With her support, I went from barely passing to achieving the highest score.',
+    strengths: ['Analytical thinking', 'Curiosity', 'Problem-solving', 'Initiative'],
+    personal_notes: 'Dr. Mitchell knows about my goal to study physics at MIT. She has been incredibly supportive.',
+    counselor_notes: null,
+    generated_letter: null,
+    profiles: {
+      full_name: 'Emma Rodriguez',
+      avatar_url: null,
+      email: 'emma@student.com'
+    }
+  },
+  {
+    id: 'mock-2',
+    student_id: 'student-2',
+    referee_name: 'Mr. James Thompson',
+    referee_role: 'English Department Head',
+    status: 'in_progress',
+    created_at: '2024-11-18T10:00:00Z',
+    updated_at: '2024-11-19T10:00:00Z',
+    relationship_duration: 'Mr. Thompson has been my English teacher for three years and also leads the Creative Writing Club where I serve as president.',
+    relationship_capacity: 'Close mentoring relationship through both classes and extracurricular writing activities. He has reviewed countless drafts of my creative work.',
+    meaningful_project: 'We collaborated on the school literary magazine revival. I led the student team while Mr. Thompson provided editorial guidance. The magazine won a regional award.',
+    best_moment: 'When I presented my personal narrative about my immigration experience, Mr. Thompson said it was one of the most powerful pieces he had read in his 20 years of teaching.',
+    difficulties_overcome: 'English is my second language. Mr. Thompson helped me see this as a strength rather than a weakness, encouraging me to incorporate my bilingual perspective.',
+    strengths: ['Creativity', 'Leadership', 'Communication', 'Empathy'],
+    personal_notes: 'Mr. Thompson has helped me understand that my unique background is an asset in my writing.',
+    counselor_notes: 'Michael has shown exceptional growth. Focus on his unique perspective as a bilingual writer.',
+    generated_letter: null,
+    profiles: {
+      full_name: 'Michael Chen',
+      avatar_url: null,
+      email: 'michael@student.com'
+    }
+  },
+  {
+    id: 'mock-3',
+    student_id: 'student-3',
+    referee_name: 'Dr. Maria Garcia',
+    referee_role: 'Biology Teacher & Research Mentor',
+    status: 'sent',
+    created_at: '2024-11-10T10:00:00Z',
+    updated_at: '2024-11-15T10:00:00Z',
+    relationship_duration: 'Two years in AP Biology and one year in the research mentorship program.',
+    relationship_capacity: 'Very close - weekly one-on-one research meetings plus regular class instruction.',
+    meaningful_project: 'Summer research project on local wetland ecosystems. We published findings in a student journal.',
+    best_moment: 'Presenting our research at the state science symposium. Dr. Garcia said my presentation skills rivaled graduate students.',
+    difficulties_overcome: 'Learning to handle failure in research. My first three hypotheses were wrong, but Dr. Garcia taught me that negative results are still valuable.',
+    strengths: ['Analytical thinking', 'Discipline', 'Curiosity', 'Teamwork'],
+    personal_notes: 'Dr. Garcia has been instrumental in my decision to pursue environmental science.',
+    counselor_notes: 'Sofia is an exceptional researcher. Highlight her resilience and scientific rigor.',
+    generated_letter: `Dear Admissions Committee,
+
+I am writing to provide my strongest recommendation for Sofia Johnson, whom I have had the privilege of mentoring over the past two years in both AP Biology and our school's research program.
+
+Sofia first caught my attention through her insatiable curiosity and methodical approach to scientific inquiry. Unlike many students who seek quick answers, Sofia embraces the process of discovery, understanding that meaningful research requires patience, precision, and persistence.
+
+During our summer research project examining local wetland ecosystems, Sofia demonstrated exceptional scientific rigor. When her initial hypotheses proved incorrect, rather than becoming discouraged, she viewed these results as valuable data points that would guide her next steps.
+
+Her ability to communicate complex scientific concepts is equally impressive. At the state science symposium, Sofia presented our findings with a confidence and clarity that rivaled graduate-level presentations.
+
+I recommend Sofia without reservation.
+
+Sincerely,
+Dr. Maria Garcia`,
+    profiles: {
+      full_name: 'Sofia Johnson',
+      avatar_url: null,
+      email: 'sofia@student.com'
+    }
+  }
+];
+
 const CounselorRecommendationLetters = () => {
   const { toast } = useToast();
-  const { requests, isLoading, sendLetter, updateRequest } = useCounselorRecommendations();
+  const { requests: dbRequests, isLoading, sendLetter, updateRequest } = useCounselorRecommendations();
+  
+  // Use mock data if no DB data available (for demo)
+  const requests = (dbRequests && dbRequests.length > 0) ? dbRequests : mockRequests;
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
