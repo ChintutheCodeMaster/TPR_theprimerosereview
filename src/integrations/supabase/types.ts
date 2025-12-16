@@ -14,16 +14,153 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recommendation_requests: {
+        Row: {
+          best_moment: string | null
+          counselor_notes: string | null
+          created_at: string
+          difficulties_overcome: string | null
+          generated_letter: string | null
+          id: string
+          meaningful_project: string | null
+          personal_notes: string | null
+          referee_name: string
+          referee_role: string | null
+          relationship_capacity: string | null
+          relationship_duration: string | null
+          status: Database["public"]["Enums"]["recommendation_status"]
+          strengths: string[] | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          best_moment?: string | null
+          counselor_notes?: string | null
+          created_at?: string
+          difficulties_overcome?: string | null
+          generated_letter?: string | null
+          id?: string
+          meaningful_project?: string | null
+          personal_notes?: string | null
+          referee_name: string
+          referee_role?: string | null
+          relationship_capacity?: string | null
+          relationship_duration?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          strengths?: string[] | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          best_moment?: string | null
+          counselor_notes?: string | null
+          created_at?: string
+          difficulties_overcome?: string | null
+          generated_letter?: string | null
+          id?: string
+          meaningful_project?: string | null
+          personal_notes?: string | null
+          referee_name?: string
+          referee_role?: string | null
+          relationship_capacity?: string | null
+          relationship_duration?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          strengths?: string[] | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      student_counselor_assignments: {
+        Row: {
+          counselor_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          counselor_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          counselor_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_my_counselor_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_student_counselor: {
+        Args: { _counselor_id: string; _student_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "counselor" | "admin"
+      recommendation_status: "draft" | "pending" | "in_progress" | "sent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +287,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "counselor", "admin"],
+      recommendation_status: ["draft", "pending", "in_progress", "sent"],
+    },
   },
 } as const
