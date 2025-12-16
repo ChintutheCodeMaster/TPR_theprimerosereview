@@ -9,6 +9,7 @@ import {
   Sparkles
 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
+import clientLogo from "@/assets/client-logo.jpg";
 
 export const Header = () => {
   return (
@@ -45,10 +46,12 @@ export const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          {/* Client Logo Placeholder - will be replaced with actual client logo */}
-          <div className="h-10 w-auto flex items-center">
-            {/* Client logo will go here */}
-          </div>
+          {/* Client Logo */}
+          <img 
+            src={clientLogo} 
+            alt="Client Logo" 
+            className="h-10 w-auto rounded"
+          />
 
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
