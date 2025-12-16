@@ -22,11 +22,7 @@ const mainItems = [{
   url: "/applications",
   icon: Calendar
 }, {
-  title: "Recommendations",
-  url: "/recommendations",
-  icon: GraduationCap
-}, {
-  title: "Rec. Letters",
+  title: "Recommendation Letters",
   url: "/recommendation-letters",
   icon: Award
 }, {
