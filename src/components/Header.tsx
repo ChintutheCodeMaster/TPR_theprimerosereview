@@ -8,14 +8,24 @@ import {
   LogOut,
   Sparkles
 } from "lucide-react";
+import primroseLogo from "@/assets/primrose-logo.png";
 
 export const Header = () => {
   return (
     <header className="bg-card border-b border-border shadow-card px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Search and AI Assistant */}
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative max-w-md flex-1">
+        {/* Left side - Primrose Logo */}
+        <div className="flex items-center gap-4">
+          <img 
+            src={primroseLogo} 
+            alt="The Primrose Review" 
+            className="h-10 w-auto"
+          />
+        </div>
+
+        {/* Center - Search and AI Assistant */}
+        <div className="flex items-center gap-4 flex-1 max-w-xl mx-8">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
@@ -35,6 +45,11 @@ export const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
+          {/* Client Logo Placeholder - will be replaced with actual client logo */}
+          <div className="h-10 w-auto flex items-center">
+            {/* Client logo will go here */}
+          </div>
+
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-5 w-5" />
