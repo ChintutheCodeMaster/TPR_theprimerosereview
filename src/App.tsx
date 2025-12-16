@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import Students from "./pages/Students";
 import Essays from "./pages/Essays";
 import Applications from "./pages/Applications";
-import Recommendations from "./pages/Recommendations";
+
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -60,7 +60,6 @@ const App = () => {
                   <Route path="/students" element={<Students />} />
                   <Route path="/essays" element={<Essays />} />
                   <Route path="/applications" element={<Applications />} />
-                  <Route path="/recommendations" element={<Recommendations />} />
                   <Route path="/recommendation-letters" element={<CounselorRecommendationLetters />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/notifications" element={<Notifications />} />
