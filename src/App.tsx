@@ -21,6 +21,9 @@ import ViewReports from "./pages/ViewReports";
 import StudentRecommendationLetters from "./pages/StudentRecommendationLetters";
 import CounselorRecommendationLetters from "./pages/CounselorRecommendationLetters";
 import NotFound from "./pages/NotFound";
+import primroseLogo from "@/assets/primrose-logo.png";
+import clientLogo from "@/assets/client-logo.jpg";
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -33,12 +36,21 @@ const App = () => {
             
             {/* Main Content */}
             <div className="flex-1 flex flex-col">
-              {/* Header with Sidebar Toggle */}
-              <header className="h-14 flex items-center border-b border-border bg-background px-4">
-                <SidebarTrigger />
-                <div className="ml-4">
-                  <h2 className="text-lg font-semibold text-foreground">The Primrose Review CRM</h2>
+              {/* Header with Logos */}
+              <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger />
+                  <img 
+                    src={primroseLogo} 
+                    alt="The Primrose Review" 
+                    className="h-10 w-auto"
+                  />
                 </div>
+                <img 
+                  src={clientLogo} 
+                  alt="Client Logo" 
+                  className="h-10 w-auto rounded"
+                />
               </header>
 
               {/* Page Content */}
