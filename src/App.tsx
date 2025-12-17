@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
+import { DemoNavigation } from "@/components/DemoNavigation";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -69,6 +70,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             {children}
           </main>
         </div>
+        
+        {/* Demo Navigation - floating button */}
+        <DemoNavigation />
       </div>
     </SidebarProvider>
   );
