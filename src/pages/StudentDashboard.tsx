@@ -20,12 +20,12 @@ import {
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  // Mock student data
+  // Mock student data - matches data from other pages for demo consistency
   const student = {
-    name: "Sarah Johnson",
+    name: "Emma Thompson",
     avatar: "/placeholder.svg",
-    overallProgress: 70,
-    motivationalMessage: "you're 70% on track!"
+    overallProgress: 85,
+    motivationalMessage: "you're 85% on track!"
   };
 
   const progressData = {

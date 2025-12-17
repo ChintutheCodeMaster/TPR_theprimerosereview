@@ -91,7 +91,7 @@ const mockNotifications: Notification[] = [
     timestamp: '6 hours ago',
     read: true,
     actionable: true,
-    linkedPage: '/recommendations',
+    linkedPage: '/recommendation-letters',
     linkedId: 'rec1'
   },
   {
