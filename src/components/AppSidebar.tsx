@@ -1,10 +1,13 @@
-import { useState } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Sparkles, Bell, UserCircle, BookOpen, Award, Home } from "lucide-react";
+import { useState, useMemo } from "react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Sparkles, Bell, UserCircle, BookOpen, Award, Home, Lock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+type UserRole = 'counselor' | 'student' | 'parent';
 
 const mainItems = [{
   title: "Dashboard",
@@ -60,20 +63,82 @@ const parentItems = [{
   url: "/parent-portal",
   icon: Home
 }];
+
+// Routes that belong to each role
+const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
+const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats'];
+const parentRoutes = ['/parent-portal'];
+
 export function AppSidebar() {
-  const {
-    open
-  } = useSidebar();
+  const { open } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const isActive = (path: string) => currentPath === path;
-  const getNavCls = ({
-    isActive
-  }: {
-    isActive: boolean;
-  }) => isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground";
-  return <>
+
+  // Determine current user role based on the route
+  const currentRole: UserRole = useMemo(() => {
+    if (studentRoutes.some(route => currentPath.startsWith(route))) return 'student';
+    if (parentRoutes.some(route => currentPath.startsWith(route))) return 'parent';
+    return 'counselor';
+  }, [currentPath]);
+
+  const getNavCls = ({ isActive }: { isActive: boolean }) => 
+    isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground";
+
+  const getDisabledCls = () => 
+    "opacity-50 cursor-not-allowed pointer-events-none text-muted-foreground";
+
+  const renderMenuItem = (item: typeof mainItems[0], allowedRole: UserRole) => {
+    const isDisabled = currentRole !== allowedRole;
+    
+    if (isDisabled) {
+      return (
+        <SidebarMenuItem key={item.title}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${getDisabledCls()}`}>
+                  <item.icon className="h-4 w-4" />
+                  {open && (
+                    <>
+                      <span className="flex-1">{item.title}</span>
+                      <Lock className="h-3 w-3" />
+                    </>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Available for {allowedRole === 'counselor' ? 'counselors' : allowedRole === 'student' ? 'students' : 'parents'} only</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </SidebarMenuItem>
+      );
+    }
+
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton asChild>
+          <NavLink to={item.url} end className={getNavCls}>
+            <item.icon className="h-4 w-4" />
+            {open && (
+              <>
+                <span>{item.title}</span>
+                {'badge' in item && item.badge && (
+                  <Badge variant="destructive" className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </>
+            )}
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
+  return (
+    <>
       <Sidebar className={open ? "w-64" : "w-16"} variant="sidebar">
         <SidebarContent>
           {/* Logo Section */}
@@ -82,80 +147,79 @@ export function AppSidebar() {
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <GraduationCap className="h-5 w-5 text-primary-foreground" />
               </div>
-              {open && <div>
+              {open && (
+                <div>
                   <h1 className="font-bold text-foreground">The Primrose Review</h1>
                   <p className="text-xs text-muted-foreground">CRM Platform</p>
-                </div>}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Main Navigation */}
+          {/* Main Navigation - Counselor */}
           <SidebarGroup>
-            <SidebarGroupLabel>Counselor</SidebarGroupLabel>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              Counselor
+              {currentRole === 'counselor' && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
+              )}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {mainItems.map(item => <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end className={getNavCls}>
-                        <item.icon className="h-4 w-4" />
-                        {open && <>
-                            <span>{item.title}</span>
-                            {item.badge && <Badge variant="destructive" className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs">
-                                {item.badge}
-                              </Badge>}
-                          </>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>)}
+                {mainItems.map(item => renderMenuItem(item, 'counselor'))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           {/* Student Portal Navigation */}
           <SidebarGroup>
-            <SidebarGroupLabel>Student Portal</SidebarGroupLabel>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              Student Portal
+              {currentRole === 'student' && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
+              )}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {studentItems.map(item => <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end className={getNavCls}>
-                        <item.icon className="h-4 w-4" />
-                        {open && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>)}
+                {studentItems.map(item => renderMenuItem(item, 'student'))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           {/* Parent Portal Navigation */}
           <SidebarGroup>
-            <SidebarGroupLabel>Parent Portal</SidebarGroupLabel>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              Parent Portal
+              {currentRole === 'parent' && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
+              )}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {parentItems.map(item => <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end className={getNavCls}>
-                        <item.icon className="h-4 w-4" />
-                        {open && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>)}
+                {parentItems.map(item => renderMenuItem(item, 'parent'))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           {/* AI Assistant */}
-          {open && <div className="mt-auto p-4 space-y-2">
-              <Button variant="outline" className="w-full justify-start gap-3 border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground hover:border-ai-accent" size="sm" onClick={() => setShowAIAssistant(true)}>
+          {open && (
+            <div className="mt-auto p-4 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground hover:border-ai-accent"
+                size="sm"
+                onClick={() => setShowAIAssistant(true)}
+              >
                 <Sparkles className="h-4 w-4 text-ai-accent" />
                 AI Assistant
               </Button>
-            </div>}
+            </div>
+          )}
         </SidebarContent>
       </Sidebar>
       
       {/* AI Assistant Panel */}
       <AIAssistantPanel isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} />
-    </>;
+    </>
+  );
 }
