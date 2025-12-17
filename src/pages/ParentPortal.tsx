@@ -20,13 +20,13 @@ import { toast } from "sonner";
 const ParentPortal = () => {
   const [message, setMessage] = useState("");
 
-  // Mock data for demo
+  // Mock data for demo - matches data from other pages for consistency
   const childInfo = {
-    name: "Emma Rodriguez",
+    name: "Emma Thompson",
     school: "Lincoln High School",
     grade: "12th Grade",
-    counselor: "Dr. Sarah Johnson",
-    counselorEmail: "sarah.johnson@primrose.edu",
+    counselor: "Ms. Johnson",
+    counselorEmail: "johnson@primrose.edu",
     gpa: 3.8,
     satScore: 1450,
     status: "on-track" as const
