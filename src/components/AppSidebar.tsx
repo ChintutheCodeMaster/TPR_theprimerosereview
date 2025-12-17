@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Sparkles, Bell, UserCircle, BookOpen, Award } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Sparkles, Bell, UserCircle, BookOpen, Award, Home } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
+
 const mainItems = [{
   title: "Dashboard",
-  url: "/",
+  url: "/dashboard",
   icon: BarChart3
 }, {
   title: "Students",
@@ -35,6 +36,7 @@ const mainItems = [{
   url: "/notifications",
   icon: Bell
 }];
+
 const studentItems = [{
   title: "Student Dashboard",
   url: "/student-dashboard",
@@ -47,6 +49,16 @@ const studentItems = [{
   title: "Recommendation Letters",
   url: "/student-recommendation-letters",
   icon: Award
+}, {
+  title: "My Stats",
+  url: "/student-stats",
+  icon: BarChart3
+}];
+
+const parentItems = [{
+  title: "Parent Portal",
+  url: "/parent-portal",
+  icon: Home
 }];
 export function AppSidebar() {
   const {
@@ -105,6 +117,23 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {studentItems.map(item => <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} end className={getNavCls}>
+                        <item.icon className="h-4 w-4" />
+                        {open && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Parent Portal Navigation */}
+          <SidebarGroup>
+            <SidebarGroupLabel>Parent Portal</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {parentItems.map(item => <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} end className={getNavCls}>
                         <item.icon className="h-4 w-4" />
