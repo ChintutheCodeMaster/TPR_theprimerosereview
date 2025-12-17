@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      parent_student_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          invitation_code: string | null
+          parent_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitation_code?: string | null
+          parent_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitation_code?: string | null
+          parent_id?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -21,6 +45,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          school_id: string | null
           updated_at: string
           user_id: string
         }
@@ -30,6 +55,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          school_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -39,10 +65,19 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          school_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recommendation_requests: {
         Row: {
@@ -98,6 +133,24 @@ export type Database = {
           strengths?: string[] | null
           student_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      schools: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -157,9 +210,13 @@ export type Database = {
         Args: { _counselor_id: string; _student_id: string }
         Returns: boolean
       }
+      is_student_parent: {
+        Args: { _parent_id: string; _student_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "student" | "counselor" | "admin"
+      app_role: "student" | "counselor" | "admin" | "parent"
       recommendation_status: "draft" | "pending" | "in_progress" | "sent"
     }
     CompositeTypes: {
@@ -288,7 +345,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["student", "counselor", "admin"],
+      app_role: ["student", "counselor", "admin", "parent"],
       recommendation_status: ["draft", "pending", "in_progress", "sent"],
     },
   },
