@@ -39,7 +39,7 @@ const mockRequests: RecommendationRequest[] = [
     counselor_notes: null,
     generated_letter: `Dear Admissions Committee,
 
-It is with great enthusiasm that I write this letter of recommendation for Emma Johnson, whom I have had the privilege of teaching in Advanced Placement Physics for the past two years.
+It is with great enthusiasm that I write this letter of recommendation for Emma Thompson, whom I have had the privilege of teaching in Advanced Placement Physics for the past two years.
 
 Emma stands out as one of the most intellectually curious and dedicated students I have encountered in my fifteen years of teaching. Her analytical abilities are exceptional – she approaches complex physics problems with a methodical precision that belies her age, yet maintains the creative flexibility to consider unconventional solutions.
 
