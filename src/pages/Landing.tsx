@@ -1,0 +1,86 @@
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { GraduationCap, Users, UserCircle, Eye } from "lucide-react";
+import primroseLogo from "@/assets/primrose-logo.png";
+
+const Landing = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex flex-col items-center justify-center p-6">
+      <div className="max-w-2xl w-full text-center space-y-8">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <img 
+            src={primroseLogo} 
+            alt="The Primrose Review" 
+            className="h-20 w-auto"
+          />
+        </div>
+
+        {/* Welcome Text */}
+        <div className="space-y-3">
+          <h1 className="text-4xl font-bold text-foreground">
+            Welcome to The Primrose Review
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            College Application Management System
+          </p>
+        </div>
+
+        {/* Login Options */}
+        <Card className="p-8 space-y-6">
+          <h2 className="text-xl font-semibold text-foreground">Sign in as:</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => navigate('/auth?role=counselor')}
+            >
+              <GraduationCap className="h-8 w-8" />
+              <span className="font-medium">Counselor</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => navigate('/auth?role=student')}
+            >
+              <Users className="h-8 w-8" />
+              <span className="font-medium">Student</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => navigate('/auth?role=parent')}
+            >
+              <UserCircle className="h-8 w-8" />
+              <span className="font-medium">Parent</span>
+            </Button>
+          </div>
+        </Card>
+
+        {/* Demo Button */}
+        <div className="pt-4">
+          <Button 
+            size="lg" 
+            variant="secondary"
+            className="gap-2"
+            onClick={() => navigate('/demo')}
+          >
+            <Eye className="h-5 w-5" />
+            View Demo
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            Explore the system without signing in
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Landing;
