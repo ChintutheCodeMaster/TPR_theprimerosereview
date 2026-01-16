@@ -551,13 +551,10 @@ const Essays = () => {
                           placeholder="Add your feedback and comments..." 
                           className="min-h-[100px]"
                         />
-                        <div className="flex gap-2">
-                          <Button size="sm">Save Feedback</Button>
-                          <Button variant="outline" size="sm">
-                            <Share className="h-4 w-4 mr-2" />
-                            Share with Student
-                          </Button>
-                        </div>
+                        <Button size="sm">
+                          <Share className="h-4 w-4 mr-2" />
+                          Save and Share with Student
+                        </Button>
                       </CardContent>
                     </Card>
 
