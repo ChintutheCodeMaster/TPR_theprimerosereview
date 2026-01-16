@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StudentCard } from "@/components/StudentCard";
 import { DashboardStats } from "@/components/DashboardStats";
+import { CounselorInsights } from "@/components/CounselorInsights";
 import { EssayPreview } from "@/components/EssayPreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -191,6 +192,9 @@ const Index = () => {
           </Card>
         </Collapsible>
       </div>
+
+      {/* Counselor Insights */}
+      <CounselorInsights />
 
       {/* Quick Actions */}
       <Card className="p-6">
