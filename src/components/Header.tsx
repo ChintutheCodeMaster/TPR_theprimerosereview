@@ -19,7 +19,7 @@ export const Header = () => {
           <img 
             src={primroseLogo} 
             alt="The Primrose Review" 
-            className="h-14 w-auto"
+            className="h-16 w-auto"
           />
         </div>
 
@@ -41,7 +41,7 @@ export const Header = () => {
           <img 
             src={clientLogo} 
             alt="Client Logo" 
-            className="h-14 w-auto rounded"
+            className="h-16 w-auto rounded"
           />
 
           {/* Notifications */}
