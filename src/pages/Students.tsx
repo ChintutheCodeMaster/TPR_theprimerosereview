@@ -22,8 +22,12 @@ import {
   MessageSquare,
   BarChart3,
   Target,
-  Trophy
+  Trophy,
+  LayoutGrid,
+  List
 } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Student {
   id: string;
@@ -125,6 +129,7 @@ const Students = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [gpaFilter, setGpaFilter] = useState("all");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -210,13 +215,337 @@ const Students = () => {
                     <Button variant="outline" size="sm">
                       <Filter className="h-4 w-4" />
                     </Button>
+                    <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "list" | "grid")}>
+                      <ToggleGroupItem value="list" aria-label="List view">
+                        <List className="h-4 w-4" />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="grid" aria-label="Grid view">
+                        <LayoutGrid className="h-4 w-4" />
+                      </ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Students Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Students List View */}
+      {viewMode === "list" && (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>GPA</TableHead>
+                <TableHead>Test Score</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead>Essays</TableHead>
+                <TableHead>Deadlines</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Activity</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student) => {
+                const StatusIcon = getStatusIcon(student.status);
+                
+                return (
+                  <Dialog key={student.id}>
+                    <DialogTrigger asChild>
+                      <TableRow className="cursor-pointer hover:bg-muted/50">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.avatar} alt={student.name} />
+                              <AvatarFallback className="bg-gradient-secondary text-secondary-foreground text-xs">
+                                {student.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{student.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{student.gpa}</TableCell>
+                        <TableCell>
+                          {student.satScore ? `SAT: ${student.satScore}` : student.actScore ? `ACT: ${student.actScore}` : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={student.completionPercentage} className="h-2 w-16" />
+                            <span className="text-sm text-muted-foreground">{student.completionPercentage}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{student.essaysSubmitted}/{student.totalEssays}</TableCell>
+                        <TableCell>{student.upcomingDeadlines}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={getStatusColor(student.status) as any}
+                            className="flex items-center gap-1 w-fit"
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {student.status.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{student.lastActivity}</TableCell>
+                      </TableRow>
+                    </DialogTrigger>
+                    
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-3">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={student.avatar} alt={student.name} />
+                            <AvatarFallback className="bg-gradient-secondary text-secondary-foreground">
+                              {student.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h2 className="text-xl font-bold">{student.name}</h2>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={getStatusColor(student.status) as any}>
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {student.status.replace('-', ' ')}
+                              </Badge>
+                            </div>
+                          </div>
+                        </DialogTitle>
+                      </DialogHeader>
+
+                      <Tabs defaultValue="overview" className="w-full">
+                        <TabsList className="grid w-full grid-cols-5">
+                          <TabsTrigger value="overview">Overview</TabsTrigger>
+                          <TabsTrigger value="progress">Progress</TabsTrigger>
+                          <TabsTrigger value="essays">Essays</TabsTrigger>
+                          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                          <TabsTrigger value="meetings">Meetings</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="overview" className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                  <BarChart3 className="h-5 w-5 text-primary" />
+                                  Academic Performance
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-3">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">GPA</span>
+                                    <span className="font-semibold">{student.gpa}</span>
+                                  </div>
+                                  {student.satScore && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">SAT Score</span>
+                                      <span className="font-semibold">{student.satScore}</span>
+                                    </div>
+                                  )}
+                                  {student.actScore && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">ACT Score</span>
+                                      <span className="font-semibold">{student.actScore}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                  <Target className="h-5 w-5 text-primary" />
+                                  Target Schools
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-2">
+                                  {student.targetSchools.map((school, index) => (
+                                    <Badge key={index} variant="outline">{school}</Badge>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-primary" />
+                                Extracurriculars
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-2">
+                                {student.extracurriculars.map((activity, index) => (
+                                  <Badge key={index} variant="secondary">{activity}</Badge>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="progress" className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-lg">Application Progress</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-3">
+                                  <div className="flex justify-between">
+                                    <span>Overall Completion</span>
+                                    <span className="font-semibold">{student.completionPercentage}%</span>
+                                  </div>
+                                  <Progress value={student.completionPercentage} className="h-3" />
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <FileText className="h-5 w-5" />
+                                  Essays
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-foreground">
+                                    {student.essaysSubmitted}/{student.totalEssays}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Submitted</div>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <GraduationCap className="h-5 w-5" />
+                                  Recommendations
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-foreground">
+                                    {student.recommendationsSubmitted}/{student.recommendationsRequested}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Received</div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-warning" />
+                                Upcoming Deadlines
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-center p-4">
+                                <div className="text-3xl font-bold text-warning">
+                                  {student.upcomingDeadlines}
+                                </div>
+                                <div className="text-sm text-muted-foreground">Deadlines in next 30 days</div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="essays" className="space-y-4">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Essay Status</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                  <div>
+                                    <div className="font-medium">Common App Personal Statement</div>
+                                    <div className="text-sm text-muted-foreground">Draft 3 submitted</div>
+                                  </div>
+                                  <Badge variant="default">Completed</Badge>
+                                </div>
+                                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                  <div>
+                                    <div className="font-medium">Supplemental Essay #1</div>
+                                    <div className="text-sm text-muted-foreground">In progress</div>
+                                  </div>
+                                  <Badge variant="secondary">Draft</Badge>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="tasks" className="space-y-4">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Active Tasks</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {student.tasks.map((task) => (
+                                  <div key={task.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                    <div>
+                                      <div className="font-medium">{task.task}</div>
+                                      <div className="text-sm text-muted-foreground">Due: {task.dueDate}</div>
+                                    </div>
+                                    <Badge variant={task.completed ? "default" : "outline"}>
+                                      {task.completed ? "Completed" : "Pending"}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="meetings" className="space-y-4">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <MessageSquare className="h-5 w-5" />
+                                Meeting History
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {student.meetingNotes.map((meeting, index) => (
+                                  <div key={index} className="p-4 border border-border rounded-lg">
+                                    <div className="font-medium mb-2">{meeting.date}</div>
+                                    <div className="text-sm text-muted-foreground">{meeting.summary}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+                      </Tabs>
+
+                      <div className="flex gap-2 pt-4 border-t border-border">
+                        <Button className="flex-1">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Schedule Meeting
+                        </Button>
+                        <Button variant="outline" className="flex-1">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Report
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Students Grid View */}
+      {viewMode === "grid" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredStudents.map((student) => {
                 const StatusIcon = getStatusIcon(student.status);
                 
@@ -537,7 +866,8 @@ const Students = () => {
                   </Dialog>
                 );
               })}
-      </div>
+        </div>
+      )}
 
       {filteredStudents.length === 0 && (
         <Card>
