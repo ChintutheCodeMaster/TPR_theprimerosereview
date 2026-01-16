@@ -41,7 +41,7 @@ export const Header = () => {
           <img 
             src={clientLogo} 
             alt="Client Logo" 
-            className="h-16 w-auto rounded"
+            className="h-32 w-auto rounded"
           />
 
           {/* Notifications */}
