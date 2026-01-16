@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
   Upload, 
@@ -15,20 +19,75 @@ import {
   History,
   AlertCircle,
   TrendingUp,
-  MessageCircle
+  MessageCircle,
+  Eye,
+  Loader2
 } from "lucide-react";
+
+interface FeedbackItem {
+  id: string;
+  text: string;
+  source: 'ai' | 'manual';
+  criterionName?: string;
+  color?: string;
+}
+
+interface CriterionScore {
+  id: string;
+  name: string;
+  score: number;
+  color: string;
+}
+
+interface AnalysisResult {
+  overallScore: number;
+  criteria: CriterionScore[];
+  issues: any[];
+}
+
+interface EssayFeedback {
+  id: string;
+  essay_title: string;
+  essay_content: string;
+  essay_prompt: string | null;
+  ai_analysis: AnalysisResult | null;
+  feedback_items: FeedbackItem[];
+  personal_message: string | null;
+  status: string;
+  created_at: string;
+  sent_at: string | null;
+}
 
 const StudentPersonalArea = () => {
   const [activeTab, setActiveTab] = useState("essays");
+  const [selectedEssay, setSelectedEssay] = useState<any>(null);
+  const [essayFeedback, setEssayFeedback] = useState<EssayFeedback[]>([]);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
+  const { toast } = useToast();
 
-  // Mock data
+  // Mock data for essays
   const essays = [
     {
       id: 1,
       title: "Common App Personal Statement",
       type: "Common App",
-      prompt: "Some students have a background, identity, interest, or talent...",
-      wordCount: 520,
+      prompt: "Some students have a background, identity, interest, or talent that is so meaningful they believe their application would be incomplete without it. If this sounds like you, then please share your story.",
+      content: `Growing up in a bilingual household, I often found myself serving as a bridge between two worlds. My parents, immigrants from Mexico, spoke primarily Spanish at home, while I navigated the English-dominant world of my American school. This duality shaped my identity in ways I didn't fully understand until I was fifteen.
+
+It started with a simple request. My mother needed help filling out medical forms at the hospital. What should have been a routine appointment became a defining moment. As I translated complex medical terminology, watching my mother's worried eyes scan the incomprehensible English words, I realized the weight of responsibility that language carries. One mistranslation could mean the wrong medication, the wrong diagnosis, the wrong outcome.
+
+That day, I began volunteering at the local community health clinic as a translator. What I discovered went far beyond words. I learned that translation is not just about converting Spanish to English—it's about bridging cultural gaps, advocating for patients who feel invisible, and giving voice to those who struggle to express their fears in an unfamiliar language.
+
+Mrs. Rodriguez, a grandmother who came in for what she thought was routine fatigue, became my most memorable patient. Through our conversations, I uncovered that she had been experiencing chest pain for weeks but was too afraid to mention it, believing her concerns would be dismissed. With careful translation and advocacy, I helped her communicate her symptoms clearly to the doctor. She was diagnosed with a cardiac condition that, left untreated, could have been fatal.
+
+This experience transformed my understanding of healthcare disparities. I began researching the intersection of language access and health outcomes, discovering that limited English proficiency patients have higher rates of medical errors and worse health outcomes. This revelation sparked my passion for health equity and my determination to pursue medicine.
+
+I organized a workshop series at the clinic, training other bilingual students to become medical interpreters. We developed a visual symptom chart in Spanish that now hangs in every examination room. These small changes have had measurable impact—patient satisfaction scores increased by 23% among Spanish-speaking patients.
+
+My dual identity, once a source of confusion, has become my greatest strength. I no longer see myself as caught between two worlds, but as someone uniquely positioned to connect them. I want to become a physician who doesn't just treat symptoms, but who understands the complex cultural and linguistic barriers that prevent patients from receiving equitable care.
+
+Every conversation I translate, every patient I advocate for, reinforces my commitment to a future in medicine. I am not just a bridge between languages—I am a bridge between communities, cultures, and ultimately, between patients and the care they deserve.`,
+      wordCount: 647,
       targetWords: 650,
       status: "review",
       lastUpdated: "2 hours ago",
@@ -40,7 +99,18 @@ const StudentPersonalArea = () => {
       id: 2,
       title: "UC Berkeley Supplemental",
       type: "UC Application",
-      prompt: "Describe the most significant challenge you have faced...",
+      prompt: "Describe the most significant challenge you have faced and the steps you have taken to overcome this challenge. How has this challenge affected your academic achievement?",
+      content: `The piano keys felt cold under my trembling fingers. Sixteen years of practice, countless hours of scales and arpeggios, and here I was, frozen on stage at the regional competition, my mind completely blank. The opening notes of Chopin's Ballade No. 1 had vanished from my memory like morning mist.
+
+Those thirty seconds of silence felt like hours. The audience waited. My teacher watched from the front row, her expression a mixture of concern and encouragement. And I sat there, hands hovering over the keys, experiencing the most profound failure of my young life.
+
+I don't remember walking off stage. I don't remember the car ride home. What I remember is the shame that followed—a heavy, persistent weight that made me avoid the piano for three weeks. My parents, both accomplished musicians, tried to comfort me, but their words felt hollow against the enormity of my public failure.
+
+The turning point came unexpectedly. While helping my younger cousin with her first recital piece, I watched her stumble through "Mary Had a Little Lamb," hitting wrong notes with cheerful abandon. When she finished, she looked up with a proud smile and asked, "Did you hear? I only messed up twice!"
+
+Her joy was untouched by perfectionism. She wasn't performing for approval or validation—she was making music because it made her happy. In that moment, I realized that somewhere along my sixteen-year journey, I had lost sight of why I started playing piano in the first place.
+
+I returned to the piano with a different mindset. Instead of drilling competition pieces, I began improvising. I played music I genuinely loved—jazz standards, film scores, and yes, eventually, Chopin again. But this time, I played for myself, not for judges.`,
       wordCount: 280,
       targetWords: 350,
       status: "draft",
@@ -53,7 +123,12 @@ const StudentPersonalArea = () => {
       id: 3,
       title: "Harvard Supplemental Essay",
       type: "Supplemental",
-      prompt: "Briefly describe an intellectual experience...",
+      prompt: "Briefly describe an intellectual experience that was important to you.",
+      content: `The moment that changed everything happened at 2:47 AM in my bedroom, illuminated only by the glow of my computer screen. I had just trained my first neural network to recognize handwritten digits—and it worked.
+
+Those ten glowing numbers on my screen represented more than a successful coding project. They represented possibility. If a machine could learn to see patterns in chaos, what else could it learn? Could it predict climate change patterns? Diagnose diseases from medical images? Help us understand the human brain itself?
+
+That night sparked an obsession. I devoured research papers, built increasingly complex models, and crashed my laptop more times than I can count. When I created an AI that could predict local air quality with 89% accuracy using only publicly available data, I realized that machine learning wasn't just about algorithms—it was about finding invisible patterns that could solve real problems.`,
       wordCount: 150,
       targetWords: 200,
       status: "approved",
@@ -67,6 +142,7 @@ const StudentPersonalArea = () => {
       title: "Stanford Why Major Essay",
       type: "Supplemental",
       prompt: "Why are you interested in your chosen major?",
+      content: "",
       wordCount: 0,
       targetWords: 250,
       status: "not-started",
@@ -125,6 +201,56 @@ const StudentPersonalArea = () => {
       improvements: ["More specific details", "Stronger conclusion"]
     }
   ];
+
+  // Load feedback from database when essay is selected
+  const loadEssayFeedback = async (essayTitle: string) => {
+    setIsLoadingFeedback(true);
+    try {
+      const { data, error } = await supabase
+        .from('essay_feedback')
+        .select('*')
+        .eq('essay_title', essayTitle)
+        .in('status', ['sent', 'read'])
+        .order('sent_at', { ascending: false });
+
+      if (error) throw error;
+
+      const typedData = (data || []).map(item => ({
+        id: item.id,
+        essay_title: item.essay_title,
+        essay_content: item.essay_content,
+        essay_prompt: item.essay_prompt,
+        ai_analysis: item.ai_analysis as unknown as AnalysisResult | null,
+        feedback_items: (item.feedback_items as unknown as FeedbackItem[]) || [],
+        personal_message: item.personal_message,
+        status: item.status,
+        created_at: item.created_at,
+        sent_at: item.sent_at,
+      }));
+
+      setEssayFeedback(typedData);
+
+      // Mark as read
+      if (typedData.length > 0) {
+        const unread = typedData.filter(f => f.status === 'sent');
+        for (const feedback of unread) {
+          await supabase
+            .from('essay_feedback')
+            .update({ status: 'read' })
+            .eq('id', feedback.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading feedback:", error);
+    } finally {
+      setIsLoadingFeedback(false);
+    }
+  };
+
+  const handleEssayClick = (essay: any) => {
+    setSelectedEssay(essay);
+    loadEssayFeedback(essay.title);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -186,7 +312,11 @@ const StudentPersonalArea = () => {
 
           <div className="grid gap-4">
             {essays.map((essay) => (
-              <Card key={essay.id} className={`${getUrgencyColor(essay.urgency)}`}>
+              <Card 
+                key={essay.id} 
+                className={`${getUrgencyColor(essay.urgency)} cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => handleEssayClick(essay)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -229,9 +359,9 @@ const StudentPersonalArea = () => {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button size="sm" variant="outline">Edit</Button>
-                    <Button size="sm" variant="outline">View History</Button>
-                    <Button size="sm" variant="outline">Download</Button>
+                    <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}>Edit</Button>
+                    <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}>View History</Button>
+                    <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}>Download</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -377,6 +507,155 @@ const StudentPersonalArea = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Essay Detail Modal */}
+      <Dialog open={!!selectedEssay} onOpenChange={() => setSelectedEssay(null)}>
+        <DialogContent className="max-w-[900px] h-[85vh] p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl">{selectedEssay?.title}</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">{selectedEssay?.type}</p>
+              </div>
+              <Badge className={getStatusColor(selectedEssay?.status || '')}>
+                {getStatusIcon(selectedEssay?.status || '')}
+                <span className="ml-1 capitalize">{selectedEssay?.status?.replace('-', ' ')}</span>
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Side - Essay Content */}
+            <div className="flex-1 border-r">
+              <div className="p-4 border-b bg-muted/30">
+                <p className="text-sm text-muted-foreground font-medium">Prompt:</p>
+                <p className="text-sm mt-1">{selectedEssay?.prompt}</p>
+              </div>
+              <ScrollArea className="h-[calc(100%-80px)]">
+                <div className="p-4">
+                  {selectedEssay?.content ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedEssay.content}</p>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No content yet. Start writing your essay!</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Right Side - Counselor Feedback */}
+            <div className="w-[350px] flex flex-col">
+              <div className="p-4 border-b bg-primary/5">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  Counselor Feedback
+                </h3>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-4">
+                  {isLoadingFeedback ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : essayFeedback.length > 0 ? (
+                    <div className="space-y-4">
+                      {essayFeedback.map((fb) => (
+                        <Card key={fb.id} className="bg-card">
+                          <CardContent className="p-4 space-y-3">
+                            {/* Score */}
+                            {fb.ai_analysis && (
+                              <div className="flex items-center gap-2 pb-3 border-b">
+                                <Star className="h-5 w-5 text-primary" />
+                                <span className="font-bold text-lg">{fb.ai_analysis.overallScore}/100</span>
+                              </div>
+                            )}
+
+                            {/* Personal Message */}
+                            {fb.personal_message && (
+                              <div className="bg-primary/10 p-3 rounded-lg">
+                                <p className="text-xs font-medium text-primary mb-1">Personal Note:</p>
+                                <p className="text-sm">{fb.personal_message}</p>
+                              </div>
+                            )}
+
+                            {/* Feedback Items */}
+                            {fb.feedback_items.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">Feedback Points:</p>
+                                {fb.feedback_items.map((item, idx) => (
+                                  <div key={item.id || idx} className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+                                    {item.color && (
+                                      <div 
+                                        className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" 
+                                        style={{ backgroundColor: item.color }}
+                                      />
+                                    )}
+                                    <div>
+                                      {item.criterionName && (
+                                        <span className="text-[10px] text-muted-foreground block">
+                                          {item.criterionName}
+                                        </span>
+                                      )}
+                                      <p className="text-xs">{item.text}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Criteria Breakdown */}
+                            {fb.ai_analysis?.criteria && (
+                              <div className="pt-2 border-t">
+                                <p className="text-xs font-medium text-muted-foreground mb-2">Score Breakdown:</p>
+                                <div className="space-y-1.5">
+                                  {fb.ai_analysis.criteria.map((c) => (
+                                    <div key={c.id} className="flex items-center gap-2">
+                                      <div 
+                                        className="w-2 h-2 rounded-full" 
+                                        style={{ backgroundColor: c.color }}
+                                      />
+                                      <span className="text-xs flex-1 truncate">{c.name}</span>
+                                      <span className="text-xs font-medium">{c.score}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <p className="text-[10px] text-muted-foreground pt-2">
+                              Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No feedback yet</p>
+                      <p className="text-xs mt-1">Your counselor will review your essay soon</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-4 border-t flex gap-2">
+            <Button className="flex-1">
+              <FileText className="h-4 w-4 mr-2" />
+              Edit Essay
+            </Button>
+            <Button variant="outline" className="flex-1">
+              <History className="h-4 w-4 mr-2" />
+              View History
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
