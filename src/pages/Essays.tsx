@@ -27,7 +27,9 @@ import {
   Calendar,
   User,
   Star,
-  ArrowUpDown
+  ArrowUpDown,
+  LayoutGrid,
+  List
 } from "lucide-react";
 
 interface Essay {
@@ -125,6 +127,7 @@ const Essays = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("lastUpdated");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
   const [feedbackModalEssay, setFeedbackModalEssay] = useState<Essay | null>(null);
 
@@ -320,13 +323,33 @@ const Essays = () => {
               <Button variant="outline" size="sm">
                 <Filter className="h-4 w-4" />
               </Button>
+
+              <div className="flex border rounded-md">
+                <Button 
+                  variant={viewMode === "grid" ? "default" : "ghost"} 
+                  size="sm"
+                  className="rounded-r-none"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === "list" ? "default" : "ghost"} 
+                  size="sm"
+                  className="rounded-l-none"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Essays Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Essays Grid/List */}
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filteredEssays.map((essay) => {
           const StatusIcon = getStatusIcon(essay.status);
           const wordProgress = (essay.wordCount / essay.targetWords) * 100;
@@ -371,10 +394,7 @@ const Essays = () => {
                     {/* Essay Type & AI Score */}
                     <div className="flex items-center justify-between mb-3">
                       <Badge variant="outline">{getTypeLabel(essay.essayType)}</Badge>
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-ai-accent" />
-                        <span className="text-sm font-medium">AI Score: {essay.aiScore}/100</span>
-                      </div>
+                      <span className="text-sm font-medium">Score: {essay.aiScore}/100</span>
                     </div>
 
                     {/* Word Count Progress */}
@@ -628,7 +648,95 @@ const Essays = () => {
             </Dialog>
           );
         })}
-      </div>
+        </div>
+      ) : (
+        /* List View */
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {filteredEssays.map((essay) => {
+                const StatusIcon = getStatusIcon(essay.status);
+                return (
+                  <Dialog key={essay.id}>
+                    <DialogTrigger asChild>
+                      <div className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors">
+                        <Avatar className="h-10 w-10 border-2 border-primary/10">
+                          <AvatarImage src={essay.studentAvatar} alt={essay.studentName} />
+                          <AvatarFallback className="bg-gradient-secondary text-secondary-foreground">
+                            {essay.studentName.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground truncate">{essay.title}</h3>
+                            {essay.urgent && (
+                              <Badge variant="destructive" className="text-xs">Urgent</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{essay.studentName}</p>
+                        </div>
+
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <div className="font-bold text-primary">{essay.aiScore}</div>
+                            <div className="text-xs text-muted-foreground">Score</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium">{essay.wordCount}/{essay.targetWords}</div>
+                            <div className="text-xs text-muted-foreground">Words</div>
+                          </div>
+                          <Badge variant={getStatusColor(essay.status) as any} className="flex items-center gap-1">
+                            <StatusIcon className="h-3 w-3" />
+                            {essay.status.replace('-', ' ')}
+                          </Badge>
+                          <Badge variant="outline">{getTypeLabel(essay.essayType)}</Badge>
+                          <div className="text-xs text-muted-foreground w-20 text-right">
+                            Due: {essay.dueDate}
+                          </div>
+                        </div>
+                      </div>
+                    </DialogTrigger>
+                    {/* Same Dialog Content as grid view - reusing the pattern */}
+                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={essay.studentAvatar} alt={essay.studentName} />
+                              <AvatarFallback className="bg-gradient-secondary text-secondary-foreground">
+                                {essay.studentName.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h2 className="text-xl font-bold">{essay.title}</h2>
+                              <p className="text-sm text-muted-foreground">{essay.studentName}</p>
+                            </div>
+                          </div>
+                          <Badge variant={getStatusColor(essay.status) as any}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {essay.status.replace('-', ' ')}
+                          </Badge>
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Button 
+                          size="lg" 
+                          className="w-full"
+                          onClick={() => setFeedbackModalEssay(essay)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Open Feedback Editor
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredEssays.length === 0 && (
         <Card>
