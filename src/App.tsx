@@ -25,6 +25,7 @@ import CheckDeadlines from "./pages/CheckDeadlines";
 import ViewReports from "./pages/ViewReports";
 import StudentRecommendationLetters from "./pages/StudentRecommendationLetters";
 import CounselorRecommendationLetters from "./pages/CounselorRecommendationLetters";
+import EssayAnalytics from "./pages/EssayAnalytics";
 import NotFound from "./pages/NotFound";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
@@ -92,6 +93,7 @@ const App = () => {
           <Route path="/dashboard" element={<AppLayout><Index /></AppLayout>} />
           <Route path="/students" element={<AppLayout><Students /></AppLayout>} />
           <Route path="/essays" element={<AppLayout><Essays /></AppLayout>} />
+          <Route path="/essay-analytics" element={<AppLayout><EssayAnalytics /></AppLayout>} />
           <Route path="/applications" element={<AppLayout><Applications /></AppLayout>} />
           <Route path="/recommendation-letters" element={<AppLayout><CounselorRecommendationLetters /></AppLayout>} />
           <Route path="/messages" element={<AppLayout><Messages /></AppLayout>} />
