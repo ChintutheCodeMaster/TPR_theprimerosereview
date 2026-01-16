@@ -318,14 +318,6 @@ const Essays = () => {
             <BarChart3 className="h-4 w-4 mr-2" />
             Analytics
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-          >
-            <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
-            Bulk Review
-          </Button>
         </div>
       </div>
 
