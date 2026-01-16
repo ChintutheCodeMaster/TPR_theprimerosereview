@@ -5,10 +5,14 @@ import { EssayPreview } from "@/components/EssayPreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Plus, Users, FileText, Calendar, TrendingUp } from "lucide-react";
+import { Plus, Users, FileText, Calendar, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [studentsOpen, setStudentsOpen] = useState(false);
+  const [essaysOpen, setEssaysOpen] = useState(false);
+
   // Mock data for demonstration
   const mockStudents = [
     {
@@ -97,49 +101,95 @@ const Index = () => {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Students Needing Attention */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Students Needing Attention
-            </h2>
-            <Button variant="outline" size="sm" onClick={() => navigate('/add-student')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Student
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockStudents.map((student) => (
-              <StudentCard 
-                key={student.id} 
-                student={student} 
-                onViewStudent={handleViewStudent}
-              />
-            ))}
-          </div>
-        </div>
+        <Collapsible open={studentsOpen} onOpenChange={setStudentsOpen}>
+          <Card className="p-6">
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity">
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                  <Users className="h-6 w-6 text-primary" />
+                  Students Needing Attention
+                  <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    {mockStudents.length}
+                  </span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/add-student');
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
+                  {studentsOpen ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-6">
+              <div className="space-y-4">
+                {mockStudents.map((student) => (
+                  <StudentCard 
+                    key={student.id} 
+                    student={student} 
+                    onViewStudent={handleViewStudent}
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Recent Essays */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Essays for Review
-            </h2>
-            <Button variant="outline" size="sm" onClick={() => navigate('/review-essays')}>
-              View All
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockEssays.map((essay) => (
-              <EssayPreview 
-                key={essay.id} 
-                essay={essay} 
-                onViewEssay={handleViewEssay}
-              />
-            ))}
-          </div>
-        </div>
+        <Collapsible open={essaysOpen} onOpenChange={setEssaysOpen}>
+          <Card className="p-6">
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity">
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                  <FileText className="h-6 w-6 text-primary" />
+                  Essays for Review
+                  <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    {mockEssays.length}
+                  </span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/review-essays');
+                    }}
+                  >
+                    View All
+                  </Button>
+                  {essaysOpen ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-6">
+              <div className="space-y-4">
+                {mockEssays.map((essay) => (
+                  <EssayPreview 
+                    key={essay.id} 
+                    essay={essay} 
+                    onViewEssay={handleViewEssay}
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
 
       {/* Quick Actions */}
