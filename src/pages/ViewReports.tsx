@@ -43,7 +43,7 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
   LineChart as LineChartIcon,
-  Sparkles,
+  Lightbulb,
   User,
   GraduationCap,
   School,
@@ -155,7 +155,7 @@ const ViewReports = () => {
 
   const atRiskStudents = studentProgress.filter(s => s.riskLevel === 'high' || s.riskLevel === 'medium');
 
-  const aiInsights = [
+  const keyInsights = [
     "Essay quality has improved by 25% over the past 6 weeks, indicating effective feedback implementation.",
     "UC Berkeley and Stanford are the most popular choices, with 67% of students applying to at least one UC school.",
     "3 students are at high risk of missing upcoming deadlines and need immediate attention.",
@@ -279,17 +279,17 @@ const ViewReports = () => {
         </Card>
       </div>
 
-      {/* AI Insights */}
+      {/* Key Insights */}
       <Card className="bg-gradient-subtle border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI-Generated Insights
+            <Lightbulb className="h-5 w-5 text-primary" />
+            Key Insights
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {aiInsights.slice(0, 3).map((insight, index) => (
+            {keyInsights.slice(0, 3).map((insight, index) => (
               <div key={index} className="p-3 bg-background/50 rounded-lg border">
                 <p className="text-sm">{insight}</p>
               </div>

@@ -79,17 +79,6 @@ export const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
           })}
         </div>
 
-        {/* AI Assistant */}
-        <div className="p-4 border-t border-border">
-          <Button 
-            variant="outline"
-            className="w-full justify-start gap-3 border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground hover:border-ai-accent"
-          >
-            <Sparkles className="h-5 w-5 text-ai-accent" />
-            AI Assistant
-          </Button>
-        </div>
-
         {/* Notifications */}
         <div className="p-4">
           <Button 

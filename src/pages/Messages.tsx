@@ -13,7 +13,6 @@ import {
   Filter, 
   Send,
   Paperclip,
-  Sparkles,
   MessageSquare,
   Clock,
   CheckCircle,
@@ -164,7 +163,7 @@ const mockConversations: Conversation[] = [
   }
 ];
 
-const aiTemplates = [
+const messageTemplates = [
   {
     id: 'deadline',
     title: 'Deadline Reminder',
@@ -225,8 +224,8 @@ const Messages = () => {
     }
   };
 
-  const generateAIMessage = (templateId: string) => {
-    const template = aiTemplates.find(t => t.id === templateId);
+  const generateTemplateMessage = (templateId: string) => {
+    const template = messageTemplates.find(t => t.id === templateId);
     if (!template || !selectedConversation) return;
 
     let message = template.template;
@@ -292,14 +291,6 @@ const Messages = () => {
             <Users className="h-4 w-4 mr-2" />
             Bulk Message
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-          >
-            <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
-            AI Assistant
-          </Button>
         </div>
       </div>
 
@@ -350,11 +341,11 @@ const Messages = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-ai-accent/10 rounded-lg">
-                <Sparkles className="h-5 w-5 text-ai-accent" />
+              <div className="p-2 bg-secondary/10 rounded-lg">
+                <Lightbulb className="h-5 w-5 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">AI Assisted</p>
+                <p className="text-sm text-muted-foreground">Templates Used</p>
                 <p className="text-2xl font-bold text-foreground">12</p>
               </div>
             </div>
@@ -587,8 +578,8 @@ const Messages = () => {
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-ai-accent" />
-                            AI Message Templates
+                            <Lightbulb className="h-4 w-4 text-primary" />
+                            Message Templates
                           </h4>
                           <Button 
                             variant="ghost" 
@@ -599,13 +590,13 @@ const Messages = () => {
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {aiTemplates.map((template) => (
+                          {messageTemplates.map((template) => (
                             <Button
                               key={template.id}
                               variant="outline"
                               size="sm"
                               className="text-left h-auto p-2"
-                              onClick={() => generateAIMessage(template.id)}
+                              onClick={() => generateTemplateMessage(template.id)}
                             >
                               <div>
                                 <p className="font-medium text-xs">{template.title}</p>
