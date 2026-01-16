@@ -13,11 +13,13 @@ import {
   Star, 
   Plus, 
   Save, 
-  Share, 
+  Send, 
   Loader2, 
   AlertTriangle,
   X,
-  Pencil
+  Pencil,
+  Eye,
+  ArrowLeft
 } from "lucide-react";
 
 interface AnalysisIssue {
@@ -59,28 +61,49 @@ interface Essay {
   id: string;
   title: string;
   studentName: string;
+  studentId?: string;
   prompt: string;
   content: string;
+}
+
+interface SavedFeedback {
+  id: string;
+  student_id: string;
+  counselor_id: string;
+  essay_title: string;
+  essay_content: string;
+  essay_prompt: string | null;
+  ai_analysis: AnalysisResult | null;
+  feedback_items: FeedbackItem[];
+  manual_notes: string | null;
+  personal_message: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  sent_at: string | null;
 }
 
 interface EssayFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   essay: Essay;
+  existingFeedbackId?: string;
 }
 
-export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModalProps) => {
+export const EssayFeedbackModal = ({ isOpen, onClose, essay, existingFeedbackId }: EssayFeedbackModalProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
   const [manualNote, setManualNote] = useState("");
+  const [personalMessage, setPersonalMessage] = useState("");
   const [hoveredIssue, setHoveredIssue] = useState<AnalysisIssue | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectedText, setSelectedText] = useState("");
+  const [feedbackId, setFeedbackId] = useState<string | null>(existingFeedbackId || null);
+  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
 
   // Full essay content for demo
-  const essayContent = `Growing up in a household where both my parents worked multiple jobs to make ends meet, I learned early that education was not just an opportunity—it was a necessity. Every morning, I watched my mother leave for her 6 AM shift at the local diner, knowing she would return home at 11 PM only to help me with homework despite her exhaustion.
+  const essayContent = essay.content || `Growing up in a household where both my parents worked multiple jobs to make ends meet, I learned early that education was not just an opportunity—it was a necessity. Every morning, I watched my mother leave for her 6 AM shift at the local diner, knowing she would return home at 11 PM only to help me with homework despite her exhaustion.
 
 This daily routine taught me resilience, but it also sparked a curiosity about economic inequality that would shape my academic interests. When I was fourteen, I started tutoring younger students in mathematics, not just to earn money for my family, but because I discovered that teaching allowed me to see how different perspectives could solve the same problem.
 
@@ -89,10 +112,42 @@ Through this experience, I realized that my passion lies in understanding comple
 My experience has taught me that challenges are not obstacles but stepping stones to growth. Every difficult moment has strengthened my resolve to succeed and has shown me the importance of helping others along the way.`;
 
   useEffect(() => {
-    if (isOpen && !analysis) {
-      analyzeEssay();
+    if (isOpen) {
+      if (existingFeedbackId) {
+        loadExistingFeedback();
+      } else {
+        analyzeEssay();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, existingFeedbackId]);
+
+  const loadExistingFeedback = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('essay_feedback')
+        .select('*')
+        .eq('id', existingFeedbackId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        const savedData = data as unknown as SavedFeedback;
+        setFeedbackId(savedData.id);
+        setAnalysis(savedData.ai_analysis);
+        setFeedbackItems(savedData.feedback_items || []);
+        setManualNote(savedData.manual_notes || "");
+        setPersonalMessage(savedData.personal_message || "");
+      }
+    } catch (error) {
+      console.error("Error loading feedback:", error);
+      toast({
+        title: "Error Loading Feedback",
+        description: "Could not load existing feedback",
+        variant: "destructive",
+      });
+    }
+  };
 
   const analyzeEssay = async () => {
     setIsAnalyzing(true);
@@ -104,13 +159,8 @@ My experience has taught me that challenges are not obstacles but stepping stone
         }
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       setAnalysis(data);
       toast({
@@ -168,19 +218,73 @@ My experience has taught me that challenges are not obstacles but stepping stone
     setFeedbackItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const saveDraft = () => {
-    toast({
-      title: "Draft Saved",
-      description: "Your feedback has been saved as a draft",
-    });
-  };
+  const saveFeedback = async (status: 'draft' | 'sent') => {
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Not Authenticated",
+          description: "Please log in to save feedback",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const saveAndShare = () => {
-    toast({
-      title: "Feedback Sent",
-      description: "Your feedback has been saved and shared with the student",
-    });
-    onClose();
+      const feedbackData = {
+        student_id: essay.studentId || user.id,
+        counselor_id: user.id,
+        essay_title: essay.title,
+        essay_content: essayContent,
+        essay_prompt: essay.prompt,
+        ai_analysis: JSON.parse(JSON.stringify(analysis)),
+        feedback_items: JSON.parse(JSON.stringify(feedbackItems)),
+        manual_notes: manualNote || null,
+        personal_message: personalMessage || null,
+        status,
+        sent_at: status === 'sent' ? new Date().toISOString() : null,
+      };
+
+      let result;
+      if (feedbackId) {
+        result = await supabase
+          .from('essay_feedback')
+          .update(feedbackData)
+          .eq('id', feedbackId)
+          .select()
+          .single();
+      } else {
+        result = await supabase
+          .from('essay_feedback')
+          .insert([feedbackData])
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+
+      setFeedbackId(result.data.id);
+
+      toast({
+        title: status === 'draft' ? "Draft Saved" : "Feedback Sent",
+        description: status === 'draft' 
+          ? "Your feedback has been saved as a draft" 
+          : "Your feedback has been sent to the student",
+      });
+
+      if (status === 'sent') {
+        onClose();
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Could not save feedback",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Render essay with highlights
@@ -189,14 +293,11 @@ My experience has taught me that challenges are not obstacles but stepping stone
       return <span>{essayContent}</span>;
     }
 
-    // Sort issues by startIndex
     const sortedIssues = [...analysis.issues].sort((a, b) => a.startIndex - b.startIndex);
-    
     const segments: JSX.Element[] = [];
     let lastIndex = 0;
 
     sortedIssues.forEach((issue, idx) => {
-      // Add non-highlighted text before this issue
       if (issue.startIndex > lastIndex) {
         segments.push(
           <span key={`text-${idx}`}>
@@ -205,7 +306,6 @@ My experience has taught me that challenges are not obstacles but stepping stone
         );
       }
 
-      // Add highlighted text
       segments.push(
         <TooltipProvider key={`highlight-${idx}`}>
           <Tooltip delayDuration={100}>
@@ -267,7 +367,6 @@ My experience has taught me that challenges are not obstacles but stepping stone
       lastIndex = issue.endIndex;
     });
 
-    // Add remaining text
     if (lastIndex < essayContent.length) {
       segments.push(
         <span key="text-end">
@@ -278,6 +377,128 @@ My experience has taught me that challenges are not obstacles but stepping stone
 
     return segments;
   }, [analysis?.issues, essayContent]);
+
+  // Preview Mode
+  if (showPreview) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-[800px] h-[80vh] p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-0">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Edit
+              </Button>
+              <DialogTitle className="text-lg">
+                Preview Feedback for {essay.studentName}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 p-6">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="text-center pb-4 border-b">
+                <h2 className="text-xl font-bold">{essay.title}</h2>
+                <p className="text-muted-foreground">Feedback from your counselor</p>
+                {analysis && (
+                  <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
+                    <Star className="h-5 w-5 text-primary" />
+                    <span className="font-bold text-lg">{analysis.overallScore}/100</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Personal Message */}
+              {personalMessage && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-4">
+                    <p className="text-sm font-medium text-primary mb-2">Personal Note from your counselor:</p>
+                    <p className="text-foreground">{personalMessage}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Feedback Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Detailed Feedback</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {feedbackItems.map((item, index) => (
+                    <div key={item.id} className="p-3 rounded-lg border">
+                      <div className="flex items-start gap-2">
+                        {item.color && (
+                          <div 
+                            className="w-3 h-3 rounded-full mt-1 flex-shrink-0" 
+                            style={{ backgroundColor: item.color }}
+                          />
+                        )}
+                        <div>
+                          {item.criterionName && (
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {item.criterionName}
+                            </span>
+                          )}
+                          <p className="text-sm">{item.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Criteria Scores */}
+              {analysis?.criteria && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Score Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {analysis.criteria.map((criterion) => (
+                      <div key={criterion.id} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>{criterion.name}</span>
+                          <span className="font-medium">{criterion.score}/100</span>
+                        </div>
+                        <Progress value={criterion.score} className="h-2" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Actions */}
+          <div className="p-4 border-t flex gap-2">
+            <Textarea
+              placeholder="Add a personal message to the student (optional)..."
+              value={personalMessage}
+              onChange={(e) => setPersonalMessage(e.target.value)}
+              className="flex-1 resize-none"
+              rows={2}
+            />
+            <div className="flex flex-col gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => saveFeedback('draft')}
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              </Button>
+              <Button 
+                onClick={() => saveFeedback('sent')}
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -403,13 +624,33 @@ My experience has taught me that challenges are not obstacles but stepping stone
                     Feedback Draft ({feedbackItems.length} items)
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={saveDraft}>
-                      <Save className="h-3 w-3 mr-1" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => saveFeedback('draft')}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3 mr-1" />
+                      )}
                       Save Draft
                     </Button>
-                    <Button size="sm" onClick={saveAndShare}>
-                      <Share className="h-3 w-3 mr-1" />
-                      Save & Share
+                    <Button 
+                      variant="outline"
+                      size="sm" 
+                      onClick={() => setShowPreview(true)}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Preview
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setShowPreview(true)}
+                    >
+                      <Send className="h-3 w-3 mr-1" />
+                      Send to Student
                     </Button>
                   </div>
                 </div>
