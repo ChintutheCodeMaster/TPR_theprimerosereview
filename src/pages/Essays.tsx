@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { EssayFeedbackModal } from "@/components/EssayFeedbackModal";
+import { CounselorFeedbackHistory } from "@/components/CounselorFeedbackHistory";
 import { 
   Search, 
   Filter, 
@@ -563,21 +564,9 @@ const Essays = () => {
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Previous Feedback</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {essay.feedback.map((feedback, index) => (
-                            <div key={index} className="p-3 border border-border rounded-lg">
-                              <p className="text-sm">{feedback}</p>
-                              <p className="text-xs text-muted-foreground mt-1">2 days ago</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <CounselorFeedbackHistory 
+                      studentName={essay.studentName}
+                    />
                   </TabsContent>
 
                   <TabsContent value="versions" className="space-y-4">

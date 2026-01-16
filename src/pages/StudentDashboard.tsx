@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StudentEssayFeedback } from "@/components/StudentEssayFeedback";
 import { 
   FileText, 
   Calendar, 
@@ -235,6 +236,9 @@ const StudentDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Essay Feedback from Counselor */}
+      <StudentEssayFeedback />
 
       {/* Quick Links */}
       <Card>

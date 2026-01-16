@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      essay_feedback: {
+        Row: {
+          ai_analysis: Json | null
+          counselor_id: string
+          created_at: string
+          essay_content: string
+          essay_prompt: string | null
+          essay_title: string
+          feedback_items: Json | null
+          id: string
+          manual_notes: string | null
+          personal_message: string | null
+          sent_at: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          counselor_id: string
+          created_at?: string
+          essay_content: string
+          essay_prompt?: string | null
+          essay_title: string
+          feedback_items?: Json | null
+          id?: string
+          manual_notes?: string | null
+          personal_message?: string | null
+          sent_at?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          counselor_id?: string
+          created_at?: string
+          essay_content?: string
+          essay_prompt?: string | null
+          essay_title?: string
+          feedback_items?: Json | null
+          id?: string
+          manual_notes?: string | null
+          personal_message?: string | null
+          sent_at?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       parent_student_assignments: {
         Row: {
           created_at: string
