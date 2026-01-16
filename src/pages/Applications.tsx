@@ -16,7 +16,6 @@ import {
   Download, 
   Eye,
   MessageSquare,
-  Sparkles,
   FileText,
   Clock,
   CheckCircle,
@@ -305,14 +304,6 @@ const Applications = () => {
           <Button variant="outline" size="sm">
             <Send className="h-4 w-4 mr-2" />
             Send Reminders
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-          >
-            <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
-            AI Insights
           </Button>
         </div>
       </div>

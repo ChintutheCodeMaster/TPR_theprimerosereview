@@ -20,7 +20,6 @@ import {
   FileText,
   Calendar,
   MessageSquare,
-  Sparkles,
   BarChart3,
   Target,
   Trophy
@@ -168,14 +167,6 @@ const Students = () => {
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Export Reports
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-                >
-                  <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
-                  AI Insights
                 </Button>
         </div>
       </div>
@@ -540,12 +531,6 @@ const Students = () => {
                         <Button variant="outline" className="flex-1">
                           <FileText className="h-4 w-4 mr-2" />
                           Generate Report
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-                        >
-                          <Sparkles className="h-4 w-4 text-ai-accent" />
                         </Button>
                       </div>
                     </DialogContent>

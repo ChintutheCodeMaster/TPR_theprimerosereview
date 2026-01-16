@@ -117,8 +117,8 @@ const StudentPersonalArea = () => {
     {
       id: 2,
       essayTitle: "Common App Personal Statement",
-      type: "ai",
-      author: "AI Assistant",
+      type: "analysis",
+      author: "Essay Analysis",
       content: "Grammar: 95%, Tone: 88%, Prompt Alignment: 92%. Your essay demonstrates strong personal reflection and growth.",
       timestamp: "2 hours ago",
       strengths: ["Clear narrative structure", "Authentic voice"],
@@ -251,10 +251,10 @@ const StudentPersonalArea = () => {
                     {item.type === 'counselor' ? (
                       <MessageCircle className="h-5 w-5 text-primary" />
                     ) : (
-                      <Star className="h-5 w-5 text-ai-accent" />
+                      <Star className="h-5 w-5 text-primary" />
                     )}
                     <CardTitle className="text-lg">
-                      {item.type === 'counselor' ? 'Counselor Feedback' : 'AI Analysis'}
+                      {item.type === 'counselor' ? 'Counselor Feedback' : 'Essay Analysis'}
                     </CardTitle>
                     <Badge variant="outline">{item.essayTitle}</Badge>
                   </div>
