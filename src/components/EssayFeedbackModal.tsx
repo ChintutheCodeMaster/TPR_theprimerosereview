@@ -102,14 +102,8 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay, existingFeedbackId 
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
 
-  // Full essay content for demo
-  const essayContent = essay.content || `Growing up in a household where both my parents worked multiple jobs to make ends meet, I learned early that education was not just an opportunity—it was a necessity. Every morning, I watched my mother leave for her 6 AM shift at the local diner, knowing she would return home at 11 PM only to help me with homework despite her exhaustion.
-
-This daily routine taught me resilience, but it also sparked a curiosity about economic inequality that would shape my academic interests. When I was fourteen, I started tutoring younger students in mathematics, not just to earn money for my family, but because I discovered that teaching allowed me to see how different perspectives could solve the same problem.
-
-Through this experience, I realized that my passion lies in understanding complex systems—whether they're economic models or educational frameworks. This is why I want to study Economics with a focus on public policy. I believe that by understanding how financial systems work, I can contribute to creating more equitable opportunities for families like mine.
-
-My experience has taught me that challenges are not obstacles but stepping stones to growth. Every difficult moment has strengthened my resolve to succeed and has shown me the importance of helping others along the way.`;
+  // Use essay content from props
+  const essayContent = essay.content;
 
   useEffect(() => {
     if (isOpen) {
