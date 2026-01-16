@@ -20,16 +20,12 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Brain,
-  Edit3,
-  CheckSquare,
   Share,
   BarChart3,
   Calendar,
   User,
   Star,
-  ArrowUpDown,
-  Lightbulb
+  ArrowUpDown
 } from "lucide-react";
 
 interface Essay {
@@ -128,7 +124,7 @@ const Essays = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("lastUpdated");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
-  const [aiMode, setAiMode] = useState<'brainstorm' | 'refine' | 'polish'>('brainstorm');
+  
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -430,9 +426,8 @@ const Essays = () => {
                 </DialogHeader>
 
                 <Tabs defaultValue="review" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="review">Review</TabsTrigger>
-                    <TabsTrigger value="ai-coach">AI Coach</TabsTrigger>
                     <TabsTrigger value="feedback">Feedback</TabsTrigger>
                     <TabsTrigger value="versions">Versions</TabsTrigger>
                   </TabsList>
@@ -481,16 +476,24 @@ const Essays = () => {
                             
                             <div className="space-y-2">
                               <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Grammar</span>
-                                <span className="text-xs font-medium">85/100</span>
+                                <span className="text-xs text-muted-foreground">Personal Voice & Authenticity</span>
+                                <span className="text-xs font-medium">88/100</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Storytelling</span>
+                                <span className="text-xs text-muted-foreground">Storytelling & Structure</span>
                                 <span className="text-xs font-medium">75/100</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Prompt Alignment</span>
+                                <span className="text-xs text-muted-foreground">Self-Reflection & Growth</span>
                                 <span className="text-xs font-medium">82/100</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Prompt Alignment</span>
+                                <span className="text-xs font-medium">79/100</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Grammar & Clarity</span>
+                                <span className="text-xs font-medium">85/100</span>
                               </div>
                             </div>
 
@@ -537,103 +540,6 @@ const Essays = () => {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="ai-coach" className="space-y-4">
-                    <div className="flex gap-2 mb-4">
-                      <Button 
-                        variant={aiMode === 'brainstorm' ? 'default' : 'outline'}
-                        onClick={() => setAiMode('brainstorm')}
-                        className="flex items-center gap-2"
-                      >
-                        <Lightbulb className="h-4 w-4" />
-                        Brainstorm
-                      </Button>
-                      <Button 
-                        variant={aiMode === 'refine' ? 'default' : 'outline'}
-                        onClick={() => setAiMode('refine')}
-                        className="flex items-center gap-2"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        Refine
-                      </Button>
-                      <Button 
-                        variant={aiMode === 'polish' ? 'default' : 'outline'}
-                        onClick={() => setAiMode('polish')}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckSquare className="h-4 w-4" />
-                        Polish
-                      </Button>
-                    </div>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        {aiMode === 'brainstorm' && (
-                          <div className="space-y-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <Lightbulb className="h-5 w-5 text-ai-accent" />
-                              Brainstorming Questions
-                            </h3>
-                            <div className="space-y-3">
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">What specific moment changed your perspective?</p>
-                                <p className="text-xs text-muted-foreground mt-1">Help the student identify a pivotal experience</p>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">What did you learn about yourself from this experience?</p>
-                                <p className="text-xs text-muted-foreground mt-1">Encourage self-reflection and growth</p>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">How will this experience shape your future goals?</p>
-                                <p className="text-xs text-muted-foreground mt-1">Connect past experience to future aspirations</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {aiMode === 'refine' && (
-                          <div className="space-y-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <Edit3 className="h-5 w-5 text-ai-accent" />
-                              Refinement Suggestions
-                            </h3>
-                            <div className="space-y-3">
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">Strengthen Opening</p>
-                                <p className="text-xs text-muted-foreground">Consider starting with a specific scene or dialogue</p>
-                                <Button variant="outline" size="sm" className="mt-2">Apply Suggestion</Button>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">Add Sensory Details</p>
-                                <p className="text-xs text-muted-foreground">Include what you saw, heard, felt to make the story vivid</p>
-                                <Button variant="outline" size="sm" className="mt-2">Apply Suggestion</Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {aiMode === 'polish' && (
-                          <div className="space-y-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <CheckSquare className="h-5 w-5 text-ai-accent" />
-                              Polish & Grammar
-                            </h3>
-                            <div className="space-y-3">
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">Grammar Check Complete</p>
-                                <p className="text-xs text-muted-foreground">3 suggestions found</p>
-                                <Button variant="outline" size="sm" className="mt-2">Review Changes</Button>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">Style Improvements</p>
-                                <p className="text-xs text-muted-foreground">Sentence flow and clarity enhancements</p>
-                                <Button variant="outline" size="sm" className="mt-2">Apply All</Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
 
                   <TabsContent value="feedback" className="space-y-4">
                     <Card>
