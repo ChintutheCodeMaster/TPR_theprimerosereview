@@ -1,10 +1,8 @@
-import { useState, useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Sparkles, Bell, UserCircle, BookOpen, Award, Home, Lock } from "lucide-react";
+import { useMemo } from "react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, Lock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type UserRole = 'counselor' | 'student' | 'parent';
@@ -73,7 +71,6 @@ export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // Determine current user role based on the route
   const currentRole: UserRole = useMemo(() => {
@@ -201,25 +198,8 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* AI Assistant */}
-          {open && (
-            <div className="mt-auto p-4 space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground hover:border-ai-accent"
-                size="sm"
-                onClick={() => setShowAIAssistant(true)}
-              >
-                <Sparkles className="h-4 w-4 text-ai-accent" />
-                AI Assistant
-              </Button>
-            </div>
-          )}
         </SidebarContent>
       </Sidebar>
-      
-      {/* AI Assistant Panel */}
-      <AIAssistantPanel isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} />
     </>
   );
 }

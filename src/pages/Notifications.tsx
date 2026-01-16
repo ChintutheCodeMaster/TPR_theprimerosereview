@@ -24,7 +24,6 @@ import {
   Eye,
   EyeOff,
   Trash2,
-  Sparkles,
   TrendingUp,
   Archive,
   MoreHorizontal,
@@ -147,7 +146,7 @@ const mockNotifications: Notification[] = [
   }
 ];
 
-const aiDigest = {
+const dailyDigest = {
   summary: "You have 3 critical items requiring immediate attention today",
   priorities: [
     {
@@ -290,14 +289,6 @@ const Notifications = () => {
             <Archive className="h-4 w-4 mr-2" />
             Archive Old
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground"
-          >
-            <Sparkles className="h-4 w-4 mr-2 text-ai-accent" />
-            AI Settings
-          </Button>
         </div>
       </div>
 
@@ -360,19 +351,19 @@ const Notifications = () => {
         </Card>
       </div>
 
-      {/* AI Daily Digest */}
-      <Card className="border-ai-accent/20 bg-gradient-to-r from-ai-accent/5 to-transparent">
+      {/* Daily Digest */}
+      <Card className="border-primary/20 bg-gradient-subtle">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-ai-accent" />
-            AI Daily Digest
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Daily Digest
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-foreground font-medium">{aiDigest.summary}</p>
+          <p className="text-foreground font-medium">{dailyDigest.summary}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {aiDigest.priorities.map((priority, index) => (
+            {dailyDigest.priorities.map((priority, index) => (
               <Card key={index} className="bg-background/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-2">
@@ -385,7 +376,7 @@ const Notifications = () => {
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{priority.title}</h4>
                       <p className="text-xs text-muted-foreground mt-1">{priority.description}</p>
-                      <p className="text-xs font-medium text-ai-accent mt-2">{priority.action}</p>
+                      <p className="text-xs font-medium text-primary mt-2">{priority.action}</p>
                     </div>
                   </div>
                 </CardContent>
