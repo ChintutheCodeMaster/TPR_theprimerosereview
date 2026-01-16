@@ -5,8 +5,7 @@ import {
   Bell, 
   Search, 
   Settings, 
-  LogOut,
-  Sparkles
+  LogOut
 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
@@ -24,7 +23,7 @@ export const Header = () => {
           />
         </div>
 
-        {/* Center - Search and AI Assistant */}
+        {/* Center - Search */}
         <div className="flex items-center gap-4 flex-1 max-w-xl mx-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -34,14 +33,6 @@ export const Header = () => {
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
-          <Button 
-            variant="outline"
-            size="sm"
-            className="border-ai-accent/20 hover:bg-gradient-ai hover:text-primary-foreground hover:border-ai-accent group"
-          >
-            <Sparkles className="h-4 w-4 mr-2 text-ai-accent group-hover:text-primary-foreground" />
-            Ask AI
-          </Button>
         </div>
 
         {/* Right Section */}

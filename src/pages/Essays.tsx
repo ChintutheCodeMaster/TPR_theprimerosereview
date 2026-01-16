@@ -186,7 +186,7 @@ const Essays = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Essays</h1>
-          <p className="text-muted-foreground">Manage and review student essays with AI-powered insights</p>
+          <p className="text-muted-foreground">Manage and review student essays</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">

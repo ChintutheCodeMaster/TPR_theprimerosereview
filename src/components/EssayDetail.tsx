@@ -363,7 +363,7 @@ My experience has taught me that challenges are not obstacles but stepping stone
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Star className="h-5 w-5" />
-                    AI Insights
+                    Essay Analysis
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -77,7 +77,7 @@ const StudentDashboard = () => {
     }
   ];
 
-  const aiInsights = [
+  const tips = [
     "Your Common App essay has improved significantly in storytelling clarity since your last draft.",
     "Consider focusing more time on your UC Berkeley essays - they're due soon!",
     "Great progress on recommendations - you're ahead of most students at this stage."
@@ -216,19 +216,19 @@ const StudentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* AI Insights & Tips */}
+        {/* Tips & Reminders */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              AI Insights & Tips
+              Tips & Reminders
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {aiInsights.map((insight, index) => (
+              {tips.map((tip, index) => (
                 <div key={index} className="p-3 rounded-lg bg-muted/30 border border-muted">
-                  <p className="text-sm text-foreground">{insight}</p>
+                  <p className="text-sm text-foreground">{tip}</p>
                 </div>
               ))}
             </div>
