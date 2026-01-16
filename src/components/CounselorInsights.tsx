@@ -35,10 +35,10 @@ export const CounselorInsights = () => {
   };
 
   const upcomingTasks = [
-    { label: "מכתבי המלצה להשלמה", count: 5, urgent: true },
-    { label: "מועדי הגשה השבוע", count: 7, urgent: true },
-    { label: "פגישות מתוכננות", count: 3, urgent: false },
-    { label: "חיבורים ממתינים לביקורת", count: 9, urgent: false }
+    { label: "Recommendations to complete", count: 5, urgent: true },
+    { label: "Deadlines this week", count: 7, urgent: true },
+    { label: "Scheduled meetings", count: 3, urgent: false },
+    { label: "Essays pending review", count: 9, urgent: false }
   ];
 
   // Pie chart data for recommendations
