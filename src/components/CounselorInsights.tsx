@@ -7,9 +7,9 @@ import {
   AlertCircle,
   GraduationCap,
   Target,
-  MessageSquare,
   CalendarCheck
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 export const CounselorInsights = () => {
   // Mock data for counselor insights
@@ -41,6 +41,21 @@ export const CounselorInsights = () => {
     { label: "חיבורים ממתינים לביקורת", count: 9, urgent: false }
   ];
 
+  // Pie chart data for recommendations
+  const recommendationPieData = [
+    { name: "Sent", value: recommendationStats.sent, color: "hsl(var(--success))" },
+    { name: "In Progress", value: recommendationStats.inProgress, color: "hsl(var(--primary))" },
+    { name: "Pending", value: recommendationStats.pending, color: "hsl(var(--warning))" }
+  ];
+
+  // Bar chart data for weekly activity
+  const weeklyBarData = [
+    { name: "Essays", value: weeklyActivity.essaysReviewed, fill: "hsl(var(--primary))" },
+    { name: "Meetings", value: weeklyActivity.meetingsHeld, fill: "hsl(var(--secondary))" },
+    { name: "Messages", value: weeklyActivity.messagesExchanged, fill: "hsl(var(--accent))" },
+    { name: "Deadlines", value: weeklyActivity.deadlinesMet, fill: "hsl(var(--success))" }
+  ];
+
   const submittedPercent = Math.round((applicationProgress.submitted / applicationProgress.total) * 100);
   const inProgressPercent = Math.round((applicationProgress.inProgress / applicationProgress.total) * 100);
 
@@ -48,45 +63,110 @@ export const CounselorInsights = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">Counselor Overview</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Recommendation Letters Status */}
-        <Card className="p-5 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recommendations Pie Chart */}
+        <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-primary/20">
               <Mail className="h-5 w-5 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground">Recommendations</h3>
+            <h3 className="font-semibold text-foreground">Recommendation Letters Status</h3>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Pending</span>
-              <span className="font-bold text-warning">{recommendationStats.pending}</span>
+          <div className="flex items-center justify-center gap-8">
+            <div className="h-48 w-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={recommendationPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {recommendationPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">In Progress</span>
-              <span className="font-bold text-primary">{recommendationStats.inProgress}</span>
+            <div className="space-y-3">
+              {recommendationPieData.map((item, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-sm text-muted-foreground">{item.name}</span>
+                  <span className="font-bold text-foreground">{item.value}</span>
+                </div>
+              ))}
+              <div className="pt-2 border-t border-border">
+                <span className="text-sm text-muted-foreground">Total: </span>
+                <span className="font-bold text-foreground">{recommendationStats.total}</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Sent</span>
-              <span className="font-bold text-success">{recommendationStats.sent}</span>
-            </div>
-            <Progress 
-              value={(recommendationStats.sent / recommendationStats.total) * 100} 
-              className="mt-3 h-2"
-            />
-            <p className="text-xs text-muted-foreground text-center mt-1">
-              {Math.round((recommendationStats.sent / recommendationStats.total) * 100)}% completed
-            </p>
           </div>
         </Card>
 
+        {/* Weekly Activity Bar Chart */}
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-accent">
+              <Target className="h-5 w-5 text-accent-foreground" />
+            </div>
+            <h3 className="font-semibold text-foreground">This Week's Activity</h3>
+          </div>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyBarData} layout="vertical">
+                <XAxis type="number" hide />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  width={80}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  radius={[0, 4, 4, 0]}
+                  barSize={24}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Application Progress */}
         <Card className="p-5 bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-secondary/20">
               <GraduationCap className="h-5 w-5 text-secondary-foreground" />
             </div>
-            <h3 className="font-semibold text-foreground">Applications</h3>
+            <h3 className="font-semibold text-foreground">Applications Progress</h3>
           </div>
           <div className="space-y-3">
             <div>
@@ -106,34 +186,6 @@ export const CounselorInsights = () => {
             <div className="flex justify-between items-center pt-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Not Started</span>
               <span className="text-sm font-semibold text-destructive">{applicationProgress.notStarted}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Weekly Activity */}
-        <Card className="p-5 bg-gradient-to-br from-accent/30 to-accent/50 border-accent/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-accent">
-              <Target className="h-5 w-5 text-accent-foreground" />
-            </div>
-            <h3 className="font-semibold text-foreground">This Week</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-2 rounded-lg bg-background/50">
-              <p className="text-2xl font-bold text-primary">{weeklyActivity.essaysReviewed}</p>
-              <p className="text-xs text-muted-foreground">Essays Reviewed</p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-background/50">
-              <p className="text-2xl font-bold text-primary">{weeklyActivity.meetingsHeld}</p>
-              <p className="text-xs text-muted-foreground">Meetings</p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-background/50">
-              <p className="text-2xl font-bold text-primary">{weeklyActivity.messagesExchanged}</p>
-              <p className="text-xs text-muted-foreground">Messages</p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-background/50">
-              <p className="text-2xl font-bold text-success">{weeklyActivity.deadlinesMet}</p>
-              <p className="text-xs text-muted-foreground">Deadlines Met</p>
             </div>
           </div>
         </Card>
