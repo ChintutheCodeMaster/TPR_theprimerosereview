@@ -50,19 +50,19 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header with Logos */}
-          <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4">
+          <header className="h-20 flex items-center justify-between border-b border-border bg-background px-4">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <img 
                 src={primroseLogo} 
                 alt="The Primrose Review" 
-                className="h-10 w-auto"
+                className="h-12 w-auto"
               />
             </div>
             <img 
               src={clientLogo} 
               alt="Client Logo" 
-              className="h-10 w-auto rounded"
+              className="h-16 w-auto rounded"
             />
           </header>
 
