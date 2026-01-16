@@ -43,13 +43,8 @@ interface CriterionScore {
 
 interface AnalysisResult {
   overallScore: number;
-  criteria?: CriterionScore[] | {
-    clarity?: number;
-    structure?: number;
-    authenticity?: number;
-    impact?: number;
-    grammar?: number;
-  };
+  criteria?: CriterionScore[] | Record<string, number>;
+  criteriaScores?: Record<string, number>;
   summary?: string;
   strengths?: string[];
   improvements?: string[];
@@ -211,49 +206,95 @@ That night sparked an obsession. I devoured research papers, built increasingly 
     }
   ];
 
-  // Load feedback from database when essay is selected
+  // Mock feedback data for demo
+  const mockFeedbackData: Record<string, EssayFeedback[]> = {
+    "Common App Personal Statement - Cultural Bridge": [
+      {
+        id: 'demo-fb-1',
+        essay_title: 'Common App Personal Statement - Cultural Bridge',
+        essay_content: '',
+        essay_prompt: null,
+        ai_analysis: {
+          overallScore: 88,
+          criteria: {
+            voice: 92,
+            structure: 85,
+            content: 90,
+            grammar: 88,
+            impact: 86
+          },
+          strengths: [
+            "Beautiful metaphor of being a cultural bridge that runs throughout the essay",
+            "Strong emotional connection through the grandmother relationship",
+            "Excellent use of specific, vivid details (grain of rice, stern expressions)",
+            "Natural transition from personal story to broader life lessons"
+          ],
+          improvements: [
+            "Consider adding one more specific debate example to strengthen the connection",
+            "The conclusion could be slightly more forward-looking regarding future goals",
+            "Some sentences in the second paragraph could be tightened for impact"
+          ]
+        },
+        feedback_items: [
+          { type: "strength", category: "Opening", text: "The opening immediately establishes your unique perspective and draws the reader in with the powerful image of bridging two worlds." },
+          { type: "strength", category: "Character Development", text: "Your grandmother emerges as a fully realized character in just a few sentences—her stern expressions, her insistence on finishing rice—these details bring her to life." },
+          { type: "suggestion", category: "Middle Section", text: "The transition to debate team is good, but consider adding a specific debate moment where you used these translation skills. A brief example would make this section more concrete." },
+          { type: "strength", category: "Theme", text: "The bridge metaphor works beautifully and evolves naturally from literal translation to emotional translation to philosophical understanding." },
+          { type: "suggestion", category: "Conclusion", text: "While the ending is touching, consider adding one sentence about how you'll continue building bridges in college or your future career." },
+          { type: "strength", category: "Voice", text: "Your authentic voice shines through every paragraph. This essay could only have been written by you." }
+        ],
+        personal_message: "Emma, this essay moved me deeply. Your ability to honor your grandmother's memory while showing personal growth is exactly what admissions officers look for. The small revisions I've suggested will polish an already strong essay. You should be proud of this work.",
+        status: 'sent',
+        created_at: '2024-01-15T10:00:00Z',
+        sent_at: '2024-01-15T14:30:00Z'
+      }
+    ]
+  };
+
+  // Load feedback - use mock data for demo
   const loadEssayFeedback = async (essayTitle: string) => {
     setIsLoadingFeedback(true);
-    try {
-      const { data, error } = await supabase
-        .from('essay_feedback')
-        .select('*')
-        .eq('essay_title', essayTitle)
-        .in('status', ['sent', 'read'])
-        .order('sent_at', { ascending: false });
+    
+    // Simulate loading delay for demo
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Use mock data for demo
+    const mockFeedback = mockFeedbackData[essayTitle];
+    if (mockFeedback) {
+      setEssayFeedback(mockFeedback);
+    } else {
+      // Try to fetch from database
+      try {
+        const { data, error } = await supabase
+          .from('essay_feedback')
+          .select('*')
+          .eq('essay_title', essayTitle)
+          .in('status', ['sent', 'read'])
+          .order('sent_at', { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const typedData = (data || []).map(item => ({
-        id: item.id,
-        essay_title: item.essay_title,
-        essay_content: item.essay_content,
-        essay_prompt: item.essay_prompt,
-        ai_analysis: item.ai_analysis as unknown as AnalysisResult | null,
-        feedback_items: (item.feedback_items as unknown as FeedbackItem[]) || [],
-        personal_message: item.personal_message,
-        status: item.status,
-        created_at: item.created_at,
-        sent_at: item.sent_at,
-      }));
+        const typedData = (data || []).map(item => ({
+          id: item.id,
+          essay_title: item.essay_title,
+          essay_content: item.essay_content,
+          essay_prompt: item.essay_prompt,
+          ai_analysis: item.ai_analysis as unknown as AnalysisResult | null,
+          feedback_items: (item.feedback_items as unknown as FeedbackItem[]) || [],
+          personal_message: item.personal_message,
+          status: item.status,
+          created_at: item.created_at,
+          sent_at: item.sent_at,
+        }));
 
-      setEssayFeedback(typedData);
-
-      // Mark as read
-      if (typedData.length > 0) {
-        const unread = typedData.filter(f => f.status === 'sent');
-        for (const feedback of unread) {
-          await supabase
-            .from('essay_feedback')
-            .update({ status: 'read' })
-            .eq('id', feedback.id);
-        }
+        setEssayFeedback(typedData);
+      } catch (error) {
+        console.error("Error loading feedback:", error);
+        setEssayFeedback([]);
       }
-    } catch (error) {
-      console.error("Error loading feedback:", error);
-    } finally {
-      setIsLoadingFeedback(false);
     }
+    
+    setIsLoadingFeedback(false);
   };
 
   const handleEssayClick = (essay: any) => {
