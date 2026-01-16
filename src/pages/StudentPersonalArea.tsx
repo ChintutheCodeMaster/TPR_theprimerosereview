@@ -25,9 +25,11 @@ import {
 } from "lucide-react";
 
 interface FeedbackItem {
-  id: string;
+  id?: string;
   text: string;
-  source: 'ai' | 'manual';
+  source?: 'ai' | 'manual';
+  type?: 'strength' | 'suggestion';
+  category?: string;
   criterionName?: string;
   color?: string;
 }
@@ -41,8 +43,17 @@ interface CriterionScore {
 
 interface AnalysisResult {
   overallScore: number;
-  criteria: CriterionScore[];
-  issues: any[];
+  criteria?: CriterionScore[] | {
+    clarity?: number;
+    structure?: number;
+    authenticity?: number;
+    impact?: number;
+    grammar?: number;
+  };
+  summary?: string;
+  strengths?: string[];
+  improvements?: string[];
+  issues?: any[];
 }
 
 interface EssayFeedback {
@@ -69,25 +80,23 @@ const StudentPersonalArea = () => {
   const essays = [
     {
       id: 1,
-      title: "Common App Personal Statement",
+      title: "Common App Personal Statement - Cultural Bridge",
       type: "Common App",
       prompt: "Some students have a background, identity, interest, or talent that is so meaningful they believe their application would be incomplete without it. If this sounds like you, then please share your story.",
-      content: `Growing up in a bilingual household, I often found myself serving as a bridge between two worlds. My parents, immigrants from Mexico, spoke primarily Spanish at home, while I navigated the English-dominant world of my American school. This duality shaped my identity in ways I didn't fully understand until I was fifteen.
+      content: `Growing up in a bilingual household, I often found myself serving as a bridge between two worlds. My grandmother, who immigrated from Mexico at sixty-two, spoke only Spanish. My classmates, born and raised in suburban Ohio, knew only English. At family gatherings, I translated not just words, but entire worldviews.
 
-It started with a simple request. My mother needed help filling out medical forms at the hospital. What should have been a routine appointment became a defining moment. As I translated complex medical terminology, watching my mother's worried eyes scan the incomprehensible English words, I realized the weight of responsibility that language carries. One mistranslation could mean the wrong medication, the wrong diagnosis, the wrong outcome.
+The moment that defined my role came during my sophomore year when my grandmother was hospitalized. The doctors spoke in rapid medical terminology while my grandmother clutched her rosary, understanding nothing. I became her voice, her advocate, her lifeline. I learned words like "arrhythmia" and "echocardiogram" and found ways to explain them in terms she could grasp – "Your heart is dancing when it should be walking, Abuela."
 
-That day, I began volunteering at the local community health clinic as a translator. What I discovered went far beyond words. I learned that translation is not just about converting Spanish to English—it's about bridging cultural gaps, advocating for patients who feel invisible, and giving voice to those who struggle to express their fears in an unfamiliar language.
+This experience ignited my passion for medicine, but more specifically, for the human side of healthcare. I began volunteering at a free clinic that served primarily Spanish-speaking patients. There, I witnessed firsthand how language barriers could mean the difference between life and death, between understanding a diagnosis and living in fear of the unknown.
 
-Mrs. Rodriguez, a grandmother who came in for what she thought was routine fatigue, became my most memorable patient. Through our conversations, I uncovered that she had been experiencing chest pain for weeks but was too afraid to mention it, believing her concerns would be dismissed. With careful translation and advocacy, I helped her communicate her symptoms clearly to the doctor. She was diagnosed with a cardiac condition that, left untreated, could have been fatal.
+But being a bridge is not without its challenges. Sometimes I feel stretched thin, belonging fully to neither world. At school, I am "the Mexican girl" despite being born in Cleveland. At family reunions, I am "la gringa" because my Spanish carries an American accent. This in-between space used to feel like a weakness, a constant reminder of what I was not.
 
-This experience transformed my understanding of healthcare disparities. I began researching the intersection of language access and health outcomes, discovering that limited English proficiency patients have higher rates of medical errors and worse health outcomes. This revelation sparked my passion for health equity and my determination to pursue medicine.
+Now I see it as my greatest strength. I have learned to find beauty in the hyphen of Mexican-American, in the space between languages where new understanding is born. I have learned that bridges are not just passive structures – they actively connect, they bear weight, they make journeys possible.
 
-I organized a workshop series at the clinic, training other bilingual students to become medical interpreters. We developed a visual symptom chart in Spanish that now hangs in every examination room. These small changes have had measurable impact—patient satisfaction scores increased by 23% among Spanish-speaking patients.
+As I prepare to study medicine, I carry these lessons with me. I want to be the doctor who sits with patients, who takes the time to translate not just medical terms but also hope and reassurance. I want to build bridges in exam rooms, in hospitals, in communities that have been overlooked for too long.
 
-My dual identity, once a source of confusion, has become my greatest strength. I no longer see myself as caught between two worlds, but as someone uniquely positioned to connect them. I want to become a physician who doesn't just treat symptoms, but who understands the complex cultural and linguistic barriers that prevent patients from receiving equitable care.
-
-Every conversation I translate, every patient I advocate for, reinforces my commitment to a future in medicine. I am not just a bridge between languages—I am a bridge between communities, cultures, and ultimately, between patients and the care they deserve.`,
-      wordCount: 647,
+My grandmother passed away last spring, but her legacy lives on in every patient I help, every word I translate, every bridge I build. She taught me that true communication is not about speaking the same language – it is about making the effort to understand.`,
+      wordCount: 520,
       targetWords: 650,
       status: "review",
       lastUpdated: "2 hours ago",
@@ -585,20 +594,23 @@ That night sparked an obsession. I devoured research papers, built increasingly 
                               <div className="space-y-2">
                                 <p className="text-xs font-medium text-muted-foreground">Feedback Points:</p>
                                 {fb.feedback_items.map((item, idx) => (
-                                  <div key={item.id || idx} className="flex items-start gap-2 p-2 bg-muted/50 rounded">
-                                    {item.color && (
-                                      <div 
-                                        className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" 
-                                        style={{ backgroundColor: item.color }}
-                                      />
-                                    )}
+                                  <div 
+                                    key={item.id || idx} 
+                                    className={`flex items-start gap-2 p-2 rounded text-sm ${
+                                      item.type === 'strength' 
+                                        ? 'bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500' 
+                                        : 'bg-orange-50 dark:bg-orange-950/30 border-l-2 border-orange-500'
+                                    }`}
+                                  >
                                     <div>
-                                      {item.criterionName && (
-                                        <span className="text-[10px] text-muted-foreground block">
-                                          {item.criterionName}
+                                      {item.category && (
+                                        <span className={`text-[10px] font-medium block ${
+                                          item.type === 'strength' ? 'text-green-600' : 'text-orange-600'
+                                        }`}>
+                                          {item.type === 'strength' ? '✓' : '→'} {item.category}
                                         </span>
                                       )}
-                                      <p className="text-xs">{item.text}</p>
+                                      <p className="text-xs mt-0.5">{item.text}</p>
                                     </div>
                                   </div>
                                 ))}
@@ -610,17 +622,49 @@ That night sparked an obsession. I devoured research papers, built increasingly 
                               <div className="pt-2 border-t">
                                 <p className="text-xs font-medium text-muted-foreground mb-2">Score Breakdown:</p>
                                 <div className="space-y-1.5">
-                                  {fb.ai_analysis.criteria.map((c) => (
-                                    <div key={c.id} className="flex items-center gap-2">
-                                      <div 
-                                        className="w-2 h-2 rounded-full" 
-                                        style={{ backgroundColor: c.color }}
-                                      />
-                                      <span className="text-xs flex-1 truncate">{c.name}</span>
-                                      <span className="text-xs font-medium">{c.score}</span>
-                                    </div>
-                                  ))}
+                                  {Array.isArray(fb.ai_analysis.criteria) 
+                                    ? fb.ai_analysis.criteria.map((c) => (
+                                        <div key={c.id} className="flex items-center gap-2">
+                                          <div 
+                                            className="w-2 h-2 rounded-full" 
+                                            style={{ backgroundColor: c.color }}
+                                          />
+                                          <span className="text-xs flex-1 truncate">{c.name}</span>
+                                          <span className="text-xs font-medium">{c.score}</span>
+                                        </div>
+                                      ))
+                                    : Object.entries(fb.ai_analysis.criteria).map(([key, value]) => (
+                                        <div key={key} className="flex items-center gap-2">
+                                          <div className="w-2 h-2 rounded-full bg-primary" />
+                                          <span className="text-xs flex-1 truncate capitalize">{key}</span>
+                                          <span className="text-xs font-medium">{value}</span>
+                                        </div>
+                                      ))
+                                  }
                                 </div>
+                              </div>
+                            )}
+
+                            {/* AI Summary & Suggestions */}
+                            {fb.ai_analysis?.strengths && (
+                              <div className="pt-2 border-t">
+                                <p className="text-xs font-medium text-green-600 mb-1">✓ Strengths:</p>
+                                <ul className="text-xs space-y-1 text-muted-foreground">
+                                  {fb.ai_analysis.strengths.map((s, i) => (
+                                    <li key={i}>• {s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {fb.ai_analysis?.improvements && (
+                              <div className="pt-2">
+                                <p className="text-xs font-medium text-orange-600 mb-1">→ To Improve:</p>
+                                <ul className="text-xs space-y-1 text-muted-foreground">
+                                  {fb.ai_analysis.improvements.map((s, i) => (
+                                    <li key={i}>• {s}</li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
 
