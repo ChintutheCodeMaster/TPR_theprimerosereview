@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { EssayFeedbackModal } from "@/components/EssayFeedbackModal";
 import { 
   Search, 
   Filter, 
@@ -124,7 +125,7 @@ const Essays = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("lastUpdated");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
-  
+  const [feedbackModalEssay, setFeedbackModalEssay] = useState<Essay | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -547,19 +548,18 @@ const Essays = () => {
                         <CardTitle>Counselor Feedback</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <Textarea 
-                          placeholder="Add your feedback and comments..." 
-                          className="min-h-[100px]"
-                        />
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            Save Draft
-                          </Button>
-                          <Button size="sm">
-                            <Share className="h-4 w-4 mr-2" />
-                            Save and Share with Student
-                          </Button>
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Use the advanced feedback tool to review the essay with AI-powered analysis, 
+                          highlight specific sections, and build comprehensive feedback for the student.
+                        </p>
+                        <Button 
+                          size="lg" 
+                          className="w-full"
+                          onClick={() => setFeedbackModalEssay(essay)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Open Feedback Editor
+                        </Button>
                       </CardContent>
                     </Card>
 
@@ -649,6 +649,21 @@ const Essays = () => {
             <p className="text-muted-foreground">Try adjusting your search terms or filters</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModalEssay && (
+        <EssayFeedbackModal
+          isOpen={!!feedbackModalEssay}
+          onClose={() => setFeedbackModalEssay(null)}
+          essay={{
+            id: feedbackModalEssay.id,
+            title: feedbackModalEssay.title,
+            studentName: feedbackModalEssay.studentName,
+            prompt: feedbackModalEssay.prompt,
+            content: feedbackModalEssay.content,
+          }}
+        />
       )}
     </div>
   );
