@@ -7,13 +7,68 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
+      applications: {
+        Row: {
+          id: string
+          student_id: string
+          school_name: string
+          application_type: string
+          deadline_date: string
+          status: string
+          program: string | null
+          required_essays: number
+          completed_essays: number
+          recommendations_requested: number
+          recommendations_submitted: number
+          completion_percentage: number
+          urgent: boolean
+          ai_score_avg: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          school_name: string
+          application_type: string
+          deadline_date: string
+          status?: string
+          program?: string | null
+          required_essays?: number
+          completed_essays?: number
+          recommendations_requested?: number
+          recommendations_submitted?: number
+          completion_percentage?: number
+          urgent?: boolean
+          ai_score_avg?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          school_name?: string
+          application_type?: string
+          deadline_date?: string
+          status?: string
+          program?: string | null
+          required_essays?: number
+          completed_essays?: number
+          recommendations_requested?: number
+          recommendations_submitted?: number
+          completion_percentage?: number
+          urgent?: boolean
+          ai_score_avg?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       essay_feedback: {
         Row: {
           ai_analysis: Json | null
@@ -62,6 +117,84 @@ export type Database = {
           status?: string
           student_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      extracurriculars: {
+        Row: {
+          id: string
+          student_id: string
+          activity: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          activity: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          activity?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      meeting_notes: {
+        Row: {
+          id: string
+          student_id: string
+          counselor_id: string
+          meeting_date: string
+          summary: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          counselor_id: string
+          meeting_date: string
+          summary: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          counselor_id?: string
+          meeting_date?: string
+          summary?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          id: string
+          student_id: string
+          label: string
+          completed: boolean
+          completed_at: string | null
+          due_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          label: string
+          completed?: boolean
+          completed_at?: string | null
+          due_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          label?: string
+          completed?: boolean
+          completed_at?: string | null
+          due_date?: string | null
+          created_at?: string
         }
         Relationships: []
       }
@@ -226,6 +359,108 @@ export type Database = {
         }
         Relationships: []
       }
+      student_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          grade: string | null
+          graduation_year: number | null
+          phone: string | null
+          gpa: number | null
+          sat_score: number | null
+          act_score: number | null
+          parent_name: string | null
+          parent_email: string | null
+          parent_phone: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          grade?: string | null
+          graduation_year?: number | null
+          phone?: string | null
+          gpa?: number | null
+          sat_score?: number | null
+          act_score?: number | null
+          parent_name?: string | null
+          parent_email?: string | null
+          parent_phone?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          grade?: string | null
+          graduation_year?: number | null
+          phone?: string | null
+          gpa?: number | null
+          sat_score?: number | null
+          act_score?: number | null
+          parent_name?: string | null
+          parent_email?: string | null
+          parent_phone?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      target_schools: {
+        Row: {
+          id: string
+          student_id: string
+          school_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          school_name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          school_name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          id: string
+          student_id: string
+          counselor_id: string | null
+          task: string
+          due_date: string | null
+          completed: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          counselor_id?: string | null
+          task: string
+          due_date?: string | null
+          completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          counselor_id?: string | null
+          task?: string
+          due_date?: string | null
+          completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -250,6 +485,10 @@ export type Database = {
     }
     Functions: {
       get_my_counselor_id: { Args: never; Returns: string }
+      get_student_stats: {
+        Args: never
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

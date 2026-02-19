@@ -7,186 +7,126 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useStudentRecommendations } from "@/hooks/useRecommendationRequests";
-import { 
-  FileText, 
-  CheckCircle, 
+import { toast } from "sonner";
+import {
+  FileText,
+  CheckCircle,
   Clock,
   Send,
   User,
   Award,
   Sparkles,
   ChevronRight,
-  Loader2
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type RecommendationRequest = Database["public"]["Tables"]["recommendation_requests"]["Row"];
 
-// Mock data for demonstration
-const mockRequests: RecommendationRequest[] = [
-  {
-    id: 'mock-1',
-    student_id: 'mock-student',
-    referee_name: 'Dr. Sarah Mitchell',
-    referee_role: 'AP Physics Teacher',
-    relationship_duration: 'Grade 11-12, Advanced Physics',
-    relationship_capacity: 'Teacher and Science Club Advisor',
-    meaningful_project: 'Led independent research on renewable energy',
-    best_moment: 'Won regional science fair with solar panel project',
-    difficulties_overcome: 'Struggled initially with calculus-based physics but showed remarkable improvement',
-    strengths: ['Analytical thinking', 'Problem-solving', 'Curiosity'],
-    personal_notes: '',
-    counselor_notes: null,
-    generated_letter: `Dear Admissions Committee,
-
-It is with great enthusiasm that I write this letter of recommendation for Emma Thompson, whom I have had the privilege of teaching in Advanced Placement Physics for the past two years.
-
-Emma stands out as one of the most intellectually curious and dedicated students I have encountered in my fifteen years of teaching. Her analytical abilities are exceptional – she approaches complex physics problems with a methodical precision that belies her age, yet maintains the creative flexibility to consider unconventional solutions.
-
-What truly distinguishes Emma is her genuine passion for understanding the "why" behind scientific phenomena. During our unit on renewable energy, she independently designed and conducted an experiment on solar panel efficiency that won first place at the regional science fair. This project exemplified her ability to apply theoretical knowledge to real-world challenges.
-
-I am confident that Emma will make significant contributions to any academic community she joins. She has my highest recommendation.
-
-Sincerely,
-Dr. Sarah Mitchell
-AP Physics Teacher
-British International School of Washington`,
-    status: 'sent',
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-20T14:30:00Z'
-  },
-  {
-    id: 'mock-2',
-    student_id: 'mock-student',
-    referee_name: 'Mr. David Chen',
-    referee_role: 'Mathematics Department Head',
-    relationship_duration: 'Grade 10-12, Honors Mathematics',
-    relationship_capacity: 'Teacher and Math Olympiad Coach',
-    meaningful_project: 'Prepared for international math competition',
-    best_moment: 'Solved a particularly challenging proof during class',
-    difficulties_overcome: null,
-    strengths: ['Analytical thinking', 'Leadership', 'Discipline'],
-    personal_notes: 'Would like the letter to mention my tutoring work',
-    counselor_notes: 'Working on this - strong candidate',
-    generated_letter: null,
-    status: 'in_progress',
-    created_at: '2024-01-18T09:00:00Z',
-    updated_at: '2024-01-19T11:00:00Z'
-  },
-  {
-    id: 'mock-3',
-    student_id: 'mock-student',
-    referee_name: 'Ms. Rachel Torres',
-    referee_role: 'English Literature Teacher',
-    relationship_duration: 'Grade 11, AP English',
-    relationship_capacity: 'Teacher and Creative Writing Club Supervisor',
-    meaningful_project: null,
-    best_moment: null,
-    difficulties_overcome: null,
-    strengths: ['Creativity', 'Communication'],
-    personal_notes: '',
-    counselor_notes: null,
-    generated_letter: null,
-    status: 'pending',
-    created_at: '2024-01-20T15:00:00Z',
-    updated_at: '2024-01-20T15:00:00Z'
-  }
+const STRENGTH_OPTIONS = [
+  "Analytical thinking",
+  "Creativity",
+  "Leadership",
+  "Teamwork",
+  "Curiosity",
+  "Discipline",
+  "Empathy",
+  "Initiative",
+  "Problem-solving",
+  "Communication",
 ];
 
-const StudentRecommendationLetters = () => {
-  const { requests: dbRequests, isLoading, createRequest } = useStudentRecommendations();
-  const [currentStep, setCurrentStep] = useState<'list' | 'form' | 'view'>('list');
-  const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
-  
-  // Use mock data if no real requests exist
-  const requests = dbRequests && dbRequests.length > 0 ? dbRequests : mockRequests;
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    refereeName: '',
-    refereeRole: '',
-    relationshipDuration: '',
-    relationshipCapacity: '',
-    meaningfulProject: '',
-    bestMoment: '',
-    difficultiesOvercome: '',
-    strengths: [] as string[],
-    personalNotes: ''
-  });
+const INITIAL_FORM = {
+  refereeName: "",
+  refereeRole: "",
+  relationshipDuration: "",
+  relationshipCapacity: "",
+  meaningfulProject: "",
+  bestMoment: "",
+  difficultiesOvercome: "",
+  strengths: [] as string[],
+  personalNotes: "",
+};
 
-  const strengthOptions = [
-    'Analytical thinking',
-    'Creativity',
-    'Leadership',
-    'Teamwork',
-    'Curiosity',
-    'Discipline',
-    'Empathy',
-    'Initiative',
-    'Problem-solving',
-    'Communication'
-  ];
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "sent":
+      return (
+        <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Received
+        </Badge>
+      );
+    case "in_progress":
+      return (
+        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+          <Clock className="h-3 w-3 mr-1" />
+          In Progress
+        </Badge>
+      );
+    case "pending":
+      return (
+        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending Review
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline">
+          <FileText className="h-3 w-3 mr-1" />
+          Draft
+        </Badge>
+      );
+  }
+};
+
+const StudentRecommendationLetters = () => {
+  const { requests, isLoading, error, createRequest } = useStudentRecommendations();
+  const [currentStep, setCurrentStep] = useState<"list" | "form" | "view">("list");
+  const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
+  const [formData, setFormData] = useState(INITIAL_FORM);
 
   const handleStrengthToggle = (strength: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       strengths: prev.strengths.includes(strength)
-        ? prev.strengths.filter(s => s !== strength)
-        : [...prev.strengths, strength]
+        ? prev.strengths.filter((s) => s !== strength)
+        : [...prev.strengths, strength],
     }));
   };
 
   const handleSubmit = async () => {
     if (!formData.refereeName || !formData.refereeRole || !formData.relationshipDuration) {
+      toast.error("Please fill in all required fields marked with *");
       return;
     }
 
     try {
       await createRequest.mutateAsync({
-        referee_name: formData.refereeName,
-        referee_role: formData.refereeRole,
-        relationship_duration: formData.relationshipDuration,
-        relationship_capacity: formData.relationshipCapacity,
-        meaningful_project: formData.meaningfulProject,
-        best_moment: formData.bestMoment,
-        difficulties_overcome: formData.difficultiesOvercome,
-        strengths: formData.strengths,
-        personal_notes: formData.personalNotes,
-        status: 'pending',
-        student_id: '', // Will be set by the hook
-      });
+  referee_name: formData.refereeName,
+  referee_role: formData.refereeRole,
+  relationship_duration: formData.relationshipDuration,
+  relationship_capacity: formData.relationshipCapacity,
+  meaningful_project: formData.meaningfulProject,
+  best_moment: formData.bestMoment,
+  difficulties_overcome: formData.difficultiesOvercome,
+  strengths: formData.strengths,
+  personal_notes: formData.personalNotes,
+  status: "pending",
+  student_id: "", // TS placeholder — overwritten by hook with real user.id
+});
 
-      setFormData({
-        refereeName: '',
-        refereeRole: '',
-        relationshipDuration: '',
-        relationshipCapacity: '',
-        meaningfulProject: '',
-        bestMoment: '',
-        difficultiesOvercome: '',
-        strengths: [],
-        personalNotes: ''
-      });
-      setCurrentStep('list');
-    } catch (error) {
-      console.error('Error submitting:', error);
+      setFormData(INITIAL_FORM);
+      setCurrentStep("list");
+    } catch (err) {
+      // Error toast is already handled in the hook's onError
+      console.error("Error submitting recommendation request:", err);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'sent':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="h-3 w-3 mr-1" />Received</Badge>;
-      case 'in_progress':
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20"><Clock className="h-3 w-3 mr-1" />In Progress</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
-      default:
-        return <Badge variant="outline"><FileText className="h-3 w-3 mr-1" />Draft</Badge>;
-    }
-  };
-
-  // Loading state
+  // ── Loading state ─────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -195,11 +135,27 @@ const StudentRecommendationLetters = () => {
     );
   }
 
-  // View Letter Content
-  if (currentStep === 'view' && selectedRequest) {
+  // ── Error state ───────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96 gap-3 text-destructive">
+        <AlertCircle className="h-6 w-6" />
+        <p>Failed to load recommendation requests. Please refresh and try again.</p>
+      </div>
+    );
+  }
+
+  // ── View Letter ───────────────────────────────────────────
+  if (currentStep === "view" && selectedRequest) {
     return (
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
-        <Button variant="ghost" onClick={() => { setCurrentStep('list'); setSelectedRequest(null); }}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setCurrentStep("list");
+            setSelectedRequest(null);
+          }}
+        >
           ← Back to Letters
         </Button>
 
@@ -231,15 +187,14 @@ const StudentRecommendationLetters = () => {
     );
   }
 
-  // Questionnaire Form
-  if (currentStep === 'form') {
+  // ── Questionnaire Form ────────────────────────────────────
+  if (currentStep === "form") {
     return (
       <div className="p-6 space-y-6 max-w-3xl mx-auto">
-        <Button variant="ghost" onClick={() => setCurrentStep('list')}>
+        <Button variant="ghost" onClick={() => setCurrentStep("list")}>
           ← Back to Letters
         </Button>
 
-        {/* Intro Section */}
         <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="p-8 text-center">
             <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -247,8 +202,9 @@ const StudentRecommendationLetters = () => {
               You are one step away from your recommendation letter
             </h1>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              To make this recommendation as accurate and personal as possible, please complete the short questionnaire below.
-              Your answers will help your counselor write the strongest letter on your behalf.
+              To make this recommendation as accurate and personal as possible, please complete the
+              short questionnaire below. Your answers will help your counselor write the strongest
+              letter on your behalf.
             </p>
           </CardContent>
         </Card>
@@ -273,7 +229,7 @@ const StudentRecommendationLetters = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="refereeRole">Their role/position</Label>
+              <Label htmlFor="refereeRole">Their role/position *</Label>
               <Input
                 id="refereeRole"
                 placeholder="e.g., AP Physics Teacher, Math Department Head"
@@ -283,7 +239,9 @@ const StudentRecommendationLetters = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="relationshipDuration">How long have you known them and in what capacity? *</Label>
+              <Label htmlFor="relationshipDuration">
+                How long have you known them and in what capacity? *
+              </Label>
               <Textarea
                 id="relationshipDuration"
                 placeholder="e.g., taught me in Grade 11–12 Math, thesis supervisor, homeroom teacher"
@@ -299,7 +257,9 @@ const StudentRecommendationLetters = () => {
                 id="relationshipCapacity"
                 placeholder="Classes only, one-on-one mentoring, extracurricular supervision, research project, leadership role, etc."
                 value={formData.relationshipCapacity}
-                onChange={(e) => setFormData({ ...formData, relationshipCapacity: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, relationshipCapacity: e.target.value })
+                }
                 rows={3}
               />
             </div>
@@ -316,7 +276,9 @@ const StudentRecommendationLetters = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="meaningfulProject">What is the most meaningful academic or personal project you did together?</Label>
+              <Label htmlFor="meaningfulProject">
+                What is the most meaningful academic or personal project you did together?
+              </Label>
               <Textarea
                 id="meaningfulProject"
                 placeholder="Briefly describe what you worked on and why it mattered"
@@ -327,7 +289,9 @@ const StudentRecommendationLetters = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bestMoment">Can you describe one moment where this referee saw you at your best?</Label>
+              <Label htmlFor="bestMoment">
+                Can you describe one moment where this referee saw you at your best?
+              </Label>
               <Textarea
                 id="bestMoment"
                 placeholder="A class discussion, project, challenge, leadership moment, or clear improvement over time"
@@ -338,12 +302,16 @@ const StudentRecommendationLetters = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="difficultiesOvercome">Did you overcome any difficulty while working with them?</Label>
+              <Label htmlFor="difficultiesOvercome">
+                Did you overcome any difficulty while working with them?
+              </Label>
               <Textarea
                 id="difficultiesOvercome"
                 placeholder="Academic struggle, personal challenge, resilience, or growth"
                 value={formData.difficultiesOvercome}
-                onChange={(e) => setFormData({ ...formData, difficultiesOvercome: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, difficultiesOvercome: e.target.value })
+                }
                 rows={4}
               />
             </div>
@@ -362,7 +330,7 @@ const StudentRecommendationLetters = () => {
             <div className="space-y-3">
               <Label>What do you think this referee would say you're especially strong at?</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {strengthOptions.map((strength) => (
+                {STRENGTH_OPTIONS.map((strength) => (
                   <div key={strength} className="flex items-center space-x-2">
                     <Checkbox
                       id={strength}
@@ -378,7 +346,9 @@ const StudentRecommendationLetters = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="personalNotes">Would you like to add a few personal notes for your counselor? (Optional)</Label>
+              <Label htmlFor="personalNotes">
+                Would you like to add a few personal notes for your counselor? (Optional)
+              </Label>
               <Textarea
                 id="personalNotes"
                 placeholder="Any additional context or information you'd like to share..."
@@ -390,14 +360,19 @@ const StudentRecommendationLetters = () => {
           </CardContent>
         </Card>
 
-        {/* Submit Button */}
+        {/* Submit */}
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-6">
-            <Button 
-              onClick={handleSubmit} 
-              size="lg" 
+            <Button
+              onClick={handleSubmit}
+              size="lg"
               className="w-full"
-              disabled={createRequest.isPending || !formData.refereeName || !formData.refereeRole || !formData.relationshipDuration}
+              disabled={
+                createRequest.isPending ||
+                !formData.refereeName ||
+                !formData.refereeRole ||
+                !formData.relationshipDuration
+              }
             >
               {createRequest.isPending ? (
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -415,22 +390,21 @@ const StudentRecommendationLetters = () => {
     );
   }
 
-  // Main List View
+  // ── Main List View ────────────────────────────────────────
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Recommendation Letters</h1>
           <p className="text-muted-foreground">Request and view your recommendation letters</p>
         </div>
-        <Button onClick={() => setCurrentStep('form')}>
+        <Button onClick={() => setCurrentStep("form")}>
           <FileText className="h-4 w-4 mr-2" />
           Request New Letter
         </Button>
       </div>
 
-      {/* Status Overview */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -440,7 +414,7 @@ const StudentRecommendationLetters = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold text-foreground">{requests?.length || 0}</p>
+                <p className="text-2xl font-bold text-foreground">{requests?.length ?? 0}</p>
               </div>
             </div>
           </CardContent>
@@ -455,7 +429,8 @@ const StudentRecommendationLetters = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {requests?.filter(r => r.status === 'pending' || r.status === 'in_progress').length || 0}
+                  {requests?.filter((r) => r.status === "pending" || r.status === "in_progress")
+                    .length ?? 0}
                 </p>
               </div>
             </div>
@@ -471,7 +446,7 @@ const StudentRecommendationLetters = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Received</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {requests?.filter(r => r.status === 'sent').length || 0}
+                  {requests?.filter((r) => r.status === "sent").length ?? 0}
                 </p>
               </div>
             </div>
@@ -489,7 +464,7 @@ const StudentRecommendationLetters = () => {
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No recommendation letters yet.</p>
-              <Button variant="outline" className="mt-4" onClick={() => setCurrentStep('form')}>
+              <Button variant="outline" className="mt-4" onClick={() => setCurrentStep("form")}>
                 Request Your First Letter
               </Button>
             </div>
@@ -501,7 +476,7 @@ const StudentRecommendationLetters = () => {
                   className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => {
                     setSelectedRequest(request);
-                    setCurrentStep('view');
+                    setCurrentStep("view");
                   }}
                 >
                   <div className="flex items-center gap-4">
@@ -516,7 +491,9 @@ const StudentRecommendationLetters = () => {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Submitted</p>
-                      <p className="text-sm font-medium">{new Date(request.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                     {getStatusBadge(request.status)}
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />

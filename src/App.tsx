@@ -20,7 +20,7 @@ import StudentPersonalArea from "./pages/StudentPersonalArea";
 import StudentStats from "./pages/StudentStats";
 import ParentPortal from "./pages/ParentPortal";
 import AddStudent from "./pages/AddStudent";
-import ReviewEssays from "./pages/ReviewEssays";
+// import ReviewEssays from "./pages/ReviewEssays";
 import CheckDeadlines from "./pages/CheckDeadlines";
 import ViewReports from "./pages/ViewReports";
 import StudentRecommendationLetters from "./pages/StudentRecommendationLetters";
@@ -30,8 +30,8 @@ import NotFound from "./pages/NotFound";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
 
-const queryClient = new QueryClient();
 
+const queryClient = new QueryClient();
 // Layout component that conditionally shows sidebar
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -79,6 +79,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -88,7 +89,8 @@ const App = () => {
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/demo" element={<Demo />} />
-          
+                 
+
           {/* Protected routes with sidebar */}
           <Route path="/dashboard" element={<AppLayout><Index /></AppLayout>} />
           <Route path="/students" element={<AppLayout><Students /></AppLayout>} />
@@ -97,21 +99,21 @@ const App = () => {
           <Route path="/applications" element={<AppLayout><Applications /></AppLayout>} />
           <Route path="/recommendation-letters" element={<AppLayout><CounselorRecommendationLetters /></AppLayout>} />
           <Route path="/messages" element={<AppLayout><Messages /></AppLayout>} />
-          <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />
+          <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />          
           <Route path="/student-dashboard" element={<AppLayout><StudentDashboard /></AppLayout>} />
           <Route path="/student-personal-area" element={<AppLayout><StudentPersonalArea /></AppLayout>} />
           <Route path="/student-recommendation-letters" element={<AppLayout><StudentRecommendationLetters /></AppLayout>} />
           <Route path="/student-stats" element={<AppLayout><StudentStats /></AppLayout>} />
           <Route path="/parent-portal" element={<AppLayout><ParentPortal /></AppLayout>} />
           <Route path="/add-student" element={<AppLayout><AddStudent /></AppLayout>} />
-          <Route path="/review-essays" element={<AppLayout><ReviewEssays /></AppLayout>} />
+          {/* <Route path="/review-essays" element={<AppLayout><ReviewEssays /></AppLayout>} /> */}
           <Route path="/check-deadlines" element={<AppLayout><CheckDeadlines /></AppLayout>} />
           <Route path="/view-reports" element={<AppLayout><ViewReports /></AppLayout>} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-      
       <Toaster />
       <Sonner />
     </QueryClientProvider>

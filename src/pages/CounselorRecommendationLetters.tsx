@@ -122,7 +122,7 @@ const CounselorRecommendationLetters = () => {
   const { requests: dbRequests, isLoading, sendLetter, updateRequest } = useCounselorRecommendations();
   
   // Use mock data if no DB data available (for demo)
-  const requests = (dbRequests && dbRequests.length > 0) ? dbRequests : mockRequests;
+  const requests = dbRequests || [];
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

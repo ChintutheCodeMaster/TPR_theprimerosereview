@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,99 +6,161 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StudentEssayFeedback } from "@/components/StudentEssayFeedback";
-import { 
-  FileText, 
-  Calendar, 
-  Upload, 
-  MessageSquare, 
-  CheckCircle, 
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  FileText,
+  Calendar,
+  Upload,
+  MessageSquare,
+  CheckCircle,
   AlertCircle,
   Clock,
   TrendingUp,
   Star,
-  Award
+  Award,
+  Loader2
 } from "lucide-react";
 
+interface DashboardData {
+  studentName: string
+  avatarUrl: string | null
+  applications: { completed: number; total: number }
+  essays: { completed: number; total: number }
+  recommendations: { completed: number; total: number }
+  upcomingDeadlines: { id: string; title: string; date: string; daysLeft: number; urgency: string }[]
+  pendingTasks: { id: string; task: string; due_date: string | null }[]
+}
+
 const StudentDashboard = () => {
-  const navigate = useNavigate();
-  // Mock student data - matches data from other pages for demo consistency
-  const student = {
-    name: "Emma Thompson",
-    avatar: "/placeholder.svg",
-    overallProgress: 85,
-    motivationalMessage: "you're 85% on track!"
-  };
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const progressData = {
-    applications: {
-      completed: 3,
-      total: 5,
-      percentage: 60
-    },
-    essays: {
-      completed: 4,
-      total: 7,
-      percentage: 57
-    },
-    recommendations: {
-      completed: 1,
-      total: 2,
-      percentage: 50
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not logged in')
+
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', user.id)
+        .single()
+
+      // Fetch essays
+      const { data: essays } = await supabase
+        .from('essay_feedback')
+        .select('status')
+        .eq('student_id', user.id)
+
+      // Fetch recommendations
+      const { data: recs } = await supabase
+        .from('recommendation_requests')
+        .select('status')
+        .eq('student_id', user.id)
+
+      // Fetch applications
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('school_name, application_type, deadline_date, status')
+        .eq('student_id', user.id)
+        .order('deadline_date', { ascending: true })
+
+      // Fetch pending tasks
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('id, task, due_date')
+        .eq('student_id', user.id)
+        .eq('completed', false)
+        .order('due_date', { ascending: true })
+        .limit(5)
+
+      // Compute upcoming deadlines from applications
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const upcomingDeadlines = (apps || [])
+        .filter(a => a.status !== 'submitted')
+        .map(a => {
+          const date = new Date(a.deadline_date)
+          const daysLeft = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          return {
+            id: `${a.school_name}-${a.deadline_date}`,
+            title: `${a.school_name} — ${a.application_type}`,
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            daysLeft,
+            urgency: daysLeft < 0 ? 'critical' : daysLeft <= 7 ? 'critical' : daysLeft <= 21 ? 'important' : 'normal',
+          }
+        })
+        .slice(0, 5)
+
+      setData({
+        studentName: profile?.full_name?.split(' ')[0] || 'there',
+        avatarUrl: profile?.avatar_url || null,
+        applications: {
+          completed: (apps || []).filter(a => a.status === 'submitted').length,
+          total: (apps || []).length,
+        },
+        essays: {
+          completed: (essays || []).filter(e => e.status === 'sent').length,
+          total: (essays || []).length,
+        },
+        recommendations: {
+          completed: (recs || []).filter(r => r.status === 'sent').length,
+          total: (recs || []).length,
+        },
+        upcomingDeadlines,
+        pendingTasks: (tasks || []).map(t => ({
+          id: t.id,
+          task: t.task,
+          due_date: t.due_date,
+        })),
+      })
+    } catch (error: any) {
+      toast({ title: 'Failed to load dashboard', description: error.message, variant: 'destructive' })
+    } finally {
+      setLoading(false)
     }
-  };
-
-  const upcomingDeadlines = [
-    { 
-      id: 1, 
-      title: "UC Berkeley Application", 
-      date: "Nov 30, 2024", 
-      urgency: "critical", 
-      daysLeft: 5 
-    },
-    { 
-      id: 2, 
-      title: "Common App Essay Final Draft", 
-      date: "Dec 3, 2024", 
-      urgency: "important", 
-      daysLeft: 8 
-    },
-    { 
-      id: 3, 
-      title: "Harvard Supplemental Essays", 
-      date: "Dec 10, 2024", 
-      urgency: "normal", 
-      daysLeft: 15 
-    },
-    { 
-      id: 4, 
-      title: "Stanford Application", 
-      date: "Dec 15, 2024", 
-      urgency: "normal", 
-      daysLeft: 20 
-    }
-  ];
-
-  const tips = [
-    "Your Common App essay has improved significantly in storytelling clarity since your last draft.",
-    "Consider focusing more time on your UC Berkeley essays - they're due soon!",
-    "Great progress on recommendations - you're ahead of most students at this stage."
-  ];
+  }
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return 'bg-destructive text-destructive-foreground';
-      case 'important': return 'bg-orange-500 text-white';
-      default: return 'bg-muted text-muted-foreground';
+      case 'critical': return 'bg-destructive text-destructive-foreground'
+      case 'important': return 'bg-orange-500 text-white'
+      default: return 'bg-muted text-muted-foreground'
     }
-  };
+  }
 
   const getUrgencyIcon = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return <AlertCircle className="h-4 w-4" />;
-      case 'important': return <Clock className="h-4 w-4" />;
-      default: return <Calendar className="h-4 w-4" />;
+      case 'critical': return <AlertCircle className="h-4 w-4" />
+      case 'important': return <Clock className="h-4 w-4" />
+      default: return <Calendar className="h-4 w-4" />
     }
-  };
+  }
+
+  const overallProgress = data
+    ? Math.round(
+        ((data.applications.completed + data.essays.completed + data.recommendations.completed) /
+          Math.max(data.applications.total + data.essays.total + data.recommendations.total, 1)) * 100
+      )
+    : 0
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -107,19 +169,21 @@ const StudentDashboard = () => {
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={student.avatar} alt={student.name} />
-              <AvatarFallback className="text-lg">SJ</AvatarFallback>
+              <AvatarImage src={data?.avatarUrl ?? undefined} />
+              <AvatarFallback className="text-lg">
+                {data?.studentName?.[0] ?? 'S'}
+              </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">
-                Hi {student.name}, {student.motivationalMessage}
+                Hi {data?.studentName}, you're {overallProgress}% on track!
               </h1>
               <p className="text-muted-foreground mt-1">
                 Keep up the great work! Here's your college application progress.
               </p>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-primary">{student.overallProgress}%</div>
+              <div className="text-3xl font-bold text-primary">{overallProgress}%</div>
               <p className="text-sm text-muted-foreground">Complete</p>
             </div>
           </div>
@@ -128,59 +192,32 @@ const StudentDashboard = () => {
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Applications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>{progressData.applications.completed} of {progressData.applications.total} submitted</span>
-                <span className="font-medium">{progressData.applications.percentage}%</span>
-              </div>
-              <Progress value={progressData.applications.percentage} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Essays
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>{progressData.essays.completed} of {progressData.essays.total} completed</span>
-                <span className="font-medium">{progressData.essays.percentage}%</span>
-              </div>
-              <Progress value={progressData.essays.percentage} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary" />
-              Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>{progressData.recommendations.completed} of {progressData.recommendations.total} submitted</span>
-                <span className="font-medium">{progressData.recommendations.percentage}%</span>
-              </div>
-              <Progress value={progressData.recommendations.percentage} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Applications', icon: Calendar, data: data?.applications },
+          { label: 'Essays', icon: FileText, data: data?.essays },
+          { label: 'Recommendations', icon: Star, data: data?.recommendations },
+        ].map(({ label, icon: Icon, data: d }) => {
+          const pct = d && d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
+          return (
+            <Card key={label}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Icon className="h-5 w-5 text-primary" />
+                  {label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>{d?.completed ?? 0} of {d?.total ?? 0} completed</span>
+                    <span className="font-medium">{pct}%</span>
+                  </div>
+                  <Progress value={pct} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -193,46 +230,66 @@ const StudentDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {upcomingDeadlines.map((deadline) => (
-                <div 
-                  key={deadline.id} 
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${getUrgencyColor(deadline.urgency)}`}>
-                      {getUrgencyIcon(deadline.urgency)}
+            {data?.upcomingDeadlines.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No upcoming deadlines — add applications to track them here
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {data?.upcomingDeadlines.map(deadline => (
+                  <div
+                    key={deadline.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-full ${getUrgencyColor(deadline.urgency)}`}>
+                        {getUrgencyIcon(deadline.urgency)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{deadline.title}</p>
+                        <p className="text-xs text-muted-foreground">{deadline.date}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{deadline.title}</p>
-                      <p className="text-xs text-muted-foreground">{deadline.date}</p>
-                    </div>
+                    <Badge
+                      variant={deadline.urgency === 'critical' ? 'destructive' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {deadline.daysLeft < 0 ? 'Overdue' : `${deadline.daysLeft}d`}
+                    </Badge>
                   </div>
-                  <Badge variant={deadline.urgency === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
-                    {deadline.daysLeft} days
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Tips & Reminders */}
+        {/* Pending Tasks */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Tips & Reminders
+              Pending Tasks
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {tips.map((tip, index) => (
-                <div key={index} className="p-3 rounded-lg bg-muted/30 border border-muted">
-                  <p className="text-sm text-foreground">{tip}</p>
-                </div>
-              ))}
-            </div>
+            {data?.pendingTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No pending tasks — you're all caught up!
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {data?.pendingTasks.map(task => (
+                  <div key={task.id} className="p-3 rounded-lg bg-muted/30 border border-muted">
+                    <p className="text-sm font-medium text-foreground">{task.task}</p>
+                    {task.due_date && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Due: {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -240,7 +297,7 @@ const StudentDashboard = () => {
       {/* Essay Feedback from Counselor */}
       <StudentEssayFeedback />
 
-      {/* Quick Links */}
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
@@ -249,9 +306,9 @@ const StudentDashboard = () => {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Button variant="outline" className="h-16 flex-col gap-2">
               <Upload className="h-5 w-5" />
-              Upload New Essay
+              Upload Essay
             </Button>
-            <Button variant="outline" className="h-16 flex-col gap-2">
+            <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/student-personal-area')}>
               <FileText className="h-5 w-5" />
               View Feedback
             </Button>
@@ -263,19 +320,19 @@ const StudentDashboard = () => {
               <MessageSquare className="h-5 w-5" />
               Message Counselor
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
               onClick={() => navigate('/student-recommendation-letters')}
             >
               <Award className="h-5 w-5 text-primary" />
-              Recommendation Letters
+              Rec Letters
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default StudentDashboard;
+export default StudentDashboard
