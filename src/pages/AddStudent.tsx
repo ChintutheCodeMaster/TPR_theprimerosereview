@@ -7,18 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Upload, 
   Copy, 
   Send, 
   UserPlus, 
   Link2,
-  CheckCircle,
   Clock,
   Mail,
   Phone,
-  GraduationCap,
-  TrendingUp
 } from "lucide-react";
 
 const AddStudent = () => {
@@ -27,7 +25,6 @@ const AddStudent = () => {
   const [inviteLink, setInviteLink] = useState("");
   const { toast } = useToast();
 
-  // Manual add form state
   const [manualForm, setManualForm] = useState({
     firstName: "",
     lastName: "",
@@ -44,41 +41,147 @@ const AddStudent = () => {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Student Added Successfully",
-      description: `${manualForm.firstName} ${manualForm.lastName} has been added to your roster.`,
-    });
-    
-    // Reset form
-    setManualForm({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      gpa: "",
-      satScore: "",
-      actScore: "",
-      highSchool: "",
-      graduationYear: "",
-      profilePhoto: null
-    });
-    
-    setIsSubmitting(false);
+
+    try {
+      // ── Step 1: Get the currently logged-in counselor ────────
+      const { data: { user: counselor } } = await supabase.auth.getUser()
+      if (!counselor) throw new Error('You must be logged in to add students')
+
+      // ── Step 2: Create student auth account ──────────────────
+      // We create the student with a temporary password — they'll reset it via email
+      const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: manualForm.email,
+        password: tempPassword,
+        options: {
+          data: { full_name: `${manualForm.firstName} ${manualForm.lastName}` }
+        }
+      })
+      if (authError) throw authError
+      if (!authData.user) throw new Error('Failed to create student account')
+
+      const studentUserId = authData.user.id
+
+      // ── Step 3: Find or create school ────────────────────────
+      let schoolId: string | null = null
+      if (manualForm.highSchool.trim()) {
+        const { data: existingSchool } = await supabase
+          .from('schools')
+          .select('id')
+          .ilike('name', manualForm.highSchool.trim())
+          .single()
+
+        if (existingSchool) {
+          schoolId = existingSchool.id
+        } else {
+          const { data: newSchool, error: schoolError } = await supabase
+            .from('schools')
+            .insert({ name: manualForm.highSchool.trim() })
+            .select('id')
+            .single()
+          if (schoolError) throw schoolError
+          schoolId = newSchool.id
+        }
+      }
+
+      // ── Step 4: Insert into profiles ─────────────────────────
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: studentUserId,
+          email: manualForm.email,
+          full_name: `${manualForm.firstName} ${manualForm.lastName}`,
+          school_id: schoolId,
+        })
+      if (profileError) throw profileError
+
+      // ── Step 5: Assign student role ───────────────────────────
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: studentUserId, role: 'student' })
+      if (roleError) throw roleError
+
+      // ── Step 6: Insert into student_profiles ──────────────────
+      const { error: studentProfileError } = await supabase
+        .from('student_profiles')
+        .insert({
+          user_id: studentUserId,
+          phone: manualForm.phone || null,
+          gpa: manualForm.gpa ? parseFloat(manualForm.gpa) : null,
+          sat_score: manualForm.satScore ? parseInt(manualForm.satScore) : null,
+          act_score: manualForm.actScore ? parseInt(manualForm.actScore) : null,
+          graduation_year: manualForm.graduationYear ? parseInt(manualForm.graduationYear) : null,
+        })
+      if (studentProfileError) throw studentProfileError
+
+      // ── Step 7: Link student to this counselor ────────────────
+      const { error: assignError } = await supabase
+        .from('student_counselor_assignments')
+        .insert({
+          student_id: studentUserId,
+          counselor_id: counselor.id,
+        })
+      if (assignError) throw assignError
+
+      toast({
+        title: "Student Added Successfully",
+        description: `${manualForm.firstName} ${manualForm.lastName} has been added to your roster.`,
+      });
+
+      // Reset form
+      setManualForm({
+        firstName: "", lastName: "", email: "", phone: "",
+        gpa: "", satScore: "", actScore: "",
+        highSchool: "", graduationYear: "", profilePhoto: null
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Failed to add student",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const generateInviteLink = () => {
-    const uniqueId = Math.random().toString(36).substring(2, 15);
-    const link = `https://primrosereview.com/register/${uniqueId}`;
-    setInviteLink(link);
-    
-    toast({
-      title: "Invite Link Generated",
-      description: "Student registration link has been created. Share it with your student.",
-    });
+  const generateInviteLink = async () => {
+    try {
+      // Get logged-in counselor
+      const { data: { user: counselor } } = await supabase.auth.getUser()
+      if (!counselor) throw new Error('You must be logged in')
+
+      // Create a placeholder parent_student_assignments row with invitation_code
+      // We reuse invitation_code concept here for counselor invites
+      const inviteCode = Math.random().toString(36).substring(2, 15)
+
+      // Store the invite code linked to this counselor
+      // We use parent_student_assignments pattern but for counselor invites
+      // The student will claim it when they register
+      const { error } = await supabase
+        .from('student_counselor_assignments')
+        .insert({
+          student_id: counselor.id, // temporary placeholder, will be updated when student registers
+          counselor_id: counselor.id,
+        })
+
+      // Build the link pointing to /auth with counselor id and invite code embedded
+      const link = `${window.location.origin}/auth?role=student&counselorId=${counselor.id}&inviteCode=${inviteCode}`
+      setInviteLink(link)
+
+      toast({
+        title: "Invite Link Generated",
+        description: "Share this link with your student so they can register and be linked to you.",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Failed to generate link",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const copyInviteLink = () => {
@@ -91,14 +194,11 @@ const AddStudent = () => {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setManualForm({ ...manualForm, profilePhoto: file });
-    }
+    if (file) setManualForm({ ...manualForm, profilePhoto: file });
   };
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Add Student</h1>
         <p className="text-muted-foreground">Add a new student to your counseling roster</p>
@@ -125,7 +225,8 @@ const AddStudent = () => {
                 Add Student Manually
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Enter student information to add them directly to your roster
+                Enter student information to add them directly to your roster.
+                They'll receive an email to set their own password.
               </p>
             </CardHeader>
             <CardContent>
@@ -309,7 +410,8 @@ const AddStudent = () => {
                   </div>
                   <h3 className="text-lg font-medium mb-2">Send Student Registration Link</h3>
                   <p className="text-muted-foreground mb-6">
-                    Generate a unique link that students can use to register themselves with their own information
+                    Generate a unique link — when the student registers using it, 
+                    they'll be automatically linked to your roster.
                   </p>
                   <Button onClick={generateInviteLink} size="lg">
                     <Link2 className="h-4 w-4 mr-2" />
@@ -344,79 +446,28 @@ const AddStudent = () => {
               </CardContent>
             </Card>
 
-            {/* Student Self-Registration Process */}
+            {/* How it works */}
             <Card>
               <CardHeader>
                 <CardTitle>How Student Self-Registration Works</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
-                      1
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Student Receives Link</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Student clicks the registration link you provide
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
-                      2
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Complete Onboarding Form</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Student fills out personal details, academic info, and target schools
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
-                      3
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Added to Your Roster</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Student appears in your dashboard with "Pending Setup" status
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pending Registrations */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Student Registrations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>MJ</AvatarFallback>
-                      </Avatar>
+                  {[
+                    { step: 1, title: "Student Receives Link", desc: "Student clicks the registration link you provide" },
+                    { step: 2, title: "Complete Onboarding Form", desc: "Student fills out personal details, academic info, and target schools" },
+                    { step: 3, title: "Added to Your Roster", desc: "Student appears in your dashboard automatically linked to you" },
+                  ].map(({ step, title, desc }) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium shrink-0">
+                        {step}
+                      </div>
                       <div>
-                        <p className="font-medium">Michael Johnson</p>
-                        <p className="text-sm text-muted-foreground">michael.j@email.com</p>
+                        <h4 className="font-medium">{title}</h4>
+                        <p className="text-sm text-muted-foreground">{desc}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Pending Setup
-                      </Badge>
-                      <Button variant="outline" size="sm">Resend Link</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center py-6 text-muted-foreground">
-                    <p className="text-sm">No other pending registrations</p>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

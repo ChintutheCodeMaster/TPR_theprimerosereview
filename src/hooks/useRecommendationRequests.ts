@@ -100,35 +100,43 @@ export const useCounselorRecommendations = () => {
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ["counselor-recommendations"],
     queryFn: async () => {
-      // First get recommendation requests
+      // Get logged in counselor
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      // Get only students assigned to this counselor
+      const { data: assignments } = await supabase
+        .from('student_counselor_assignments')
+        .select('student_id')
+        .eq('counselor_id', user.id)
+
+      const studentIds = assignments?.map(a => a.student_id) || []
+      if (studentIds.length === 0) return []
+
+      // Fetch only those students' recommendations
       const { data: recommendations, error: recError } = await supabase
-        .from("recommendation_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from('recommendation_requests')
+        .select('*')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false })
 
-      if (recError) throw recError;
+      if (recError) throw recError
 
-      // Then get profiles for each student
-      const studentIds = [...new Set(recommendations?.map(r => r.student_id) || [])];
-      
-      if (studentIds.length === 0) {
-        return recommendations?.map(r => ({ ...r, profiles: null })) || [];
-      }
-
+      // Get profiles for each student
       const { data: profiles, error: profError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url, email")
-        .in("user_id", studentIds);
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, email')
+        .in('user_id', studentIds)
 
-      if (profError) throw profError;
+      if (profError) throw profError
 
       // Map profiles to recommendations
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+
       return recommendations?.map(r => ({
         ...r,
         profiles: profileMap.get(r.student_id) || null,
-      })) as RecommendationWithProfile[];
+      })) as RecommendationWithProfile[]
     },
   });
 
