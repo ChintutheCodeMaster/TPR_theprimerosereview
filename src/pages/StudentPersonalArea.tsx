@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/Usestudentpersonalarea";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   FileText,
   Upload,
@@ -57,6 +58,7 @@ const getStatusLabel = (status: string) =>
 // ── Component ─────────────────────────────────────────────────
 
 const StudentPersonalArea = () => {
+  const navigate = useNavigate();
   const {
     essays,
     sentFeedback,
@@ -97,7 +99,7 @@ const StudentPersonalArea = () => {
         <TabsContent value="essays" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">My Essays</h2>
-            <Button>
+            <Button onClick={() => navigate('/submit-essay')}>
               <Upload className="h-4 w-4 mr-2" />
               Upload New Essay
             </Button>

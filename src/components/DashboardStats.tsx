@@ -7,7 +7,7 @@ import {
   Calendar,
   AlertTriangle,
 } from "lucide-react";
-import { useDashboardStats } from "@/hooks/useDashboardstats";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const getIconBgColor = (color: string) => {
   switch (color) {
@@ -29,6 +29,9 @@ const getChangeColor = (type: string) => {
 
 export const DashboardStats = () => {
   const { data, isLoading } = useDashboardStats();
+
+   console.log("isLoading:", isLoading);
+  console.log("data:", data);
 
   const stats = [
     {
@@ -124,3 +127,4 @@ export const DashboardStats = () => {
     </div>
   );
 };
+

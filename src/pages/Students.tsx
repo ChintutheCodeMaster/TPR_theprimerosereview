@@ -94,15 +94,15 @@ const Students = () => {
       if (!user) throw new Error('Not logged in')
 
       // Get all students assigned to this counselor
-      const { data: assignments, error: assignError } = await supabase
-        .from('student_counselor_assignments')
-        .select('student_id')
-        .eq('counselor_id', user.id)
+      const { data: studentRoles, error: rolesError } = await supabase
+  .from('user_roles')
+  .select('user_id')
+  .eq('role', 'student')
 
-      if (assignError) throw assignError
-      if (!assignments.length) { setStudents([]); return }
+      if (rolesError) throw rolesError
+if (!studentRoles.length) { setStudents([]); return }
 
-      const studentIds = assignments.map(a => a.student_id)
+const studentIds = studentRoles.map(s => s.user_id)
 
       // Fetch profiles + school for all students
       const { data: profiles, error: profileError } = await supabase

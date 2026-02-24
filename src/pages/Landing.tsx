@@ -8,7 +8,20 @@ const Landing = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex flex-col items-center justify-center p-6">
+    <div className="relative min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex flex-col items-center justify-center p-6">
+      
+      {/* View Demo - top left */}
+      <div className="absolute top-6 left-6">
+        <Button 
+          variant="outline"
+          className="gap-2"
+          onClick={() => navigate('/demo')}
+        >
+          <Eye className="h-4 w-4" />
+          View Demo
+        </Button>
+      </div>
+
       <div className="max-w-2xl w-full text-center space-y-8">
         {/* Logo */}
         <div className="flex justify-center">
@@ -61,23 +74,18 @@ const Landing = () => {
               <span className="font-medium">Parent</span>
             </Button>
           </div>
-        </Card>
 
-        {/* Demo Button */}
-        <div className="pt-4">
-          <Button 
-            size="lg" 
-            variant="secondary"
-            className="gap-2"
-            onClick={() => navigate('/demo')}
-          >
-            <Eye className="h-5 w-5" />
-            View Demo
-          </Button>
-          <p className="text-sm text-muted-foreground mt-2">
-            Explore the system without signing in
-          </p>
-        </div>
+          {/* Signup link */}
+          <div className="pt-2 border-t border-border">
+            <span className="text-sm text-muted-foreground">Don't have an account? </span>
+            <button
+              className="text-sm text-primary font-medium hover:underline"
+              onClick={() => navigate('/signup')}
+            >
+              Sign up here
+            </button>
+          </div>
+        </Card>
       </div>
     </div>
   );

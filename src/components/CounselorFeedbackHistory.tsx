@@ -188,24 +188,23 @@ export const CounselorFeedbackHistory = ({ studentId, studentName }: CounselorFe
         </CardContent>
       </Card>
 
-      {editingFeedback && (
-        <EssayFeedbackModal
-          isOpen={!!editingFeedback}
-          onClose={() => {
-            setEditingFeedback(null);
-            loadFeedback();
-          }}
-          essay={{
-            id: editingFeedback.id,
-            title: editingFeedback.essay_title,
-            studentName: studentName || "Student",
-            studentId: editingFeedback.student_id,
-            prompt: editingFeedback.essay_prompt || "",
-            content: editingFeedback.essay_content,
-          }}
-          existingFeedbackId={editingFeedback.id}
-        />
-      )}
+     {editingFeedback && (
+  <EssayFeedbackModal
+    isOpen={!!editingFeedback}
+    onClose={() => {
+      setEditingFeedback(null);
+      loadFeedback();
+    }}
+    essay={{
+      id: editingFeedback.id,
+      title: editingFeedback.essay_title,
+      studentName: studentName || "Student",
+      studentId: editingFeedback.student_id,
+      prompt: editingFeedback.essay_prompt || "",
+      content: editingFeedback.essay_content,
+    }}
+  />
+)}
     </>
   );
 };

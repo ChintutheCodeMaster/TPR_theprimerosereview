@@ -69,6 +69,48 @@ export type Database = {
         }
         Relationships: []
       }
+      counselor_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          phone: string | null
+          bio: string | null
+          title: string | null
+          years_of_experience: number | null
+          specialization: string | null
+          max_students: number | null
+          certifications: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          phone?: string | null
+          bio?: string | null
+          title?: string | null
+          years_of_experience?: number | null
+          specialization?: string | null
+          max_students?: number | null
+          certifications?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          phone?: string | null
+          bio?: string | null
+          title?: string | null
+          years_of_experience?: number | null
+          specialization?: string | null
+          max_students?: number | null
+          certifications?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       essay_feedback: {
         Row: {
           ai_analysis: Json | null
@@ -120,6 +162,59 @@ export type Database = {
         }
         Relationships: []
       }
+      essay_feedback_history: {
+  Row: {
+    id: string
+    essay_id: string
+    student_id: string
+    counselor_id: string
+    version: number
+    feedback_items: Json | null
+    manual_notes: string | null
+    personal_message: string | null
+    ai_analysis: Json | null
+    status: string
+    sent_at: string | null
+    created_at: string
+  }
+  Insert: {
+    id?: string
+    essay_id: string
+    student_id: string
+    counselor_id: string
+    version?: number
+    feedback_items?: Json | null
+    manual_notes?: string | null
+    personal_message?: string | null
+    ai_analysis?: Json | null
+    status?: string
+    sent_at?: string | null
+    created_at?: string
+  }
+  Update: {
+    id?: string
+    essay_id?: string
+    student_id?: string
+    counselor_id?: string
+    version?: number
+    feedback_items?: Json | null
+    manual_notes?: string | null
+    personal_message?: string | null
+    ai_analysis?: Json | null
+    status?: string
+    sent_at?: string | null
+    created_at?: string
+  }
+  Relationships: [
+    {
+      foreignKeyName: "essay_feedback_history_essay_id_fkey"
+      columns: ["essay_id"]
+      isOneToOne: false
+      referencedRelation: "essay_feedback"
+      referencedColumns: ["id"]
+    }
+  ]
+}
       extracurriculars: {
         Row: {
           id: string
@@ -504,6 +599,10 @@ export type Database = {
         Args: { _parent_id: string; _student_id: string }
         Returns: boolean
       }
+      get_any_counselor_id: {
+    Args: Record<never, never>
+    Returns: string
+  }
     }
     Enums: {
       app_role: "student" | "counselor" | "admin" | "parent"

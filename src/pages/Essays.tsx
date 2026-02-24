@@ -12,6 +12,8 @@ import { EssayFeedbackModal } from "@/components/EssayFeedbackModal";
 import { CounselorFeedbackHistory } from "@/components/CounselorFeedbackHistory";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import SubmitEssay from "./SubmitEssay";
+
 import {
   Search,
   Filter,
@@ -67,26 +69,79 @@ const Essays = () => {
     fetchEssays()
   }, [])
 
+  // const fetchEssays = async () => {
+  //   setLoading(true)
+  //   try {
+  //     const { data: { user } } = await supabase.auth.getUser()
+  //     if (!user) throw new Error('Not logged in')
+
+  //     // Fetch all essays for this counselor, joined with student profile name
+  //     const { data: essayData, error } = await supabase
+  //       .from('essay_feedback')
+  //       .select('*, profiles!essay_feedback_student_id_fkey(full_name, avatar_url)')
+  //       .eq('counselor_id', user.id)
+  //       .order('updated_at', { ascending: false })
+
+  //     if (error) throw error
+
+  //     const assembled: Essay[] = (essayData || []).map(e => ({
+  //       id: e.id,
+  //       title: e.essay_title,
+  //       studentName: (e.profiles as any)?.full_name || 'Unknown Student',
+  //       studentAvatar: (e.profiles as any)?.avatar_url || null,
+  //       studentId: e.student_id,
+  //       counselorId: e.counselor_id,
+  //       prompt: e.essay_prompt,
+  //       wordCount: e.essay_content?.split(/\s+/).filter(Boolean).length || 0,
+  //       status: e.status,
+  //       aiScore: e.ai_analysis ? (e.ai_analysis as any)?.overall_score || null : null,
+  //       aiAnalysis: e.ai_analysis,
+  //       feedbackItems: e.feedback_items,
+  //       manualNotes: e.manual_notes,
+  //       personalMessage: e.personal_message,
+  //       content: e.essay_content,
+  //       createdAt: e.created_at,
+  //       updatedAt: e.updated_at,
+  //       sentAt: e.sent_at,
+  //     }))
+
+  //     setEssays(assembled)
+  //   } catch (error: any) {
+  //     toast({ title: 'Failed to load essays', description: error.message, variant: 'destructive' })
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
   const fetchEssays = async () => {
-    setLoading(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+  setLoading(true)
+  try {
+    // const { data: { user } } = await supabase.auth.getUser()
+    // if (!user) throw new Error('Not logged in')
 
-      // Fetch all essays for this counselor, joined with student profile name
-      const { data: essayData, error } = await supabase
-        .from('essay_feedback')
-        .select('*, profiles!essay_feedback_student_id_fkey(full_name, avatar_url)')
-        .eq('counselor_id', user.id)
-        .order('updated_at', { ascending: false })
+    // Step 1 — fetch essays
+    const { data: essayData, error } = await supabase
+      .from('essay_feedback')
+      .select('*')
+      // .eq('counselor_id', user.id)
+      .order('updated_at', { ascending: false })
 
-      if (error) throw error
+    if (error) throw error
 
-      const assembled: Essay[] = (essayData || []).map(e => ({
+    // Step 2 — fetch profiles for all student IDs
+    const studentIds = [...new Set((essayData || []).map(e => e.student_id))]
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, avatar_url')
+      .in('user_id', studentIds)
+
+    // Step 3 — assemble
+    const assembled: Essay[] = (essayData || []).map(e => {
+      const profile = profilesData?.find(p => p.user_id === e.student_id)
+      return {
         id: e.id,
         title: e.essay_title,
-        studentName: (e.profiles as any)?.full_name || 'Unknown Student',
-        studentAvatar: (e.profiles as any)?.avatar_url || null,
+        studentName: profile?.full_name || 'Unknown Student',
+        studentAvatar: profile?.avatar_url || null,
         studentId: e.student_id,
         counselorId: e.counselor_id,
         prompt: e.essay_prompt,
@@ -101,15 +156,16 @@ const Essays = () => {
         createdAt: e.created_at,
         updatedAt: e.updated_at,
         sentAt: e.sent_at,
-      }))
+      }
+    })
 
-      setEssays(assembled)
-    } catch (error: any) {
-      toast({ title: 'Failed to load essays', description: error.message, variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+    setEssays(assembled)
+  } catch (error: any) {
+    toast({ title: 'Failed to load essays', description: error.message, variant: 'destructive' })
+  } finally {
+    setLoading(false)
   }
+}
 
   const updateEssayStatus = async (essayId: string, newStatus: string) => {
     try {
@@ -622,16 +678,17 @@ const Essays = () => {
       {/* Feedback Modal */}
       {feedbackModalEssay && (
         <EssayFeedbackModal
-          isOpen={!!feedbackModalEssay}
-          onClose={() => { setFeedbackModalEssay(null); fetchEssays() }}
-          essay={{
-            id: feedbackModalEssay.id,
-            title: feedbackModalEssay.title,
-            studentName: feedbackModalEssay.studentName,
-            prompt: feedbackModalEssay.prompt || '',
-            content: feedbackModalEssay.content,
-          }}
-        />
+  isOpen={!!feedbackModalEssay}
+  onClose={() => { setFeedbackModalEssay(null); fetchEssays() }}
+  essay={{
+    id: feedbackModalEssay.id,
+    title: feedbackModalEssay.title,
+    studentName: feedbackModalEssay.studentName,
+    studentId: feedbackModalEssay.studentId,  // ← make sure this is passed
+    prompt: feedbackModalEssay.prompt || '',
+    content: feedbackModalEssay.content,
+  }}
+/>
       )}
     </div>
   )

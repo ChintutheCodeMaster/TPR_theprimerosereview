@@ -15,13 +15,17 @@ export const useDashboardStats = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get counselor's assigned student IDs
-      const { data: assignments } = await supabase
-        .from("student_counselor_assignments")
-        .select("student_id")
-        .eq("counselor_id", user.id);
+      // Get ALL students in the system via user_roles
+      const { data: studentRoles, error: studentError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
 
-      const studentIds = assignments?.map((a) => a.student_id) ?? [];
+    
+
+      if (studentError) throw studentError;
+
+      const studentIds = studentRoles?.map((s) => s.user_id) ?? [];
 
       if (studentIds.length === 0) {
         return {
@@ -32,9 +36,12 @@ export const useDashboardStats = () => {
         };
       }
 
+      console.log("studentRoles:", studentRoles);
+console.log("studentIds:", studentIds);
+
       // Run all counts in parallel
       const [essaysRes, deadlinesRes, atRiskRes] = await Promise.all([
-        // Essays currently in review (status = 'in_progress' or draft with content)
+        // Essays currently in review
         supabase
           .from("essay_feedback")
           .select("id", { count: "exact", head: true })
@@ -55,7 +62,7 @@ export const useDashboardStats = () => {
           )
           .neq("status", "submitted"),
 
-        // At risk: students with urgent=true applications or completion < 30%
+        // At risk: urgent=true or completion < 30%
         supabase
           .from("applications")
           .select("student_id", { count: "exact", head: false })

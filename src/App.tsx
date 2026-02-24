@@ -29,7 +29,9 @@ import EssayAnalytics from "./pages/EssayAnalytics";
 import NotFound from "./pages/NotFound";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
-
+import Signup from "./pages/SignUp";
+import SubmitEssay from "./pages/SubmitEssay";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 // Layout component that conditionally shows sidebar
@@ -89,10 +91,19 @@ const App = () => {
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/demo" element={<Demo />} />
+          <Route path="/signup" element={<Signup />} />
                  
 
           {/* Protected routes with sidebar */}
-          <Route path="/dashboard" element={<AppLayout><Index /></AppLayout>} />
+          {/* <Route path="/dashboard" element={<AppLayout><Index /></AppLayout>} /> */}
+          <Route path="/dashboard" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['counselor']}>
+                <Index />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
           <Route path="/students" element={<AppLayout><Students /></AppLayout>} />
           <Route path="/essays" element={<AppLayout><Essays /></AppLayout>} />
           <Route path="/essay-analytics" element={<AppLayout><EssayAnalytics /></AppLayout>} />
@@ -100,8 +111,32 @@ const App = () => {
           <Route path="/recommendation-letters" element={<AppLayout><CounselorRecommendationLetters /></AppLayout>} />
           <Route path="/messages" element={<AppLayout><Messages /></AppLayout>} />
           <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />          
-          <Route path="/student-dashboard" element={<AppLayout><StudentDashboard /></AppLayout>} />
-          <Route path="/student-personal-area" element={<AppLayout><StudentPersonalArea /></AppLayout>} />
+          {/* <Route path="/student-dashboard" element={<AppLayout><StudentDashboard /></AppLayout>} /> */}
+          <Route path="/student-dashboard" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentDashboard />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          {/* <Route path="/student-personal-area" element={<AppLayout><StudentPersonalArea /></AppLayout>} /> */}
+           <Route path="/student-personal-area" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentPersonalArea />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          {/* <Route path="/submit-essay" element={<AppLayout><SubmitEssay /></AppLayout>} />   */}
+          <Route path="/submit-essay" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <SubmitEssay />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
           <Route path="/student-recommendation-letters" element={<AppLayout><StudentRecommendationLetters /></AppLayout>} />
           <Route path="/student-stats" element={<AppLayout><StudentStats /></AppLayout>} />
           <Route path="/parent-portal" element={<AppLayout><ParentPortal /></AppLayout>} />
@@ -109,6 +144,7 @@ const App = () => {
           {/* <Route path="/review-essays" element={<AppLayout><ReviewEssays /></AppLayout>} /> */}
           <Route path="/check-deadlines" element={<AppLayout><CheckDeadlines /></AppLayout>} />
           <Route path="/view-reports" element={<AppLayout><ViewReports /></AppLayout>} />
+
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
