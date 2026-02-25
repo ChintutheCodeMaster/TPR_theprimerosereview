@@ -35,16 +35,17 @@ export const useIndexDashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: assignments } = await supabase
-        .from("student_counselor_assignments")
-        .select("student_id")
-        .eq("counselor_id", user.id);
+      // Use user_roles instead of assignments
+      const { data: studentRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
 
-      const studentIds = assignments?.map((a) => a.student_id) ?? [];
+      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
       if (studentIds.length === 0) return [];
 
-      // Fetch profiles + student_profiles in parallel
-      const [profilesRes, studentProfilesRes, applicationsRes, essaysRes] =
+      // Fetch all data in parallel
+      const [profilesRes, studentProfilesRes, essaysRes, recsRes] =
         await Promise.all([
           supabase
             .from("profiles")
@@ -57,13 +58,13 @@ export const useIndexDashboard = () => {
             .in("user_id", studentIds),
 
           supabase
-            .from("applications")
-            .select("student_id, status, completion_percentage, deadline_date, urgent")
+            .from("essay_feedback")
+            .select("student_id, status, updated_at")
             .in("student_id", studentIds),
 
           supabase
-            .from("essay_feedback")
-            .select("student_id, status, updated_at")
+            .from("recommendation_requests")
+            .select("student_id, status")
             .in("student_id", studentIds),
         ]);
 
@@ -74,37 +75,32 @@ export const useIndexDashboard = () => {
         (studentProfilesRes.data ?? []).map((p) => [p.user_id, p])
       );
 
-      const today = new Date();
-      const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
       return studentIds.map((id): DashboardStudent => {
         const profile = profileMap.get(id);
         const sp = studentProfileMap.get(id);
-        const apps = (applicationsRes.data ?? []).filter((a) => a.student_id === id);
         const essays = (essaysRes.data ?? []).filter((e) => e.student_id === id);
+        const recs = (recsRes.data ?? []).filter((r) => r.student_id === id);
 
+        // Essay completion (60% weight)
         const totalEssays = essays.length;
         const essaysSubmitted = essays.filter((e) =>
           ["sent", "read", "approved"].includes(e.status)
         ).length;
+        const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
 
-        const upcomingDeadlines = apps.filter((a) => {
-          const d = new Date(a.deadline_date);
-          return d >= today && d <= in7Days && a.status !== "submitted";
-        }).length;
+        // Rec completion (40% weight)
+        const recsRequested = recs.length;
+        const recsSubmitted = recs.filter((r) => r.status === "sent").length;
+        const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
 
-        const avgCompletion = apps.length
-          ? Math.round(
-              apps.reduce((s, a) => s + (a.completion_percentage ?? 0), 0) /
-                apps.length
-            )
-          : 0;
+        // Overall completion
+        const completionPercentage = Math.round(essayScore + recScore);
 
-        const isUrgent = apps.some((a) => a.urgent);
+        // Status — same thresholds as useDashboardStats
         const status: DashboardStudent["status"] =
-          avgCompletion >= 60 && !isUrgent
+          completionPercentage >= 60
             ? "on-track"
-            : avgCompletion >= 30
+            : completionPercentage >= 40
             ? "needs-attention"
             : "at-risk";
 
@@ -122,10 +118,10 @@ export const useIndexDashboard = () => {
           name: profile?.full_name ?? "Unknown Student",
           gpa: sp?.gpa ?? null,
           satScore: sp?.sat_score ?? null,
-          completionPercentage: avgCompletion,
+          completionPercentage,
           essaysSubmitted,
           totalEssays,
-          upcomingDeadlines,
+          upcomingDeadlines: 0, // will populate when applications are built
           status,
           lastActivity,
         };
@@ -143,25 +139,19 @@ export const useIndexDashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: assignments } = await supabase
-        .from("student_counselor_assignments")
-        .select("student_id")
-        .eq("counselor_id", user.id);
+      // Use user_roles instead of assignments
+      const { data: studentRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
 
-      const studentIds = assignments?.map((a) => a.student_id) ?? [];
+      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
       if (studentIds.length === 0) return [];
 
+      // Fetch essays without join (avoids foreign key issue)
       const { data, error } = await supabase
         .from("essay_feedback")
-        .select(`
-          id,
-          essay_title,
-          essay_prompt,
-          essay_content,
-          status,
-          updated_at,
-          profiles ( full_name )
-        `)
+        .select("id, essay_title, essay_prompt, essay_content, status, updated_at, student_id")
         .in("student_id", studentIds)
         .in("status", ["draft", "in_progress"])
         .order("updated_at", { ascending: false })
@@ -169,11 +159,19 @@ export const useIndexDashboard = () => {
 
       if (error) throw error;
 
+      // Fetch profiles separately
+      const profileIds = [...new Set((data ?? []).map((e) => e.student_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", profileIds);
+
       return (data ?? []).map((e): DashboardEssay => ({
         id: e.id,
         title: e.essay_title,
         studentName:
-          (e.profiles as any)?.full_name ?? "Unknown Student",
+          profilesData?.find((p) => p.user_id === e.student_id)?.full_name ??
+          "Unknown Student",
         prompt: e.essay_prompt,
         wordCount: e.essay_content
           ? e.essay_content.split(/\s+/).filter(Boolean).length

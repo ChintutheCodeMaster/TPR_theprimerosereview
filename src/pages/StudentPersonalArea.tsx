@@ -8,6 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/Usestudentpersonalarea";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, GraduationCap } from "lucide-react";
+import { useApplications } from "@/hooks/useApplications";
+
+
 import {
   FileText,
   Upload,
@@ -73,6 +77,8 @@ const StudentPersonalArea = () => {
   const [activeTab, setActiveTab]           = useState("essays");
   const [selectedEssay, setSelectedEssay]   = useState<EssayFeedback | null>(null);
 
+  const { applications, isLoading: isLoadingApplications } = useApplications();
+
   const essayFeedback = selectedEssay
     ? getFeedbackForEssay(selectedEssay.essay_title)
     : [];
@@ -88,10 +94,11 @@ const StudentPersonalArea = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="essays">Essays</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
@@ -352,6 +359,77 @@ const StudentPersonalArea = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Applications Tab ── */}
+       <TabsContent value="applications" className="space-y-6">
+  <div className="flex justify-between items-center">
+    <h2 className="text-xl font-semibold">My Applications</h2>
+    <Button onClick={() => navigate('/add-application')}>
+      <Plus className="h-4 w-4 mr-2" />
+      Add Application
+    </Button>
+  </div>
+
+  {isLoadingApplications ? (
+    <div className="flex items-center justify-center h-48">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  ) : applications.length === 0 ? (
+    <Card>
+      <CardContent className="p-12 text-center text-muted-foreground">
+        <GraduationCap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>No applications yet.</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/add-application')}>
+          Add Your First Application
+        </Button>
+      </CardContent>
+    </Card>
+  ) : (
+    <div className="grid gap-4">
+      {applications.map((app) => (
+        <Card key={app.id} className="border-l-4 border-l-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{app.school_name}</h3>
+                {app.program && (
+                  <p className="text-sm text-muted-foreground">{app.program}</p>
+                )}
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Deadline: {new Date(app.deadline_date).toLocaleDateString()}
+                  </span>
+                  <span>
+                    Essays: {app.completed_essays}/{app.required_essays}
+                  </span>
+                  <span>
+                    Recs: {app.recommendations_submitted}/{app.recommendations_requested}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge className={getStatusColor(app.status)}>
+                  {getStatusIcon(app.status)}
+                  <span className="ml-1 capitalize">{getStatusLabel(app.status)}</span>
+                </Badge>
+                <span className="text-sm font-medium text-primary">
+                  {app.completion_percentage}% complete
+                </span>
+                {app.urgent && (
+                  <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                    ⚠ Urgent
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <Progress value={app.completion_percentage} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )}
+</TabsContent>
       </Tabs>
 
       {/* ── Essay Detail Modal ── */}

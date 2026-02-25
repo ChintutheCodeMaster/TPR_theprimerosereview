@@ -100,35 +100,45 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
   const essayContent = essay.content;
 
   useEffect(() => {
-    if (isOpen) {
-      loadExistingFeedback();
-      analyzeEssay();
-    }
-  }, [isOpen]);
+  if (isOpen) {
+    const init = async () => {
+      const alreadyAnalyzed = await loadExistingFeedback();
+      if (!alreadyAnalyzed) {
+        analyzeEssay(); // only call API if no cached analysis
+      }
+    };
+    init();
+  }
+}, [isOpen]);
 
   // ── Load existing feedback from the essay row ──────────────
   const loadExistingFeedback = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('essay_feedback')
-        .select('feedback_items, manual_notes, personal_message, ai_analysis')
-        .eq('id', essay.id)
-        .single();
+  try {
+    const { data, error } = await supabase
+      .from('essay_feedback')
+      .select('feedback_items, manual_notes, personal_message, ai_analysis')
+      .eq('id', essay.id)
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      if (data) {
-        setFeedbackItems((data.feedback_items as unknown as FeedbackItem[]) || []);
-        setManualNote(data.manual_notes || "");
-        setPersonalMessage(data.personal_message || "");
-        if (data.ai_analysis) {
-          setAnalysis(data.ai_analysis as unknown as AnalysisResult);
-        }
+    if (data) {
+      setFeedbackItems((data.feedback_items as unknown as FeedbackItem[]) || []);
+      setManualNote(data.manual_notes || "");
+      setPersonalMessage(data.personal_message || "");
+
+      if (data.ai_analysis) {
+        // ✅ Already analyzed — use cached result, skip API call
+        setAnalysis(data.ai_analysis as unknown as AnalysisResult);
+        return true; // signals "already have analysis"
       }
-    } catch (error) {
-      console.error("Error loading existing feedback:", error);
     }
-  };
+    return false; // signals "need to analyze"
+  } catch (error) {
+    console.error("Error loading existing feedback:", error);
+    return false;
+  }
+};
 
   // ── Load history ───────────────────────────────────────────
   const loadHistory = async () => {

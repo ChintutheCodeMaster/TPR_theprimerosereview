@@ -23,6 +23,7 @@ export type Database = {
           program: string | null
           required_essays: number
           completed_essays: number
+          notes: string | null
           recommendations_requested: number
           recommendations_submitted: number
           completion_percentage: number
@@ -39,6 +40,7 @@ export type Database = {
           deadline_date: string
           status?: string
           program?: string | null
+          notes?: string | null
           required_essays?: number
           completed_essays?: number
           recommendations_requested?: number
@@ -56,6 +58,7 @@ export type Database = {
           application_type?: string
           deadline_date?: string
           status?: string
+          notes?: string | null
           program?: string | null
           required_essays?: number
           completed_essays?: number

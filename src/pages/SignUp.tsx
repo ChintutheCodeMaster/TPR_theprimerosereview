@@ -132,12 +132,12 @@ const Signup = () => {
             });
           if (studentError) throw studentError;
 
-          if (counselorIdParam) {
-            const { error: assignError } = await supabase
-              .from('student_counselor_assignments')
-              .insert({ student_id: data.user.id, counselor_id: counselorIdParam });
-            if (assignError) throw assignError;
-          }
+          // if (counselorIdParam) {
+          //   const { error: assignError } = await supabase
+          //     .from('student_counselor_assignments')
+          //     .insert({ student_id: data.user.id, counselor_id: counselorIdParam });
+          //   if (assignError) throw assignError;
+          // }
         }
 
         // Counselor-specific insert
@@ -185,7 +185,7 @@ const Signup = () => {
           <Button
             variant="ghost"
             className="gap-2"
-            onClick={() => selectedRole ? setSelectedRole(null) : navigate('/auth')}
+            onClick={() => selectedRole ? setSelectedRole(null) : navigate('/')}
           >
             <ArrowLeft className="h-4 w-4" />
             {selectedRole ? 'Back' : 'Back to Sign In'}

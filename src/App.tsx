@@ -32,6 +32,7 @@ import clientLogo from "@/assets/client-logo.jpg";
 import Signup from "./pages/SignUp";
 import SubmitEssay from "./pages/SubmitEssay";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AddApplication from "./pages/AddApplication";
 
 const queryClient = new QueryClient();
 // Layout component that conditionally shows sidebar
@@ -104,6 +105,13 @@ const App = () => {
             </AppLayout>
           } />
 
+          <Route path="/add-application" element={
+  <AppLayout>
+    <ProtectedRoute allowedRoles={['student']}>
+      <AddApplication />
+    </ProtectedRoute>
+  </AppLayout>
+} />
           <Route path="/students" element={<AppLayout><Students /></AppLayout>} />
           <Route path="/essays" element={<AppLayout><Essays /></AppLayout>} />
           <Route path="/essay-analytics" element={<AppLayout><EssayAnalytics /></AppLayout>} />

@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 // Extracted so both queries use identical select strings — avoids drift
-const APPLICATION_SELECT = `*, profiles ( full_name, avatar_url )`;
+const APPLICATION_SELECT = `*`;
 
 type Application = Database["public"]["Tables"]["applications"]["Row"];
 type ApplicationUpdate = Database["public"]["Tables"]["applications"]["Update"];
@@ -20,54 +20,114 @@ export const useApplications = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: applications, isLoading, error } = useQuery({
-    queryKey: ["applications"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+  // const { data: applications, isLoading, error } = useQuery({
+  //   queryKey: ["applications"],
+  //   queryFn: async () => {
+  //     const { data: { user } } = await supabase.auth.getUser();
+  //     if (!user) throw new Error("Not authenticated");
 
-      // Get user role
-      const { data: roleData } = await supabase
+  //     // Get user role
+  //     const { data: roleData } = await supabase
+  //       .from("user_roles")
+  //       .select("role")
+  //       .eq("user_id", user.id)
+  //       .single();
+
+  //     const role = roleData?.role;
+
+  //     if (role === "student") {
+  //       // RLS handles scoping — policy filters rows to own student_id
+  //       const { data, error } = await supabase
+  //         .from("applications")
+  //         .select(APPLICATION_SELECT)
+  //         .order("deadline_date", { ascending: true });
+
+  //       if (error) throw error;
+  //       return (data ?? []) as unknown as ApplicationWithProfile[];
+  //     }
+
+  //     if (role === "counselor" || role === "admin") {
+  //       const { data: assignments } = await supabase
+  //         .from("student_counselor_assignments")
+  //         .select("student_id")
+  //         .eq("counselor_id", user.id);
+
+  //       const studentIds = assignments?.map((a) => a.student_id) ?? [];
+  //       if (studentIds.length === 0) return [];
+
+  //       const { data, error } = await supabase
+  //         .from("applications")
+  //         .select(APPLICATION_SELECT)
+  //         .in("student_id", studentIds)
+  //         .order("deadline_date", { ascending: true });
+
+  //       if (error) throw error;
+  //       return (data ?? []) as unknown as ApplicationWithProfile[];
+  //     }
+
+  //     return [];
+  //   },
+  // });
+
+
+
+const { data: applications, isLoading, error } = useQuery({
+  queryKey: ["applications"],
+  queryFn: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    const role = roleData?.role;
+
+    let appsData: any[] = [];
+
+    if (role === "student") {
+      const { data, error } = await supabase
+        .from("applications")
+        .select("*")
+        .order("deadline_date", { ascending: true });
+      if (error) throw error;
+      appsData = data ?? [];
+    }
+
+    if (role === "counselor" || role === "admin") {
+      // TODO: swap back to assignments when ready
+      const { data: studentRoles } = await supabase
         .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
+        .select("user_id")
+        .eq("role", "student");
 
-      const role = roleData?.role;
+      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      if (studentIds.length === 0) return [];
 
-      if (role === "student") {
-        // RLS handles scoping — policy filters rows to own student_id
-        const { data, error } = await supabase
-          .from("applications")
-          .select(APPLICATION_SELECT)
-          .order("deadline_date", { ascending: true });
+      const { data, error } = await supabase
+        .from("applications")
+        .select("*")
+        .in("student_id", studentIds)
+        .order("deadline_date", { ascending: true });
+      if (error) throw error;
+      appsData = data ?? [];
+    }
 
-        if (error) throw error;
-        return (data ?? []) as unknown as ApplicationWithProfile[];
-      }
+    // Fetch profiles separately
+    const studentIds = [...new Set(appsData.map((a) => a.student_id))];
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_url")
+      .in("user_id", studentIds);
 
-      if (role === "counselor" || role === "admin") {
-        const { data: assignments } = await supabase
-          .from("student_counselor_assignments")
-          .select("student_id")
-          .eq("counselor_id", user.id);
-
-        const studentIds = assignments?.map((a) => a.student_id) ?? [];
-        if (studentIds.length === 0) return [];
-
-        const { data, error } = await supabase
-          .from("applications")
-          .select(APPLICATION_SELECT)
-          .in("student_id", studentIds)
-          .order("deadline_date", { ascending: true });
-
-        if (error) throw error;
-        return (data ?? []) as unknown as ApplicationWithProfile[];
-      }
-
-      return [];
-    },
-  });
+    return appsData.map((app) => ({
+      ...app,
+      profiles: profilesData?.find((p) => p.user_id === app.student_id) ?? null,
+    })) as ApplicationWithProfile[];
+  },
+});
 
   const updateApplication = useMutation({
     mutationFn: async ({ id, ...updates }: ApplicationUpdate & { id: string }) => {
