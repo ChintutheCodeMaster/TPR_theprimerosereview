@@ -64,7 +64,7 @@ const parentItems = [{
 
 // Routes that belong to each role
 const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
-const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats'];
+const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay'];
 const parentRoutes = ['/parent-portal'];
 
 export function AppSidebar() {

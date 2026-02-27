@@ -86,7 +86,7 @@ export const useDashboardStats = () => {
     .from("essay_feedback")
     .select("id", { count: "exact", head: true })
     .in("student_id", studentIds)
-    .in("status", ["draft", "in_progress"]),
+    .in("status", ["draft", "in_progress","pending"]),
 
   // Applications with deadlines in the next 7 days (keep for future)
   supabase

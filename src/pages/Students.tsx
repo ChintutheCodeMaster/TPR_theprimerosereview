@@ -280,12 +280,12 @@ const studentIds = studentRoles.map(s => s.user_id)
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
             <TabsTrigger value="essays">Essays</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="meetings">Meetings</TabsTrigger>
+            {/* <TabsTrigger value="meetings">Meetings</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -449,7 +449,7 @@ const studentIds = studentRoles.map(s => s.user_id)
             </Card>
           </TabsContent>
 
-          <TabsContent value="meetings" className="space-y-4">
+          {/* <TabsContent value="meetings" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -471,14 +471,14 @@ const studentIds = studentRoles.map(s => s.user_id)
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
 
         <div className="flex gap-2 pt-4 border-t border-border">
-          <Button className="flex-1">
+          {/* <Button className="flex-1">
             <MessageSquare className="h-4 w-4 mr-2" />
             Add Meeting Note
-          </Button>
+          </Button> */}
           <Button variant="outline" className="flex-1">
             <FileText className="h-4 w-4 mr-2" />
             Generate Report

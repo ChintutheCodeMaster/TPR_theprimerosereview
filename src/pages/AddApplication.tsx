@@ -31,7 +31,7 @@ import {
 const APPLICATION_TYPES = [
   { value: "early-decision", label: "Early Decision (ED)", description: "Binding — first choice school" },
   { value: "early-action", label: "Early Action (EA)", description: "Non-binding early application" },
-  { value: "regular", label: "Regular Decision", description: "Standard application round" },
+  // { value: "", label: "Regular Decision", description: "Standard application round" },
   { value: "ucas", label: "UCAS", description: "UK university applications" },
   { value: "rolling", label: "Rolling Admission", description: "Applications reviewed as received" },
 ];
@@ -307,7 +307,7 @@ const AddApplication = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Essays
+              Essays (Optional)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -355,7 +355,7 @@ const AddApplication = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              Recommendations
+              Recommendations (Optional)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

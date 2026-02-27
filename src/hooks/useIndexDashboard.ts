@@ -153,7 +153,7 @@ export const useIndexDashboard = () => {
         .from("essay_feedback")
         .select("id, essay_title, essay_prompt, essay_content, status, updated_at, student_id")
         .in("student_id", studentIds)
-        .in("status", ["draft", "in_progress"])
+        .in("status", ["draft", "in_progress","pending"])
         .order("updated_at", { ascending: false })
         .limit(5);
 

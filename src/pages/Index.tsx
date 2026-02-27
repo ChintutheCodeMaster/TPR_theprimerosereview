@@ -62,7 +62,7 @@ const Index = () => {
         <Collapsible open={studentsOpen} onOpenChange={setStudentsOpen}>
           <Card className="p-6">
             <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity gap-5">
                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
                   <Users className="h-6 w-6 text-primary" />
                   Students Needing Attention

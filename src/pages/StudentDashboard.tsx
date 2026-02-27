@@ -38,6 +38,10 @@ const StudentDashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const handleClick = ()=>{
+    navigate("/submit-essay")
+  }
+
   useEffect(() => {
     fetchDashboardData()
   }, [])
@@ -300,11 +304,13 @@ const StudentDashboard = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle 
+          >Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Button variant="outline" className="h-16 flex-col gap-2">
+            <Button variant="outline" className="h-16 flex-col gap-2"
+            onClick={() => navigate('/submit-essay')}>
               <Upload className="h-5 w-5" />
               Upload Essay
             </Button>

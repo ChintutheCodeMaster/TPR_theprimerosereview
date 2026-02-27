@@ -12,10 +12,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   AlertTriangle,
-  CheckCircle,
   FileText,
   GraduationCap,
-  Filter,
   List,
   Grid3X3,
   ChevronLeft,
@@ -27,217 +25,221 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────
 interface StudentDeadline {
-  studentId: string
-  studentName: string
-  progress: number // computed from essays + recs
-  essayCount: number
-  essaysDone: number
-  recCount: number
-  recsDone: number
+  studentId: string;
+  studentName: string;
+  progress: number;
+  essayCount: number;
+  essaysDone: number;
+  recCount: number;
+  recsDone: number;
 }
 
 interface Deadline {
-  id: string
-  school: string
-  applicationType: string
-  date: Date
-  daysLeft: number
-  urgency: 'overdue' | 'critical' | 'important' | 'upcoming'
-  students: StudentDeadline[]
+  id: string;
+  school: string;
+  applicationType: string;
+  date: Date;
+  daysLeft: number;
+  urgency: "overdue" | "critical" | "important" | "upcoming";
+  students: StudentDeadline[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
-const computeUrgency = (daysLeft: number): Deadline['urgency'] => {
-  if (daysLeft < 0) return 'overdue'
-  if (daysLeft <= 7) return 'critical'
-  if (daysLeft <= 21) return 'important'
-  return 'upcoming'
-}
+const computeUrgency = (daysLeft: number): Deadline["urgency"] => {
+  if (daysLeft < 0) return "overdue";
+  if (daysLeft <= 7) return "critical";
+  if (daysLeft <= 21) return "important";
+  return "upcoming";
+};
 
 const getUrgencyColor = (urgency: string) => {
   switch (urgency) {
-    case 'overdue': return 'bg-destructive text-destructive-foreground'
-    case 'critical': return 'bg-red-500 text-white'
-    case 'important': return 'bg-yellow-500 text-white'
-    case 'upcoming': return 'bg-green-500 text-white'
-    default: return 'bg-muted text-muted-foreground'
+    case "overdue":   return "bg-destructive text-destructive-foreground";
+    case "critical":  return "bg-red-500 text-white";
+    case "important": return "bg-yellow-500 text-white";
+    case "upcoming":  return "bg-green-500 text-white";
+    default:          return "bg-muted text-muted-foreground";
   }
-}
+};
 
 const getUrgencyBorder = (urgency: string) => {
   switch (urgency) {
-    case 'overdue': return 'border-l-4 border-l-destructive'
-    case 'critical': return 'border-l-4 border-l-red-500'
-    case 'important': return 'border-l-4 border-l-yellow-500'
-    case 'upcoming': return 'border-l-4 border-l-green-500'
-    default: return 'border-l-4 border-l-muted'
+    case "overdue":   return "border-l-4 border-l-destructive";
+    case "critical":  return "border-l-4 border-l-red-500";
+    case "important": return "border-l-4 border-l-yellow-500";
+    case "upcoming":  return "border-l-4 border-l-green-500";
+    default:          return "border-l-4 border-l-muted";
   }
-}
+};
 
 const formatDate = (date: Date) =>
-  date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  date.toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", year: "numeric",
+  });
 
+// ─── Component ────────────────────────────────────────────────
 const CheckDeadlines = () => {
-  const [deadlines, setDeadlines] = useState<Deadline[]>([])
-  const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState("list")
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null)
-  const [urgencyFilter, setUrgencyFilter] = useState("all")
-  const [typeFilter, setTypeFilter] = useState("all")
-  const { toast } = useToast()
+  const [deadlines, setDeadlines]               = useState<Deadline[]>([]);
+  const [loading, setLoading]                   = useState(true);
+  const [viewMode, setViewMode]                 = useState("list");
+  const [selectedDate, setSelectedDate]         = useState(new Date());
+  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [urgencyFilter, setUrgencyFilter]       = useState("all");
+  const [typeFilter, setTypeFilter]             = useState("all");
+  const { toast } = useToast();
 
-  useEffect(() => {
-    fetchDeadlines()
-  }, [])
+  useEffect(() => { fetchDeadlines(); }, []);
 
   const fetchDeadlines = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      // TODO: swap back to student_counselor_assignments when ready
+      // const { data: assignments } = await supabase
+      //   .from("student_counselor_assignments")
+      //   .select("student_id")
+      //   .eq("counselor_id", user.id);
+      // const studentIds = assignments?.map(a => a.student_id) ?? [];
 
-      // Get counselor's students
-      const { data: assignments, error: aError } = await supabase
-        .from('student_counselor_assignments')
-        .select('student_id')
-        .eq('counselor_id', user.id)
+      // Bypass — get all students via user_roles
+      const { data: studentRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
 
-      if (aError) throw aError
-      if (!assignments.length) { setDeadlines([]); return }
+      if (rolesError) throw rolesError;
 
-      const studentIds = assignments.map(a => a.student_id)
+      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      if (studentIds.length === 0) { setDeadlines([]); return; }
 
-      // Fetch applications for all students
-      const { data: apps, error: appError } = await supabase
-        .from('applications')
-        .select('*')
-        .in('student_id', studentIds)
-        .order('deadline_date', { ascending: true })
+      // Fetch applications, profiles, essays, recs in parallel
+      const [appsRes, profilesRes, essaysRes, recsRes] = await Promise.all([
+        supabase
+          .from("applications")
+          .select("*")
+          .in("student_id", studentIds)
+          .order("deadline_date", { ascending: true }),
 
-      if (appError) throw appError
+        supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", studentIds),
 
-      // Fetch student profiles
-      const { data: profiles, error: pError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', studentIds)
+        supabase
+          .from("essay_feedback")
+          .select("student_id, status")
+          .in("student_id", studentIds),
 
-      if (pError) throw pError
+        supabase
+          .from("recommendation_requests")
+          .select("student_id, status")
+          .in("student_id", studentIds),
+      ]);
 
-      // Fetch essays per student
-      const { data: essays, error: eError } = await supabase
-        .from('essay_feedback')
-        .select('student_id, status')
-        .in('student_id', studentIds)
+      if (appsRes.error)     throw appsRes.error;
+      if (profilesRes.error) throw profilesRes.error;
+      if (essaysRes.error)   throw essaysRes.error;
+      if (recsRes.error)     throw recsRes.error;
 
-      if (eError) throw eError
+      const profileMap = new Map(
+        (profilesRes.data ?? []).map((p) => [p.user_id, p.full_name ?? "Unknown"])
+      );
 
-      // Fetch recommendations per student
-      const { data: recs, error: rError } = await supabase
-        .from('recommendation_requests')
-        .select('student_id, status')
-        .in('student_id', studentIds)
+      const apps    = appsRes.data    ?? [];
+      const essays  = essaysRes.data  ?? [];
+      const recs    = recsRes.data    ?? [];
 
-      if (rError) throw rError
+      // Group by school + type + deadline
+      const deadlineMap = new Map<string, Deadline>();
 
-      const profileMap = new Map(profiles.map(p => [p.user_id, p.full_name || 'Unknown']))
+      for (const app of apps) {
+        const key  = `${app.school_name}__${app.application_type}__${app.deadline_date}`;
+        const date = new Date(app.deadline_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysLeft = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Group applications by school + type + deadline
-      // Each unique (school_name, application_type, deadline_date) = one deadline entry
-      const deadlineMap = new Map<string, Deadline>()
-
-      for (const app of apps || []) {
-        const key = `${app.school_name}__${app.application_type}__${app.deadline_date}`
-        const date = new Date(app.deadline_date)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const daysLeft = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-        // Compute student progress
-        const studentEssays = essays.filter(e => e.student_id === app.student_id)
-        const studentRecs = recs.filter(r => r.student_id === app.student_id)
-        const essaysDone = studentEssays.filter(e => e.status === 'sent').length
-        const recsDone = studentRecs.filter(r => r.status === 'sent').length
-        const total = studentEssays.length + studentRecs.length
-        const done = essaysDone + recsDone
-        const progress = total > 0 ? Math.round((done / total) * 100) : 0
+        const studentEssays = essays.filter((e) => e.student_id === app.student_id);
+        const studentRecs   = recs.filter((r) => r.student_id === app.student_id);
+        const essaysDone    = studentEssays.filter((e) => e.status === "sent").length;
+        const recsDone      = studentRecs.filter((r) => r.status === "sent").length;
+        const total         = studentEssays.length + studentRecs.length;
+        const done          = essaysDone + recsDone;
+        const progress      = total > 0 ? Math.round((done / total) * 100) : 0;
 
         const studentEntry: StudentDeadline = {
-          studentId: app.student_id,
-          studentName: profileMap.get(app.student_id) || 'Unknown',
+          studentId:   app.student_id,
+          studentName: profileMap.get(app.student_id) ?? "Unknown",
           progress,
-          essayCount: studentEssays.length,
+          essayCount:  studentEssays.length,
           essaysDone,
-          recCount: studentRecs.length,
+          recCount:    studentRecs.length,
           recsDone,
-        }
+        };
 
         if (deadlineMap.has(key)) {
-          deadlineMap.get(key)!.students.push(studentEntry)
+          deadlineMap.get(key)!.students.push(studentEntry);
         } else {
           deadlineMap.set(key, {
-            id: app.id,
-            school: app.school_name,
+            id:              app.id,
+            school:          app.school_name,
             applicationType: app.application_type,
             date,
             daysLeft,
-            urgency: computeUrgency(daysLeft),
-            students: [studentEntry],
-          })
+            urgency:         computeUrgency(daysLeft),
+            students:        [studentEntry],
+          });
         }
       }
 
-      setDeadlines(Array.from(deadlineMap.values()))
+      setDeadlines(Array.from(deadlineMap.values()));
     } catch (error: any) {
-      toast({ title: 'Failed to load deadlines', description: error.message, variant: 'destructive' })
+      toast({ title: "Failed to load deadlines", description: error.message, variant: "destructive" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const filteredDeadlines = deadlines.filter(d => {
-    const matchesUrgency = urgencyFilter === 'all' || d.urgency === urgencyFilter
-    const matchesType = typeFilter === 'all' || d.applicationType === typeFilter
-    return matchesUrgency && matchesType
-  })
+  const filteredDeadlines = deadlines.filter((d) => {
+    const matchesUrgency = urgencyFilter === "all" || d.urgency === urgencyFilter;
+    const matchesType    = typeFilter === "all" || d.applicationType === typeFilter;
+    return matchesUrgency && matchesType;
+  });
 
   const atRiskStudents = deadlines
-    .filter(d => d.urgency === 'critical' || d.urgency === 'overdue')
-    .flatMap(d => d.students.filter(s => s.progress < 70))
-    .filter((s, i, arr) => arr.findIndex(x => x.studentId === s.studentId) === i) // dedupe
+    .filter((d) => d.urgency === "critical" || d.urgency === "overdue")
+    .flatMap((d) => d.students.filter((s) => s.progress < 70))
+    .filter((s, i, arr) => arr.findIndex((x) => x.studentId === s.studentId) === i);
 
   // ─── Calendar helpers ──────────────────────────────────────
   const generateCalendarDays = () => {
-    const year = selectedDate.getFullYear()
-    const month = selectedDate.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const startDate = new Date(firstDay)
-    startDate.setDate(startDate.getDate() - firstDay.getDay())
+    const year     = selectedDate.getFullYear();
+    const month    = selectedDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const start    = new Date(firstDay);
+    start.setDate(start.getDate() - firstDay.getDay());
 
-    const days = []
-    const current = new Date(startDate)
+    const days    = [];
+    const current = new Date(start);
 
     for (let i = 0; i < 42; i++) {
-      const dayDeadlines = filteredDeadlines.filter(
-        d => d.date.toDateString() === current.toDateString()
-      )
       days.push({
         date: new Date(current),
         isCurrentMonth: current.getMonth() === month,
-        deadlines: dayDeadlines,
-      })
-      current.setDate(current.getDate() + 1)
+        deadlines: filteredDeadlines.filter(
+          (d) => d.date.toDateString() === current.toDateString()
+        ),
+      });
+      current.setDate(current.getDate() + 1);
     }
-    return days
-  }
+    return days;
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -271,10 +273,10 @@ const CheckDeadlines = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-red-600 dark:text-red-300 mb-3">
-              {atRiskStudents.length} student{atRiskStudents.length > 1 ? 's are' : ' is'} not ready for upcoming critical deadlines:
+              {atRiskStudents.length} student{atRiskStudents.length > 1 ? "s are" : " is"} not ready for upcoming critical deadlines:
             </p>
             <div className="flex flex-wrap gap-2">
-              {atRiskStudents.map(student => (
+              {atRiskStudents.map((student) => (
                 <Badge key={student.studentId} variant="destructive" className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   {student.studentName} ({student.progress}%)
@@ -308,11 +310,11 @@ const CheckDeadlines = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Early Action">Early Action</SelectItem>
-                <SelectItem value="Early Decision">Early Decision</SelectItem>
-                <SelectItem value="Regular Decision">Regular Decision</SelectItem>
-                <SelectItem value="UC System">UC System</SelectItem>
-                <SelectItem value="UCAS">UCAS</SelectItem>
+                <SelectItem value="early-decision">Early Decision</SelectItem>
+                <SelectItem value="early-action">Early Action</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="ucas">UCAS</SelectItem>
+                <SelectItem value="rolling">Rolling</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -330,37 +332,44 @@ const CheckDeadlines = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <CalendarIcon className="h-5 w-5" />
-                    {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {selectedDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
+                    >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>
                       Today
                     </Button>
-                    <Button variant="outline" size="sm"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
+                    >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-7 gap-1">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                       <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
                         {day}
                       </div>
                     ))}
                     {generateCalendarDays().map((day, index) => (
-                      <div key={index} className={`min-h-20 p-1 border border-border ${!day.isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : ''}`}>
+                      <div
+                        key={index}
+                        className={`min-h-20 p-1 border border-border ${!day.isCurrentMonth ? "bg-muted/30 text-muted-foreground" : ""}`}
+                      >
                         <div className="text-sm font-medium mb-1">{day.date.getDate()}</div>
                         <div className="space-y-1">
-                          {day.deadlines.slice(0, 2).map(deadline => (
+                          {day.deadlines.slice(0, 2).map((deadline) => (
                             <div
                               key={deadline.id}
-                              className={`text-xs p-1 rounded cursor-pointer ${getUrgencyColor(deadline.urgency)} hover:opacity-80`}
+                              className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getUrgencyColor(deadline.urgency)}`}
                               onClick={() => setSelectedDeadline(deadline)}
                             >
                               {deadline.school}
@@ -391,7 +400,7 @@ const CheckDeadlines = () => {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {filteredDeadlines.map(deadline => (
+                  {filteredDeadlines.map((deadline) => (
                     <Card
                       key={deadline.id}
                       className={`${getUrgencyBorder(deadline.urgency)} hover:shadow-md transition-shadow cursor-pointer`}
@@ -420,17 +429,20 @@ const CheckDeadlines = () => {
                         <div>
                           <p className="text-sm font-medium mb-2">Students ({deadline.students.length}):</p>
                           <div className="flex flex-wrap gap-2">
-                            {deadline.students.map(student => (
-                              <div key={student.studentId} className="flex items-center gap-2 bg-muted/50 rounded-full px-3 py-1">
+                            {deadline.students.map((student) => (
+                              <div
+                                key={student.studentId}
+                                className="flex items-center gap-2 bg-muted/50 rounded-full px-3 py-1"
+                              >
                                 <Avatar className="h-6 w-6">
                                   <AvatarFallback className="text-xs">
-                                    {student.studentName.split(' ').map(n => n[0]).join('')}
+                                    {student.studentName.split(" ").map((n) => n[0]).join("")}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span className="text-sm">{student.studentName}</span>
                                 <span className={`text-xs font-medium ${
-                                  student.progress < 50 ? 'text-red-600' :
-                                  student.progress < 80 ? 'text-yellow-600' : 'text-green-600'
+                                  student.progress < 50 ? "text-red-600" :
+                                  student.progress < 80 ? "text-yellow-600" : "text-green-600"
                                 }`}>
                                   {student.progress}%
                                 </span>
@@ -457,39 +469,41 @@ const CheckDeadlines = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {filteredDeadlines
-                  .sort((a, b) => a.date.getTime() - b.date.getTime())
-                  .slice(0, 8)
-                  .map(deadline => (
-                    <div
-                      key={deadline.id}
-                      className={`p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors ${getUrgencyBorder(deadline.urgency)}`}
-                      onClick={() => setSelectedDeadline(deadline)}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium text-sm truncate">{deadline.school}</h4>
-                        <Badge variant="outline" className={`text-xs ${getUrgencyColor(deadline.urgency)}`}>
-                          {deadline.daysLeft > 0 ? `${deadline.daysLeft}d` : 'Overdue'}
-                        </Badge>
+              {filteredDeadlines.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No deadlines yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {filteredDeadlines
+                    .sort((a, b) => a.date.getTime() - b.date.getTime())
+                    .slice(0, 8)
+                    .map((deadline) => (
+                      <div
+                        key={deadline.id}
+                        className={`p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors ${getUrgencyBorder(deadline.urgency)}`}
+                        onClick={() => setSelectedDeadline(deadline)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-medium text-sm truncate">{deadline.school}</h4>
+                          <Badge variant="outline" className={`text-xs ${getUrgencyColor(deadline.urgency)}`}>
+                            {deadline.daysLeft > 0 ? `${deadline.daysLeft}d` : "Overdue"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{deadline.applicationType}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(deadline.date)}</p>
+                        <div className="flex items-center gap-1 mt-2">
+                          {deadline.students.slice(0, 3).map((student) => (
+                            <Avatar key={student.studentId} className="h-5 w-5">
+                              <AvatarFallback className="text-xs">{student.studentName[0]}</AvatarFallback>
+                            </Avatar>
+                          ))}
+                          {deadline.students.length > 3 && (
+                            <span className="text-xs text-muted-foreground">+{deadline.students.length - 3}</span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">{deadline.applicationType}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(deadline.date)}</p>
-                      <div className="flex items-center gap-1 mt-2">
-                        {deadline.students.slice(0, 3).map(student => (
-                          <Avatar key={student.studentId} className="h-5 w-5">
-                            <AvatarFallback className="text-xs">
-                              {student.studentName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {deadline.students.length > 3 && (
-                          <span className="text-xs text-muted-foreground">+{deadline.students.length - 3}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -519,13 +533,13 @@ const CheckDeadlines = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {selectedDeadline.students.map(student => (
+                {selectedDeadline.students.map((student) => (
                   <Card key={student.studentId}>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-4">
                         <Avatar className="h-12 w-12">
                           <AvatarFallback>
-                            {student.studentName.split(' ').map(n => n[0]).join('')}
+                            {student.studentName.split(" ").map((n) => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
@@ -573,7 +587,7 @@ const CheckDeadlines = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default CheckDeadlines
+export default CheckDeadlines;

@@ -28,13 +28,20 @@ export const useCounselorInsights = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get assigned student IDs
-      const { data: assignments } = await supabase
-        .from("student_counselor_assignments")
-        .select("student_id")
-        .eq("counselor_id", user.id);
+      // TODO: swap back to student_counselor_assignments when ready
+      // const { data: assignments } = await supabase
+      //   .from("student_counselor_assignments")
+      //   .select("student_id")
+      //   .eq("counselor_id", user.id);
+      // const studentIds = assignments?.map((a) => a.student_id) ?? [];
 
-      const studentIds = assignments?.map((a) => a.student_id) ?? [];
+      // Bypass — get all students via user_roles
+      const { data: studentRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+
+      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
 
       if (studentIds.length === 0) {
         return {
@@ -68,8 +75,8 @@ export const useCounselorInsights = () => {
           supabase
             .from("essay_feedback")
             .select("id", { count: "exact", head: true })
-            .eq("counselor_id", user.id)
-            .in("status", ["draft", "in_progress"]),
+            .in("student_id", studentIds)
+            .in("status", ["draft", "in_progress","pending"]),
 
           // Upcoming deadlines this week
           supabase
@@ -102,9 +109,9 @@ export const useCounselorInsights = () => {
       const appsNotStarted = apps.filter((a) => a.status === "not-started").length;
 
       // ── Action items ──────────────────────────────────────
-      const essaysPending = essaysPendingRes.count ?? 0;
-      const deadlines     = deadlinesRes.count ?? 0;
-      const meetings      = meetingsRes.count ?? 0;
+      const essaysPending  = essaysPendingRes.count ?? 0;
+      const deadlines      = deadlinesRes.count ?? 0;
+      const meetings       = meetingsRes.count ?? 0;
       const recsToComplete = recPending + recInProgress;
 
       const actionItems = [
@@ -119,14 +126,9 @@ export const useCounselorInsights = () => {
           urgent: deadlines > 0,
         },
         {
-          label: "Scheduled meetings",
-          count: meetings,
-          urgent: false,
-        },
-        {
           label: "Essays pending review",
           count: essaysPending,
-          urgent: false,
+          urgent: essaysPending > 0,
         },
       ];
 

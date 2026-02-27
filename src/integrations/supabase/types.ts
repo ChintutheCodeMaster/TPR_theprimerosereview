@@ -12,6 +12,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      application_essays: {
+        Row: {
+          id: string
+          application_id: string
+          student_id: string
+          essay_label: string
+          essay_prompt: string | null
+          word_limit: number | null
+          essay_feedback_id: string | null
+          status: string
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          application_id: string
+          student_id: string
+          essay_label: string
+          essay_prompt?: string | null
+          word_limit?: number | null
+          essay_feedback_id?: string | null
+          status?: string
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          application_id?: string
+          student_id?: string
+          essay_label?: string
+          essay_prompt?: string | null
+          word_limit?: number | null
+          essay_feedback_id?: string | null
+          status?: string
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_essays_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_essays_essay_feedback_id_fkey"
+            columns: ["essay_feedback_id"]
+            isOneToOne: false
+            referencedRelation: "essay_feedback"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           id: string
@@ -166,58 +223,58 @@ export type Database = {
         Relationships: []
       }
       essay_feedback_history: {
-  Row: {
-    id: string
-    essay_id: string
-    student_id: string
-    counselor_id: string
-    version: number
-    feedback_items: Json | null
-    manual_notes: string | null
-    personal_message: string | null
-    ai_analysis: Json | null
-    status: string
-    sent_at: string | null
-    created_at: string
-  }
-  Insert: {
-    id?: string
-    essay_id: string
-    student_id: string
-    counselor_id: string
-    version?: number
-    feedback_items?: Json | null
-    manual_notes?: string | null
-    personal_message?: string | null
-    ai_analysis?: Json | null
-    status?: string
-    sent_at?: string | null
-    created_at?: string
-  }
-  Update: {
-    id?: string
-    essay_id?: string
-    student_id?: string
-    counselor_id?: string
-    version?: number
-    feedback_items?: Json | null
-    manual_notes?: string | null
-    personal_message?: string | null
-    ai_analysis?: Json | null
-    status?: string
-    sent_at?: string | null
-    created_at?: string
-  }
-  Relationships: [
-    {
-      foreignKeyName: "essay_feedback_history_essay_id_fkey"
-      columns: ["essay_id"]
-      isOneToOne: false
-      referencedRelation: "essay_feedback"
-      referencedColumns: ["id"]
-    }
-  ]
-}
+        Row: {
+          id: string
+          essay_id: string
+          student_id: string
+          counselor_id: string
+          version: number
+          feedback_items: Json | null
+          manual_notes: string | null
+          personal_message: string | null
+          ai_analysis: Json | null
+          status: string
+          sent_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          essay_id: string
+          student_id: string
+          counselor_id: string
+          version?: number
+          feedback_items?: Json | null
+          manual_notes?: string | null
+          personal_message?: string | null
+          ai_analysis?: Json | null
+          status?: string
+          sent_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          essay_id?: string
+          student_id?: string
+          counselor_id?: string
+          version?: number
+          feedback_items?: Json | null
+          manual_notes?: string | null
+          personal_message?: string | null
+          ai_analysis?: Json | null
+          status?: string
+          sent_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essay_feedback_history_essay_id_fkey"
+            columns: ["essay_id"]
+            isOneToOne: false
+            referencedRelation: "essay_feedback"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurriculars: {
         Row: {
           id: string
@@ -505,6 +562,44 @@ export type Database = {
         }
         Relationships: []
       }
+      submitted_applications: {
+        Row: {
+          id: string
+          application_id: string
+          student_id: string
+          submitted_at: string
+          essay_snapshots: Json
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          application_id: string
+          student_id: string
+          submitted_at?: string
+          essay_snapshots?: Json
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          application_id?: string
+          student_id?: string
+          submitted_at?: string
+          essay_snapshots?: Json
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submitted_applications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       target_schools: {
         Row: {
           id: string
@@ -603,9 +698,9 @@ export type Database = {
         Returns: boolean
       }
       get_any_counselor_id: {
-    Args: Record<never, never>
-    Returns: string
-  }
+        Args: Record<never, never>
+        Returns: string
+      }
     }
     Enums: {
       app_role: "student" | "counselor" | "admin" | "parent"

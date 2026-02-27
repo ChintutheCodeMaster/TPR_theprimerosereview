@@ -60,8 +60,8 @@ export const CounselorInsights = () => {
   ];
 
   const weeklyBarData = [
-    { name: "Essays",    value: actionItems.find((a) => a.label.includes("Essays"))?.count   ?? 0 },
-    { name: "Meetings",  value: actionItems.find((a) => a.label.includes("meetings"))?.count ?? 0 },
+    { name: "Essays in review",    value: actionItems.find((a) => a.label.includes("Essays"))?.count   ?? 0 },
+    // { name: "Meetings",  value: actionItems.find((a) => a.label.includes("meetings"))?.count ?? 0 },
     { name: "Deadlines", value: actionItems.find((a) => a.label.includes("Deadlines"))?.count ?? 0 },
     { name: "Recs",      value: rec.sent },
   ];

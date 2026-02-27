@@ -389,7 +389,7 @@ const Applications = () => {
                           </div>
                         </TableCell>
 
-                        <TableCell>
+                        {/* <TableCell>
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -499,6 +499,138 @@ const Applications = () => {
                               </div>
                             </DialogContent>
                           </Dialog>
+                        </TableCell> */}
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {app.completion_percentage === 100 && app.status !== 'submitted' && (
+                              <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Ready
+                              </Badge>
+                            )}
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarImage src={app.profiles?.avatar_url ?? undefined} />
+                                      <AvatarFallback>
+                                        {getInitials(app.profiles?.full_name)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h2 className="text-xl font-bold">{app.school_name}</h2>
+                                      <p className="text-sm text-muted-foreground">
+                                        {app.profiles?.full_name ?? "Student"} {app.program ? `— ${app.program}` : ""}
+                                      </p>
+                                    </div>
+                                  </DialogTitle>
+                                </DialogHeader>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center gap-2">
+                                        <Target className="h-5 w-5" />
+                                        Overview
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <p className="text-sm text-muted-foreground">Type</p>
+                                          <p className="font-medium">{getApplicationTypeLabel(app.application_type)}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-sm text-muted-foreground">Deadline</p>
+                                          <p className={`font-medium ${getDeadlineColor(app.deadline_date)}`}>
+                                            {app.deadline_date}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-sm text-muted-foreground">Status</p>
+                                          <Badge variant={getStatusColor(app.status) as any}>
+                                            {app.status.replace("-", " ")}
+                                          </Badge>
+                                        </div>
+                                        <div>
+                                          <p className="text-sm text-muted-foreground">Progress</p>
+                                          <p className="font-medium">{app.completion_percentage}%</p>
+                                        </div>
+                                      </div>
+                                      {app.completion_percentage === 100 && app.status !== 'submitted' && (
+                                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                                          <div className="flex items-center gap-2">
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                            <p className="text-sm font-medium text-green-600">
+                                              Ready to submit!
+                                            </p>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            All essays and recommendations are complete.
+                                          </p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center gap-2">
+                                        <BarChart3 className="h-5 w-5" />
+                                        Requirements
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                      <div>
+                                        <div className="flex justify-between mb-2">
+                                          <span className="text-sm">Essays</span>
+                                          <span className="text-sm">{app.completed_essays}/{app.required_essays}</span>
+                                        </div>
+                                        <Progress value={safeDivide(app.completed_essays, app.required_essays)} className="h-2" />
+                                      </div>
+                                      <div>
+                                        <div className="flex justify-between mb-2">
+                                          <span className="text-sm">Recommendations</span>
+                                          <span className="text-sm">{app.recommendations_submitted}/{app.recommendations_requested}</span>
+                                        </div>
+                                        <Progress value={safeDivide(app.recommendations_submitted, app.recommendations_requested)} className="h-2" />
+                                      </div>
+                                      {app.ai_score_avg !== null && app.ai_score_avg > 0 && (
+                                        <div>
+                                          <div className="flex justify-between mb-2">
+                                            <span className="text-sm">Avg AI Score</span>
+                                            <span className="text-sm">{app.ai_score_avg}/100</span>
+                                          </div>
+                                          <Progress value={app.ai_score_avg} className="h-2" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </div>
+
+                                <div className="flex gap-2 pt-4 border-t border-border">
+                                  <Button className="flex-1">
+                                    <User className="h-4 w-4 mr-2" />
+                                    View Student Profile
+                                  </Button>
+                                  <Button variant="outline" className="flex-1">
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    View Essays
+                                  </Button>
+                                  <Button variant="outline">
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Send Reminder
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

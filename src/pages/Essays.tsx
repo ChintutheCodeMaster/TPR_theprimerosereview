@@ -13,6 +13,7 @@ import { CounselorFeedbackHistory } from "@/components/CounselorFeedbackHistory"
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import SubmitEssay from "./SubmitEssay";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   Search,
@@ -56,6 +57,7 @@ interface Essay {
 }
 
 const Essays = () => {
+   const queryClient = useQueryClient();
   const [essays, setEssays] = useState<Essay[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -236,6 +238,7 @@ const Essays = () => {
 
   // ─── Essay Detail Dialog ──────────────────────────────────────
   const EssayDialog = ({ essay }: { essay: Essay }) => {
+   
     const StatusIcon = getStatusIcon(essay.status)
     return (
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -679,7 +682,8 @@ const Essays = () => {
       {feedbackModalEssay && (
         <EssayFeedbackModal
   isOpen={!!feedbackModalEssay}
-  onClose={() => { setFeedbackModalEssay(null); fetchEssays() }}
+  onClose={() => { setFeedbackModalEssay(null);
+    queryClient.invalidateQueries({ queryKey: ["essays"] }); fetchEssays() }}
   essay={{
     id: feedbackModalEssay.id,
     title: feedbackModalEssay.title,
