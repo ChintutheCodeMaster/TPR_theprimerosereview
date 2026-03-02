@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import SubmitEssay from "./SubmitEssay";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAssignedStudents } from "@/hooks/useAssignedStudents";
 
 import {
   Search,
@@ -66,90 +67,61 @@ const Essays = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [feedbackModalEssay, setFeedbackModalEssay] = useState<Essay | null>(null)
   const { toast } = useToast()
+  const { data: studentIds = [], isLoading: loadingAssignments } =
+  useAssignedStudents();
 
   useEffect(() => {
     fetchEssays()
-  }, [])
+  }, [studentIds])
 
-  // const fetchEssays = async () => {
-  //   setLoading(true)
-  //   try {
-  //     const { data: { user } } = await supabase.auth.getUser()
-  //     if (!user) throw new Error('Not logged in')
+ 
+const fetchEssays = async () => {
+  setLoading(true);
 
-  //     // Fetch all essays for this counselor, joined with student profile name
-  //     const { data: essayData, error } = await supabase
-  //       .from('essay_feedback')
-  //       .select('*, profiles!essay_feedback_student_id_fkey(full_name, avatar_url)')
-  //       .eq('counselor_id', user.id)
-  //       .order('updated_at', { ascending: false })
-
-  //     if (error) throw error
-
-  //     const assembled: Essay[] = (essayData || []).map(e => ({
-  //       id: e.id,
-  //       title: e.essay_title,
-  //       studentName: (e.profiles as any)?.full_name || 'Unknown Student',
-  //       studentAvatar: (e.profiles as any)?.avatar_url || null,
-  //       studentId: e.student_id,
-  //       counselorId: e.counselor_id,
-  //       prompt: e.essay_prompt,
-  //       wordCount: e.essay_content?.split(/\s+/).filter(Boolean).length || 0,
-  //       status: e.status,
-  //       aiScore: e.ai_analysis ? (e.ai_analysis as any)?.overall_score || null : null,
-  //       aiAnalysis: e.ai_analysis,
-  //       feedbackItems: e.feedback_items,
-  //       manualNotes: e.manual_notes,
-  //       personalMessage: e.personal_message,
-  //       content: e.essay_content,
-  //       createdAt: e.created_at,
-  //       updatedAt: e.updated_at,
-  //       sentAt: e.sent_at,
-  //     }))
-
-  //     setEssays(assembled)
-  //   } catch (error: any) {
-  //     toast({ title: 'Failed to load essays', description: error.message, variant: 'destructive' })
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
-  const fetchEssays = async () => {
-  setLoading(true)
   try {
-    // const { data: { user } } = await supabase.auth.getUser()
-    // if (!user) throw new Error('Not logged in')
+    // If no assigned students → no essays
+    if (!studentIds || studentIds.length === 0) {
+      setEssays([]);
+      return;
+    }
 
-    // Step 1 — fetch essays
+    // Step 1 — fetch essays only for assigned students
     const { data: essayData, error } = await supabase
-      .from('essay_feedback')
-      .select('*')
-      // .eq('counselor_id', user.id)
-      .order('updated_at', { ascending: false })
+      .from("essay_feedback")
+      .select("*")
+      .in("student_id", studentIds)
+      .order("updated_at", { ascending: false });
 
-    if (error) throw error
+    if (error) throw error;
 
-    // Step 2 — fetch profiles for all student IDs
-    const studentIds = [...new Set((essayData || []).map(e => e.student_id))]
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, avatar_url')
-      .in('user_id', studentIds)
+    // Step 2 — fetch profiles for those students
+    const { data: profilesData, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_url")
+      .in("user_id", studentIds);
 
-    // Step 3 — assemble
-    const assembled: Essay[] = (essayData || []).map(e => {
-      const profile = profilesData?.find(p => p.user_id === e.student_id)
+    if (profileError) throw profileError;
+
+    // Step 3 — assemble essays
+    const assembled: Essay[] = (essayData || []).map((e) => {
+      const profile = profilesData?.find(
+        (p) => p.user_id === e.student_id
+      );
+
       return {
         id: e.id,
         title: e.essay_title,
-        studentName: profile?.full_name || 'Unknown Student',
+        studentName: profile?.full_name || "Unknown Student",
         studentAvatar: profile?.avatar_url || null,
         studentId: e.student_id,
         counselorId: e.counselor_id,
         prompt: e.essay_prompt,
-        wordCount: e.essay_content?.split(/\s+/).filter(Boolean).length || 0,
+        wordCount:
+          e.essay_content?.split(/\s+/).filter(Boolean).length || 0,
         status: e.status,
-        aiScore: e.ai_analysis ? (e.ai_analysis as any)?.overall_score || null : null,
+        aiScore: e.ai_analysis
+          ? (e.ai_analysis as any)?.overall_score || null
+          : null,
         aiAnalysis: e.ai_analysis,
         feedbackItems: e.feedback_items,
         manualNotes: e.manual_notes,
@@ -158,16 +130,20 @@ const Essays = () => {
         createdAt: e.created_at,
         updatedAt: e.updated_at,
         sentAt: e.sent_at,
-      }
-    })
+      };
+    });
 
-    setEssays(assembled)
+    setEssays(assembled);
   } catch (error: any) {
-    toast({ title: 'Failed to load essays', description: error.message, variant: 'destructive' })
+    toast({
+      title: "Failed to load essays",
+      description: error.message,
+      variant: "destructive",
+    });
   } finally {
-    setLoading(false)
+    setLoading(false);
   }
-}
+};
 
   const updateEssayStatus = async (essayId: string, newStatus: string) => {
     try {
@@ -443,13 +419,13 @@ const Essays = () => {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
+  if (loading || loadingAssignments) {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
   return (
     <div className="p-6 space-y-6">

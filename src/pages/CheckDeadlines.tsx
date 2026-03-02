@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAssignedStudents } from "@/hooks/useAssignedStudents";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -88,116 +89,147 @@ const CheckDeadlines = () => {
   const [typeFilter, setTypeFilter]             = useState("all");
   const { toast } = useToast();
 
-  useEffect(() => { fetchDeadlines(); }, []);
+  const { data: studentIds = [], isLoading: loadingAssignments } =
+  useAssignedStudents();
+
+useEffect(() => {
+  if (!loadingAssignments) {
+    fetchDeadlines();
+  }
+}, [loadingAssignments, studentIds]);
 
   const fetchDeadlines = async () => {
-    setLoading(true);
-    try {
-      // TODO: swap back to student_counselor_assignments when ready
-      // const { data: assignments } = await supabase
-      //   .from("student_counselor_assignments")
-      //   .select("student_id")
-      //   .eq("counselor_id", user.id);
-      // const studentIds = assignments?.map(a => a.student_id) ?? [];
+  if (loadingAssignments) return;
 
-      // Bypass — get all students via user_roles
-      const { data: studentRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
+  if (studentIds.length === 0) {
+    setDeadlines([]);
+    return;
+  }
 
-      if (rolesError) throw rolesError;
+  setLoading(true);
 
-      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
-      if (studentIds.length === 0) { setDeadlines([]); return; }
+  try {
+    // Fetch applications, profiles, essays, recs in parallel
+    const [appsRes, profilesRes, essaysRes, recsRes] = await Promise.all([
+      supabase
+        .from("applications")
+        .select("*")
+        .in("student_id", studentIds)
+        .order("deadline_date", { ascending: true }),
 
-      // Fetch applications, profiles, essays, recs in parallel
-      const [appsRes, profilesRes, essaysRes, recsRes] = await Promise.all([
-        supabase
-          .from("applications")
-          .select("*")
-          .in("student_id", studentIds)
-          .order("deadline_date", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", studentIds),
 
-        supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", studentIds),
+      supabase
+        .from("essay_feedback")
+        .select("student_id, status")
+        .in("student_id", studentIds),
 
-        supabase
-          .from("essay_feedback")
-          .select("student_id, status")
-          .in("student_id", studentIds),
+      supabase
+        .from("recommendation_requests")
+        .select("student_id, status")
+        .in("student_id", studentIds),
+    ]);
 
-        supabase
-          .from("recommendation_requests")
-          .select("student_id, status")
-          .in("student_id", studentIds),
-      ]);
+    if (appsRes.error) throw appsRes.error;
+    if (profilesRes.error) throw profilesRes.error;
+    if (essaysRes.error) throw essaysRes.error;
+    if (recsRes.error) throw recsRes.error;
 
-      if (appsRes.error)     throw appsRes.error;
-      if (profilesRes.error) throw profilesRes.error;
-      if (essaysRes.error)   throw essaysRes.error;
-      if (recsRes.error)     throw recsRes.error;
+    const apps = appsRes.data ?? [];
+    const essays = essaysRes.data ?? [];
+    const recs = recsRes.data ?? [];
 
-      const profileMap = new Map(
-        (profilesRes.data ?? []).map((p) => [p.user_id, p.full_name ?? "Unknown"])
+    // ─────────────────────────────────────
+    // Build lookup maps (performance fix)
+    // ─────────────────────────────────────
+    const profileMap = new Map(
+      (profilesRes.data ?? []).map((p) => [
+        p.user_id,
+        p.full_name ?? "Unknown",
+      ])
+    );
+
+    const essayMap = new Map<string, typeof essays>();
+    essays.forEach((e) => {
+      if (!essayMap.has(e.student_id)) essayMap.set(e.student_id, []);
+      essayMap.get(e.student_id)!.push(e);
+    });
+
+    const recMap = new Map<string, typeof recs>();
+    recs.forEach((r) => {
+      if (!recMap.has(r.student_id)) recMap.set(r.student_id, []);
+      recMap.get(r.student_id)!.push(r);
+    });
+
+    // ─────────────────────────────────────
+    // Group by school + type + deadline
+    // ─────────────────────────────────────
+    const deadlineMap = new Map<string, Deadline>();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const app of apps) {
+      const key = `${app.school_name}__${app.application_type}__${app.deadline_date}`;
+      const date = new Date(app.deadline_date);
+
+      const daysLeft = Math.round(
+        (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const apps    = appsRes.data    ?? [];
-      const essays  = essaysRes.data  ?? [];
-      const recs    = recsRes.data    ?? [];
+      const studentEssays = essayMap.get(app.student_id) ?? [];
+      const studentRecs = recMap.get(app.student_id) ?? [];
 
-      // Group by school + type + deadline
-      const deadlineMap = new Map<string, Deadline>();
+      const essaysDone = studentEssays.filter(
+        (e) => e.status === "sent"
+      ).length;
 
-      for (const app of apps) {
-        const key  = `${app.school_name}__${app.application_type}__${app.deadline_date}`;
-        const date = new Date(app.deadline_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const daysLeft = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const recsDone = studentRecs.filter(
+        (r) => r.status === "sent"
+      ).length;
 
-        const studentEssays = essays.filter((e) => e.student_id === app.student_id);
-        const studentRecs   = recs.filter((r) => r.student_id === app.student_id);
-        const essaysDone    = studentEssays.filter((e) => e.status === "sent").length;
-        const recsDone      = studentRecs.filter((r) => r.status === "sent").length;
-        const total         = studentEssays.length + studentRecs.length;
-        const done          = essaysDone + recsDone;
-        const progress      = total > 0 ? Math.round((done / total) * 100) : 0;
+      const total = studentEssays.length + studentRecs.length;
+      const done = essaysDone + recsDone;
+      const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
-        const studentEntry: StudentDeadline = {
-          studentId:   app.student_id,
-          studentName: profileMap.get(app.student_id) ?? "Unknown",
-          progress,
-          essayCount:  studentEssays.length,
-          essaysDone,
-          recCount:    studentRecs.length,
-          recsDone,
-        };
+      const studentEntry: StudentDeadline = {
+        studentId: app.student_id,
+        studentName: profileMap.get(app.student_id) ?? "Unknown",
+        progress,
+        essayCount: studentEssays.length,
+        essaysDone,
+        recCount: studentRecs.length,
+        recsDone,
+      };
 
-        if (deadlineMap.has(key)) {
-          deadlineMap.get(key)!.students.push(studentEntry);
-        } else {
-          deadlineMap.set(key, {
-            id:              app.id,
-            school:          app.school_name,
-            applicationType: app.application_type,
-            date,
-            daysLeft,
-            urgency:         computeUrgency(daysLeft),
-            students:        [studentEntry],
-          });
-        }
+      if (deadlineMap.has(key)) {
+        deadlineMap.get(key)!.students.push(studentEntry);
+      } else {
+        deadlineMap.set(key, {
+          id: app.id,
+          school: app.school_name,
+          applicationType: app.application_type,
+          date,
+          daysLeft,
+          urgency: computeUrgency(daysLeft),
+          students: [studentEntry],
+        });
       }
-
-      setDeadlines(Array.from(deadlineMap.values()));
-    } catch (error: any) {
-      toast({ title: "Failed to load deadlines", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
-  };
+    setDeadlines(Array.from(deadlineMap.values()));
+  } catch (error: any) {
+    toast({
+      title: "Failed to load deadlines",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const filteredDeadlines = deadlines.filter((d) => {
     const matchesUrgency = urgencyFilter === "all" || d.urgency === urgencyFilter;

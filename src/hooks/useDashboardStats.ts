@@ -16,16 +16,24 @@ export const useDashboardStats = () => {
       if (!user) throw new Error("Not authenticated");
 
       // Get ALL students in the system via user_roles
-      const { data: studentRoles, error: studentError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
+      // const { data: studentRoles, error: studentError } = await supabase
+      //   .from("user_roles")
+      //   .select("user_id")
+      //   .eq("role", "student");
 
     
 
-      if (studentError) throw studentError;
+      // if (studentError) throw studentError;
 
-      const studentIds = studentRoles?.map((s) => s.user_id) ?? [];
+      // const studentIds = studentRoles?.map((s) => s.user_id) ?? [];
+      const { data: assignments, error: assignmentError } = await supabase
+  .from("student_counselor_assignments")
+  .select("student_id")
+  .eq("counselor_id", user.id);
+
+if (assignmentError) throw assignmentError;
+
+const studentIds = assignments?.map((a) => a.student_id) ?? [];
 
       if (studentIds.length === 0) {
         return {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAssignedStudents } from "@/hooks/useAssignedStudents";
 
 export interface CounselorInsightsData {
   recommendations: {
@@ -22,27 +23,13 @@ export interface CounselorInsightsData {
 }
 
 export const useCounselorInsights = () => {
+  const { data: studentIds = [], isLoading: loadingAssignments } =
+    useAssignedStudents();
+
   return useQuery({
-    queryKey: ["counselor-insights"],
+    queryKey: ["counselor-insights", studentIds],
+    enabled: !loadingAssignments,
     queryFn: async (): Promise<CounselorInsightsData> => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // TODO: swap back to student_counselor_assignments when ready
-      // const { data: assignments } = await supabase
-      //   .from("student_counselor_assignments")
-      //   .select("student_id")
-      //   .eq("counselor_id", user.id);
-      // const studentIds = assignments?.map((a) => a.student_id) ?? [];
-
-      // Bypass — get all students via user_roles
-      const { data: studentRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
-
-      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
-
       if (studentIds.length === 0) {
         return {
           recommendations: { pending: 0, inProgress: 0, sent: 0, total: 0 },
@@ -56,29 +43,24 @@ export const useCounselorInsights = () => {
         .toISOString()
         .split("T")[0];
 
-      // Run all queries in parallel
-      const [recsRes, appsRes, essaysPendingRes, deadlinesRes, meetingsRes] =
+      const [recsRes, appsRes, essaysPendingRes, deadlinesRes] =
         await Promise.all([
-          // Recommendation requests by status
           supabase
             .from("recommendation_requests")
             .select("status")
             .in("student_id", studentIds),
 
-          // Applications by status
           supabase
             .from("applications")
             .select("status")
             .in("student_id", studentIds),
 
-          // Essays pending counselor review
           supabase
             .from("essay_feedback")
             .select("id", { count: "exact", head: true })
             .in("student_id", studentIds)
-            .in("status", ["draft", "in_progress","pending"]),
+            .in("status", ["draft", "in_progress", "pending"]),
 
-          // Upcoming deadlines this week
           supabase
             .from("applications")
             .select("id", { count: "exact", head: true })
@@ -86,32 +68,20 @@ export const useCounselorInsights = () => {
             .gte("deadline_date", today)
             .lte("deadline_date", in7Days)
             .neq("status", "submitted"),
-
-          // Scheduled meetings this week
-          supabase
-            .from("meeting_notes")
-            .select("id", { count: "exact", head: true })
-            .eq("counselor_id", user.id)
-            .gte("meeting_date", today)
-            .lte("meeting_date", in7Days),
         ]);
 
-      // ── Recommendations ──────────────────────────────────
       const recs = recsRes.data ?? [];
       const recPending    = recs.filter((r) => r.status === "pending").length;
       const recInProgress = recs.filter((r) => r.status === "in_progress").length;
       const recSent       = recs.filter((r) => r.status === "sent").length;
 
-      // ── Applications ─────────────────────────────────────
       const apps = appsRes.data ?? [];
       const appsSubmitted  = apps.filter((a) => a.status === "submitted").length;
       const appsInProgress = apps.filter((a) => a.status === "in-progress").length;
       const appsNotStarted = apps.filter((a) => a.status === "not-started").length;
 
-      // ── Action items ──────────────────────────────────────
-      const essaysPending  = essaysPendingRes.count ?? 0;
-      const deadlines      = deadlinesRes.count ?? 0;
-      const meetings       = meetingsRes.count ?? 0;
+      const essaysPending = essaysPendingRes.count ?? 0;
+      const deadlines = deadlinesRes.count ?? 0;
       const recsToComplete = recPending + recInProgress;
 
       const actionItems = [

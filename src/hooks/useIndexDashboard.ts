@@ -36,12 +36,18 @@ export const useIndexDashboard = () => {
       if (!user) throw new Error("Not authenticated");
 
       // Use user_roles instead of assignments
-      const { data: studentRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
+      // const { data: studentRoles } = await supabase
+      //   .from("user_roles")
+      //   .select("user_id")
+      //   .eq("role", "student");
 
-      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      // const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      const { data: assignments } = await supabase
+        .from("student_counselor_assignments")
+        .select("student_id")
+        .eq("counselor_id", user.id);
+
+      const studentIds = assignments?.map((a) => a.student_id) ?? [];
       if (studentIds.length === 0) return [];
 
       // Fetch all data in parallel
@@ -140,12 +146,18 @@ export const useIndexDashboard = () => {
       if (!user) throw new Error("Not authenticated");
 
       // Use user_roles instead of assignments
-      const { data: studentRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
+      // const { data: studentRoles } = await supabase
+      //   .from("user_roles")
+      //   .select("user_id")
+      //   .eq("role", "student");
 
-      const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      // const studentIds = studentRoles?.map((r) => r.user_id) ?? [];
+      const { data: assignments } = await supabase
+        .from("student_counselor_assignments")
+        .select("student_id")
+        .eq("counselor_id", user.id);
+
+      const studentIds = assignments?.map((a) => a.student_id) ?? [];
       if (studentIds.length === 0) return [];
 
       // Fetch essays without join (avoids foreign key issue)

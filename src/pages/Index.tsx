@@ -5,6 +5,8 @@ import { CounselorInsights } from "@/components/CounselorInsights";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCounselorInvite } from "@/hooks/useCounselorInvite";
+import { Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -23,17 +25,17 @@ import { useIndexDashboard } from "@/hooks/useIndexDashboard";
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "draft":       return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+    case "draft": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
     case "in_progress": return "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
-    case "sent":        return "bg-green-500/10 text-green-600 border-green-500/20";
-    default:            return "bg-muted text-muted-foreground";
+    case "sent": return "bg-green-500/10 text-green-600 border-green-500/20";
+    default: return "bg-muted text-muted-foreground";
   }
 };
 
 const Index = () => {
   const navigate = useNavigate();
   const [studentsOpen, setStudentsOpen] = useState(false);
-  const [essaysOpen, setEssaysOpen]     = useState(false);
+  const [essaysOpen, setEssaysOpen] = useState(false);
 
   const {
     students,
@@ -42,6 +44,9 @@ const Index = () => {
     isLoadingStudents,
     isLoadingEssays,
   } = useIndexDashboard();
+
+  const { data: inviteLink } = useCounselorInvite();
+  console.log("Invite link:", inviteLink);
 
   return (
     <div className="p-6 space-y-6">
@@ -54,6 +59,30 @@ const Index = () => {
       </div>
 
       <DashboardStats />
+
+      {inviteLink && (
+        <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/20">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-primary">
+              Student Registration Link
+            </p>
+            <p className="text-xs text-muted-foreground break-all">
+              {inviteLink}
+            </p>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(inviteLink);
+            }}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Copy
+          </Button>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

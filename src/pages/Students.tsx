@@ -94,15 +94,29 @@ const Students = () => {
       if (!user) throw new Error('Not logged in')
 
       // Get all students assigned to this counselor
-      const { data: studentRoles, error: rolesError } = await supabase
-  .from('user_roles')
-  .select('user_id')
-  .eq('role', 'student')
+      // const { data: studentRoles, error: rolesError } = await supabase
+      //   .from('user_roles')
+      //   .select('user_id')
+      //   .eq('role', 'student')
 
-      if (rolesError) throw rolesError
-if (!studentRoles.length) { setStudents([]); return }
+      // if (rolesError) throw rolesError
+      // if (!studentRoles.length) { setStudents([]); return }
 
-const studentIds = studentRoles.map(s => s.user_id)
+      // const studentIds = studentRoles.map(s => s.user_id)
+
+      // Get students assigned to this counselor
+      const { data: assignments, error: assignmentError } = await supabase
+        .from('student_counselor_assignments')
+        .select('student_id')
+        .eq('counselor_id', user.id)
+
+      if (assignmentError) throw assignmentError
+      if (!assignments || assignments.length === 0) {
+        setStudents([])
+        return
+      }
+
+      const studentIds = assignments.map(a => a.student_id)
 
       // Fetch profiles + school for all students
       const { data: profiles, error: profileError } = await supabase

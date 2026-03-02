@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import primroseLogo from "@/assets/primrose-logo.png";
 const Signup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const counselorIdParam = searchParams.get('counselorId');
+  const inviteCodeParam = searchParams.get('invite');
 
   const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +39,14 @@ const Signup = () => {
 
   // Parent fields
   const [invitationCode, setInvitationCode] = useState("");
+
+ 
+
+useEffect(() => {
+  if (inviteCodeParam) {
+    setSelectedRole('student');
+  }
+}, [inviteCodeParam]);
 
   const getRoleIcon = (role: string, size = "h-8 w-8") => {
     switch (role) {
@@ -93,7 +101,7 @@ const Signup = () => {
             .from('schools')
             .select('id')
             .ilike('name', schoolName.trim())
-            .single();
+            .maybeSingle();
 
           if (existingSchool) {
             schoolId = existingSchool.id;
@@ -138,6 +146,26 @@ const Signup = () => {
           //     .insert({ student_id: data.user.id, counselor_id: counselorIdParam });
           //   if (assignError) throw assignError;
           // }
+          if (inviteCodeParam) {
+            const { data: inviteData } = await supabase
+              .from('counselor_invites')
+              .select('counselor_id')
+              .eq('invite_code', inviteCodeParam)
+              .maybeSingle();
+
+            if (!inviteData) {
+              throw new Error("Invalid or expired invite link");
+}
+
+            const { error: assignError } = await supabase
+              .from('student_counselor_assignments')
+              .insert({
+                student_id: data.user.id,
+                counselor_id: inviteData.counselor_id
+              });
+
+            if (assignError) throw assignError;
+          }
         }
 
         // Counselor-specific insert
@@ -185,7 +213,7 @@ const Signup = () => {
           <Button
             variant="ghost"
             className="gap-2"
-            onClick={() => selectedRole ? setSelectedRole(null) : navigate('/')}
+            onClick={() => selectedRole ? setSelectedRole(null) : navigate('/auth')}
           >
             <ArrowLeft className="h-4 w-4" />
             {selectedRole ? 'Back' : 'Back to Sign In'}
@@ -307,7 +335,7 @@ const Signup = () => {
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                       >
                         <option value="">Select...</option>
-                        <option>201234565</option>
+                        <option>2025</option>
                         <option>2026</option>
                         <option>2027</option>
                         <option>2028</option>

@@ -3,9 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type RecommendationRequest = Database["public"]["Tables"]["recommendation_requests"]["Row"];
-type RecommendationInsert = Database["public"]["Tables"]["recommendation_requests"]["Insert"];
-type RecommendationUpdate = Database["public"]["Tables"]["recommendation_requests"]["Update"];
+type RecommendationRequest =
+  Database["public"]["Tables"]["recommendation_requests"]["Row"];
+
+type RecommendationInsert =
+  Database["public"]["Tables"]["recommendation_requests"]["Insert"];
+
+type RecommendationUpdate =
+  Database["public"]["Tables"]["recommendation_requests"]["Update"];
 
 export interface RecommendationWithProfile extends RecommendationRequest {
   profiles?: {
@@ -15,17 +20,27 @@ export interface RecommendationWithProfile extends RecommendationRequest {
   } | null;
 }
 
-// Hook for students to manage their own requests
+/* ============================================================
+   STUDENT HOOK
+============================================================ */
+
 export const useStudentRecommendations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: requests, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["student-recommendations"],
     queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
         .from("recommendation_requests")
         .select("*")
+        .eq("student_id", user.id) // 🔒 Properly scoped
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -35,7 +50,10 @@ export const useStudentRecommendations = () => {
 
   const createRequest = useMutation({
     mutationFn: async (newRequest: RecommendationInsert) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -51,23 +69,30 @@ export const useStudentRecommendations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-recommendations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["student-recommendations"],
+      });
+
       toast({
         title: "Questionnaire Submitted",
-        description: "Your information has been sent to your counselor for review.",
+        description:
+          "Your information has been sent to your counselor for review.",
       });
     },
-    onError: (error: any) => {
+    onError: (err: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to submit questionnaire",
+        description: err.message || "Failed to submit questionnaire",
         variant: "destructive",
       });
     },
   });
 
   const updateRequest = useMutation({
-    mutationFn: async ({ id, ...updates }: RecommendationUpdate & { id: string }) => {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: RecommendationUpdate & { id: string }) => {
       const { data, error } = await supabase
         .from("recommendation_requests")
         .update(updates)
@@ -79,12 +104,14 @@ export const useStudentRecommendations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-recommendations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["student-recommendations"],
+      });
     },
   });
 
   return {
-    requests,
+    requests: data ?? [],
     isLoading,
     error,
     createRequest,
@@ -92,56 +119,73 @@ export const useStudentRecommendations = () => {
   };
 };
 
-// Hook for counselors to manage their students' requests
+/* ============================================================
+   COUNSELOR HOOK
+============================================================ */
+
 export const useCounselorRecommendations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: requests, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["counselor-recommendations"],
     queryFn: async () => {
-      // Get logged in counselor
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // Get only students assigned to this counselor
-      const { data: assignments } = await supabase
-        .from('student_counselor_assignments')
-        .select('student_id')
-        .eq('counselor_id', user.id)
+      if (!user) throw new Error("Not authenticated");
 
-      const studentIds = assignments?.map(a => a.student_id) || []
-      if (studentIds.length === 0) return []
+      // Get assigned students
+      const { data: assignments, error: assignError } = await supabase
+        .from("student_counselor_assignments")
+        .select("student_id")
+        .eq("counselor_id", user.id);
 
-      // Fetch only those students' recommendations
-      const { data: recommendations, error: recError } = await supabase
-        .from('recommendation_requests')
-        .select('*')
-        .in('student_id', studentIds)
-        .order('created_at', { ascending: false })
+      if (assignError) throw assignError;
 
-      if (recError) throw recError
+      const studentIds =
+        assignments?.map((a) => a.student_id) ?? [];
 
-      // Get profiles for each student
-      const { data: profiles, error: profError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, avatar_url, email')
-        .in('user_id', studentIds)
+      if (studentIds.length === 0) return [];
 
-      if (profError) throw profError
+      // Fetch recommendations
+      const { data: recommendations, error: recError } =
+        await supabase
+          .from("recommendation_requests")
+          .select("*")
+          .in("student_id", studentIds)
+          .order("created_at", { ascending: false });
 
-      // Map profiles to recommendations
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+      if (recError) throw recError;
 
-      return recommendations?.map(r => ({
-        ...r,
-        profiles: profileMap.get(r.student_id) || null,
-      })) as RecommendationWithProfile[]
+      // Fetch profiles
+      const { data: profiles, error: profError } =
+        await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url, email")
+          .in("user_id", studentIds);
+
+      if (profError) throw profError;
+
+      const profileMap = new Map(
+        profiles?.map((p) => [p.user_id, p]) ?? []
+      );
+
+      return (
+        recommendations?.map((r) => ({
+          ...r,
+          profiles: profileMap.get(r.student_id) ?? null,
+        })) ?? []
+      ) as RecommendationWithProfile[];
     },
   });
 
   const updateRequest = useMutation({
-    mutationFn: async ({ id, ...updates }: RecommendationUpdate & { id: string }) => {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: RecommendationUpdate & { id: string }) => {
       const { data, error } = await supabase
         .from("recommendation_requests")
         .update(updates)
@@ -153,28 +197,38 @@ export const useCounselorRecommendations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["counselor-recommendations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["counselor-recommendations"],
+      });
+
       toast({
         title: "Request Updated",
-        description: "The recommendation request has been updated.",
+        description:
+          "The recommendation request has been updated.",
       });
     },
-    onError: (error: any) => {
+    onError: (err: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update request",
+        description: err.message || "Failed to update request",
         variant: "destructive",
       });
     },
   });
 
   const sendLetter = useMutation({
-    mutationFn: async ({ id, letter }: { id: string; letter: string }) => {
+    mutationFn: async ({
+      id,
+      letter,
+    }: {
+      id: string;
+      letter: string;
+    }) => {
       const { data, error } = await supabase
         .from("recommendation_requests")
         .update({
           generated_letter: letter,
-          status: "sent",
+          status: "sent", // 🔥 Trigger fires here
         })
         .eq("id", id)
         .select()
@@ -184,23 +238,32 @@ export const useCounselorRecommendations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["counselor-recommendations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["counselor-recommendations"],
+      });
+
+      // If you want instant progress update
+      queryClient.invalidateQueries({
+        queryKey: ["applications"],
+      });
+
       toast({
         title: "Letter Sent",
-        description: "The recommendation letter has been sent to the student.",
+        description:
+          "The recommendation letter has been sent to the student.",
       });
     },
-    onError: (error: any) => {
+    onError: (err: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to send letter",
+        description: err.message || "Failed to send letter",
         variant: "destructive",
       });
     },
   });
 
   return {
-    requests,
+    requests: data ?? [],
     isLoading,
     error,
     updateRequest,

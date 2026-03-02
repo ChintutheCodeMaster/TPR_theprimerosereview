@@ -377,6 +377,37 @@ export type Database = {
         }
         Relationships: []
       }
+      counselor_invites: {
+        Row: {
+          id: string
+          invite_code: string
+          counselor_id: string
+          is_active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          invite_code: string
+          counselor_id: string
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          invite_code?: string
+          counselor_id?: string
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counselor_invites_counselor_id_fkey"
+            columns: ["counselor_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
