@@ -116,32 +116,35 @@ export const useDashboardStats = () => {
 ]);
 
 // Compute at-risk using same logic as Students.tsx
-const atRiskStudentIds = new Set(
-  studentIds.filter(studentId => {
-    const studentEssays = (essayStatsRes.data ?? []).filter(e => e.student_id === studentId);
-    const totalEssays = studentEssays.length;
-    const essaysSubmitted = studentEssays.filter(e => e.status === "sent").length;
+// const atRiskStudentIds = new Set(
+//   studentIds.filter(studentId => {
+//     const studentEssays = (essayStatsRes.data ?? []).filter(e => e.student_id === studentId);
+//     const totalEssays = studentEssays.length;
+//     const essaysSubmitted = studentEssays.filter(e => e.status === "sent").length;
 
-    const studentRecs = (recsRes.data ?? []).filter(r => r.student_id === studentId);
-    const recsRequested = studentRecs.length;
-    const recsSubmitted = studentRecs.filter(r => r.status === "sent").length;
+//     const studentRecs = (recsRes.data ?? []).filter(r => r.student_id === studentId);
+//     const recsRequested = studentRecs.length;
+//     const recsSubmitted = studentRecs.filter(r => r.status === "sent").length;
 
-    const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
-    const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
-    const completion = Math.round(essayScore + recScore);
+//     const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
+//     const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
+//     const completion = Math.round(essayScore + recScore);
 
-    return completion < 40; // at-risk = below 40%
-  })
-);
+//     return completion < 40; // at-risk = below 40%
+//   })
+// );
+
+const { data: atRiskData } = await supabase.rpc("get_at_risk_students");
+
+const atRiskStudents = atRiskData?.length ?? 0;
 
 return {
   totalStudents: studentIds.length,
   essaysInReview: essaysRes.count ?? 0,
   upcomingDeadlines: deadlinesRes.count ?? 0,
-  atRiskStudents: atRiskStudentIds.size,
+  atRiskStudents,
 };
-
-
     },
   });
 };
+

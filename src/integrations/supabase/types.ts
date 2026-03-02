@@ -701,6 +701,13 @@ export type Database = {
         Args: Record<never, never>
         Returns: string
       }
+      get_at_risk_students: {
+        Args: Record<never, never>
+        Returns: {
+          student_id: string
+          reasons: string[]
+        }[]
+      }
     }
     Enums: {
       app_role: "student" | "counselor" | "admin" | "parent"
