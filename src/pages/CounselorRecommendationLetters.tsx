@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,15 +104,29 @@ const CounselorRecommendationLetters = () => {
     setIsGenerating(true);
 
     try {
-      const { data, error } = await fetch("/api/generate-recommendation", {
-        method: "POST",
-        body: JSON.stringify({
-          requestId: selectedRequest.id,
-          counselorNotes,
-        }),
-      }).then((res) => res.json());
+      const { data, error } = await supabase.functions.invoke(
+        "enhance-recommendation",
+        {
+          body: {
+            studentName: selectedRequest.profiles?.full_name ?? "Student",
+            refereeName: selectedRequest.referee_name,
+            refereeRole: selectedRequest.referee_role ?? "",
+            counselorNotes,
+            studentAnswers: {
+              relationshipDuration: selectedRequest.relationship_duration,
+              relationshipCapacity: selectedRequest.relationship_capacity,
+              meaningfulProject: selectedRequest.meaningful_project,
+              bestMoment: selectedRequest.best_moment,
+              difficultiesOvercome: selectedRequest.difficulties_overcome,
+              strengths: selectedRequest.strengths,
+              personalNotes: selectedRequest.personal_notes,
+            },
+          },
+        }
+      );
 
-      if (error) throw new Error(error);
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
 
       setGeneratedLetter(data.letter);
 
@@ -119,6 +134,7 @@ const CounselorRecommendationLetters = () => {
         id: selectedRequest.id,
         status: "in_progress",
         counselor_notes: counselorNotes,
+        generated_letter: data.letter,
       });
 
       toast({
@@ -186,51 +202,181 @@ const CounselorRecommendationLetters = () => {
   /* ───────────────────────────── */
 
   if (selectedRequest) {
-    const studentName =
-      selectedRequest.profiles?.full_name || "Unknown Student";
+    const studentName = selectedRequest.profiles?.full_name || "Unknown Student";
+    const hasAnswers =
+      selectedRequest.meaningful_project ||
+      selectedRequest.best_moment ||
+      selectedRequest.difficulties_overcome ||
+      selectedRequest.personal_notes;
 
     return (
       <div className="p-6 space-y-6">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setSelectedRequest(null);
-            setGeneratedLetter("");
-            setCounselorNotes("");
-          }}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSelectedRequest(null);
+              setGeneratedLetter("");
+              setCounselorNotes("");
+            }}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{studentName}</h1>
+            <p className="text-muted-foreground text-sm">
+              {selectedRequest.referee_name}
+              {selectedRequest.referee_role && ` · ${selectedRequest.referee_role}`}
+            </p>
+          </div>
+          <div className="ml-auto">{getStatusBadge(selectedRequest.status)}</div>
+        </div>
 
-        <h1 className="text-2xl font-bold">{studentName}</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Student Answers */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="h-4 w-4" />
+                  Student's Questionnaire
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {selectedRequest.relationship_duration && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Relationship Duration</p>
+                    <p>{selectedRequest.relationship_duration}</p>
+                  </div>
+                )}
+                {selectedRequest.relationship_capacity && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Working Relationship</p>
+                    <p>{selectedRequest.relationship_capacity}</p>
+                  </div>
+                )}
+                {selectedRequest.meaningful_project && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Meaningful Project</p>
+                    <p>{selectedRequest.meaningful_project}</p>
+                  </div>
+                )}
+                {selectedRequest.best_moment && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Best Moment</p>
+                    <p>{selectedRequest.best_moment}</p>
+                  </div>
+                )}
+                {selectedRequest.difficulties_overcome && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Difficulties Overcome</p>
+                    <p>{selectedRequest.difficulties_overcome}</p>
+                  </div>
+                )}
+                {selectedRequest.strengths && selectedRequest.strengths.length > 0 && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Key Strengths</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedRequest.strengths.map((s) => (
+                        <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedRequest.personal_notes && (
+                  <div>
+                    <p className="font-medium text-muted-foreground">Personal Notes</p>
+                    <p>{selectedRequest.personal_notes}</p>
+                  </div>
+                )}
+                {!hasAnswers && (
+                  <p className="text-muted-foreground italic">
+                    Student hasn't filled out the questionnaire yet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recommendation Letter</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={generatedLetter || selectedRequest.generated_letter || ""}
-              onChange={(e) => setGeneratedLetter(e.target.value)}
-              rows={16}
-              className="font-serif"
-            />
-          </CardContent>
-        </Card>
+            {/* Counselor Notes + Generate */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  AI Generation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    Counselor Notes <span className="text-muted-foreground">(optional)</span>
+                  </label>
+                  <Textarea
+                    placeholder="Add any extra context or guidance for the AI..."
+                    value={counselorNotes}
+                    onChange={(e) => setCounselorNotes(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+                <Button
+                  onClick={handleGenerateAI}
+                  disabled={isGenerating || !hasAnswers}
+                  className="w-full"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  {isGenerating ? "Generating..." : "Generate with AI"}
+                </Button>
+                {!hasAnswers && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Waiting for student to complete questionnaire
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-        <Button
-          onClick={handleSend}
-          disabled={sendLetter.isPending}
-          className="w-full"
-        >
-          {sendLetter.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Send className="h-4 w-4 mr-2" />
-          )}
-          Send Letter
-        </Button>
+          {/* Right: Letter */}
+          <div className="space-y-4">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4" />
+                  Recommendation Letter
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="The generated letter will appear here. You can also write or edit directly."
+                  value={generatedLetter || selectedRequest.generated_letter || ""}
+                  onChange={(e) => setGeneratedLetter(e.target.value)}
+                  rows={20}
+                  className="font-serif resize-none"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={
+                    sendLetter.isPending ||
+                    (!generatedLetter && !selectedRequest.generated_letter)
+                  }
+                  className="w-full"
+                >
+                  {sendLetter.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Send Letter to Student
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -244,11 +390,59 @@ const CounselorRecommendationLetters = () => {
       <h1 className="text-3xl font-bold">Recommendation Letters</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p>Total</p><p className="text-xl font-bold">{stats.total}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p>Pending</p><p className="text-xl font-bold">{stats.pending}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p>In Progress</p><p className="text-xl font-bold">{stats.inProgress}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p>Sent</p><p className="text-xl font-bold">{stats.sent}</p></CardContent></Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/10 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Edit3 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold text-foreground">{stats.inProgress}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Sent</p>
+                <p className="text-2xl font-bold text-foreground">{stats.sent}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -290,16 +484,28 @@ const CounselorRecommendationLetters = () => {
               }}
               className="cursor-pointer hover:shadow-md transition"
             >
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">
-                    {req.profiles?.full_name}
-                  </p>
+              <CardContent className="p-4 flex items-center gap-4">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={req.profiles?.avatar_url ?? undefined} alt={req.profiles?.full_name ?? ""} />
+                  <AvatarFallback>
+                    {(req.profiles?.full_name || "?").split(" ").map((n) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground">{req.profiles?.full_name || "Unknown Student"}</p>
                   <p className="text-sm text-muted-foreground">
                     {req.referee_name}
+                    {req.referee_role && ` · ${req.referee_role}`}
                   </p>
                 </div>
-                {getStatusBadge(req.status)}
+                <div className="flex items-center gap-3">
+                  {req.generated_letter && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <FileText className="h-3 w-3" /> Draft ready
+                    </span>
+                  )}
+                  {getStatusBadge(req.status)}
+                </div>
               </CardContent>
             </Card>
           ))

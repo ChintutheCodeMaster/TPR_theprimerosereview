@@ -506,6 +506,72 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          id: string
+          student_id: string
+          counselor_id: string
+          parent_id: string | null
+          status: "active" | "urgent" | "archived"
+          tags: string[] | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          counselor_id: string
+          parent_id?: string | null
+          status?: "active" | "urgent" | "archived"
+          tags?: string[] | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          counselor_id?: string
+          parent_id?: string | null
+          status?: "active" | "urgent" | "archived"
+          tags?: string[] | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          content: string
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          content: string
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          content?: string
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       schools: {
         Row: {
           created_at: string

@@ -1,215 +1,201 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Search, 
-  Filter, 
+import {
+  Search,
   Send,
-  Paperclip,
   MessageSquare,
-  Clock,
-  CheckCircle,
   AlertCircle,
   AlertTriangle,
-  User,
   Users,
-  Mail,
   Bell,
-  Plus,
-  FileText,
-  Calendar,
   Lightbulb,
   MoreHorizontal,
-  ChevronDown,
   Pin,
   Archive,
-  Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  FileText,
+  Paperclip,
 } from "lucide-react";
 
-interface Message {
+type DBConversation = {
   id: string;
-  senderId: string;
-  senderName: string;
-  senderRole: 'counselor' | 'student' | 'parent';
+  student_id: string;
+  counselor_id: string;
+  parent_id: string | null;
+  status: "active" | "urgent" | "archived";
+  tags: string[] | null;
+  created_at: string;
+};
+
+type DBMessage = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
   content: string;
-  timestamp: string;
   read: boolean;
-  attachments?: { name: string; type: string; url: string }[];
-}
-
-interface Conversation {
-  id: string;
-  studentId: string;
-  studentName: string;
-  studentAvatar?: string;
-  parentName?: string;
-  participants: string[];
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  status: 'active' | 'urgent' | 'archived';
-  messages: Message[];
-  tags: string[];
-}
-
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    studentId: 'st1',
-    studentName: 'Emma Thompson',
-    parentName: 'Sarah Thompson',
-    participants: ['Emma Thompson', 'Sarah Thompson'],
-    lastMessage: 'Thanks for the essay feedback! I\'ll work on the conclusion.',
-    lastMessageTime: '2 hours ago',
-    unreadCount: 0,
-    status: 'active',
-    tags: ['essays', 'feedback'],
-    messages: [
-      {
-        id: 'm1',
-        senderId: 'counselor',
-        senderName: 'Ms. Johnson',
-        senderRole: 'counselor',
-        content: 'Hi Emma! I\'ve reviewed your Common App essay. Overall it\'s very strong - I love how you\'ve woven your debate experience throughout. A few suggestions: consider strengthening your conclusion to better tie back to your opening hook, and add one more specific example in paragraph 3.',
-        timestamp: '3 hours ago',
-        read: true,
-        attachments: [
-          { name: 'essay_feedback.pdf', type: 'pdf', url: '#' }
-        ]
-      },
-      {
-        id: 'm2',
-        senderId: 'st1',
-        senderName: 'Emma Thompson',
-        senderRole: 'student',
-        content: 'Thanks for the essay feedback! I\'ll work on the conclusion.',
-        timestamp: '2 hours ago',
-        read: true
-      }
-    ]
-  },
-  {
-    id: '2',
-    studentId: 'st2',
-    studentName: 'Marcus Johnson',
-    parentName: 'Robert Johnson',
-    participants: ['Marcus Johnson', 'Robert Johnson'],
-    lastMessage: 'When is the next meeting scheduled?',
-    lastMessageTime: '1 day ago',
-    unreadCount: 2,
-    status: 'urgent',
-    tags: ['deadlines', 'urgent'],
-    messages: [
-      {
-        id: 'm3',
-        senderId: 'parent',
-        senderName: 'Robert Johnson',
-        senderRole: 'parent',
-        content: 'Hi Ms. Johnson, we\'re concerned about Marcus\'s application deadlines. Can we schedule a meeting this week?',
-        timestamp: '1 day ago',
-        read: false
-      },
-      {
-        id: 'm4',
-        senderId: 'st2',
-        senderName: 'Marcus Johnson',
-        senderRole: 'student',
-        content: 'When is the next meeting scheduled?',
-        timestamp: '1 day ago',
-        read: false
-      }
-    ]
-  },
-  {
-    id: '3',
-    studentId: 'st3',
-    studentName: 'Sophia Chen',
-    parentName: 'Linda Chen',
-    participants: ['Sophia Chen', 'Linda Chen'],
-    lastMessage: 'Perfect! See you then.',
-    lastMessageTime: '3 days ago',
-    unreadCount: 0,
-    status: 'active',
-    tags: ['meetings'],
-    messages: [
-      {
-        id: 'm5',
-        senderId: 'counselor',
-        senderName: 'Ms. Johnson',
-        senderRole: 'counselor',
-        content: 'Great news! Your Johns Hopkins application has been submitted successfully. Let\'s meet next week to discuss your remaining applications.',
-        timestamp: '3 days ago',
-        read: true
-      },
-      {
-        id: 'm6',
-        senderId: 'st3',
-        senderName: 'Sophia Chen',
-        senderRole: 'student',
-        content: 'Perfect! See you then.',
-        timestamp: '3 days ago',
-        read: true
-      }
-    ]
-  }
-];
-
-const messageTemplates = [
-  {
-    id: 'deadline',
-    title: 'Deadline Reminder',
-    template: 'Hi {studentName}! This is a friendly reminder that your {applicationName} application is due on {deadline}. Let me know if you need any help finalizing your materials.'
-  },
-  {
-    id: 'essay-feedback',
-    title: 'Essay Feedback Summary',
-    template: 'Hi {studentName}! I\'ve reviewed your {essayTitle} essay. Overall impressions: {feedback}. Please review the attached comments and let\'s discuss any questions you have.'
-  },
-  {
-    id: 'recommendation',
-    title: 'Recommendation Status',
-    template: 'Hi {studentName}! Update on your recommendation letters: {status}. {nextSteps}'
-  },
-  {
-    id: 'meeting',
-    title: 'Meeting Reminder',
-    template: 'Hi {studentName}! Looking forward to our meeting on {date} at {time}. We\'ll be discussing: {agenda}. Please bring any questions you have!'
-  }
-];
+  created_at: string;
+};
 
 const Messages = () => {
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(mockConversations[0]);
+  const [conversations, setConversations] = useState<DBConversation[]>([]);
+  const [messages, setMessages] = useState<Record<string, DBMessage[]>>({});
+  const [selectedConversation, setSelectedConversation] =
+    useState<DBConversation | null>(null);
+
+  const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [newMessage, setNewMessage] = useState("");
-  const [showAITemplates, setShowAITemplates] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [showBulkMessage, setShowBulkMessage] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [bulkMessage, setBulkMessage] = useState("");
+  const [showAITemplates, setShowAITemplates] = useState(false);
 
-  const filteredConversations = mockConversations.filter(conv => {
-    const matchesSearch = conv.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (conv.parentName && conv.parentName.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+  // ─────────────────────────────────────────
+  // Load Conversations
+  // ─────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const userId = userData.user.id;
+
+      // Get conversations where user is involved
+      const { data } = await supabase
+        .from("conversations")
+        .select("*")
+        .or(`student_id.eq.${userId},counselor_id.eq.${userId},parent_id.eq.${userId}`)
+        .order("created_at", { ascending: false });
+
+      if (!data) return;
+
+      setConversations(data);
+
+      // Fetch profiles
+      const userIds = [
+        ...new Set(
+          data.flatMap((c) => [c.student_id, c.counselor_id, c.parent_id]).filter(Boolean)
+        ),
+      ];
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("user_id", userIds as string[]);
+
+      const profileMap: Record<string, any> = {};
+      prof?.forEach((p) => (profileMap[p.user_id] = p));
+      setProfiles(profileMap);
+
+      // Fetch messages
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("*")
+        .in(
+          "conversation_id",
+          data.map((c) => c.id)
+        )
+        .order("created_at");
+
+      const grouped: Record<string, DBMessage[]> = {};
+      msgs?.forEach((m) => {
+        if (!grouped[m.conversation_id]) grouped[m.conversation_id] = [];
+        grouped[m.conversation_id].push(m);
+      });
+
+      setMessages(grouped);
+    };
+
+    load();
+  }, []);
+
+  // ─────────────────────────────────────────
+  // Send Message
+  // ─────────────────────────────────────────
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    const { data } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: selectedConversation.id,
+        sender_id: userData.user.id,
+        content: newMessage,
+      })
+      .select()
+      .single();
+
+    if (!data) return;
+
+    setMessages((prev) => ({
+      ...prev,
+      [selectedConversation.id]: [
+        ...(prev[selectedConversation.id] || []),
+        data,
+      ],
+    }));
+
+    setNewMessage("");
+  };
+
+  // ─────────────────────────────────────────
+  // Derived Stats
+  // ─────────────────────────────────────────
+  const totalUnread = useMemo(() => {
+    return Object.values(messages)
+      .flat()
+      .filter((m) => !m.read).length;
+  }, [messages]);
+
+  const urgentCount = conversations.filter(
+    (c) => c.status === "urgent"
+  ).length;
+
+  const filteredConversations = conversations.filter((conv) => {
+    const studentProfile = profiles[conv.student_id];
+    const studentName = studentProfile?.full_name || "";
+
+    const matchesSearch = studentName
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    const convMessages = messages[conv.id] || [];
+    const hasUnread = convMessages.some((m) => !m.read);
+
     switch (filter) {
-      case 'students':
-        return matchesSearch && conv.participants.includes(conv.studentName);
-      case 'parents':
-        return matchesSearch && conv.parentName && conv.participants.includes(conv.parentName);
-      case 'unread':
-        return matchesSearch && conv.unreadCount > 0;
-      case 'urgent':
-        return matchesSearch && conv.status === 'urgent';
+      case "urgent":
+        return matchesSearch && conv.status === "urgent";
+      case "unread":
+        return matchesSearch && hasUnread;
+      case "students":
+        return matchesSearch && !conv.parent_id;
+      case "parents":
+        return matchesSearch && !!conv.parent_id;
       default:
         return matchesSearch;
     }
@@ -217,62 +203,19 @@ const Messages = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'counselor': return 'bg-primary text-primary-foreground';
-      case 'student': return 'bg-secondary text-secondary-foreground';
-      case 'parent': return 'bg-accent text-accent-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case "counselor": return "bg-primary/10 text-primary border-primary/20";
+      case "student": return "bg-secondary/10 text-secondary-foreground border-secondary/20";
+      case "parent": return "bg-accent/10 text-accent-foreground border-accent/20";
+      default: return "bg-muted text-muted-foreground";
     }
   };
 
-  const generateTemplateMessage = (templateId: string) => {
-    const template = messageTemplates.find(t => t.id === templateId);
-    if (!template || !selectedConversation) return;
-
-    let message = template.template;
-    message = message.replace('{studentName}', selectedConversation.studentName);
-    
-    // Add placeholder replacements
-    message = message.replace('{applicationName}', 'Stanford University');
-    message = message.replace('{deadline}', 'January 15th');
-    message = message.replace('{essayTitle}', 'Personal Statement');
-    message = message.replace('{feedback}', 'Strong storytelling with room for improvement in conclusion');
-    message = message.replace('{status}', '2 of 3 letters submitted');
-    message = message.replace('{nextSteps}', 'Following up with remaining recommender');
-    message = message.replace('{date}', 'next Friday');
-    message = message.replace('{time}', '3:00 PM');
-    message = message.replace('{agenda}', 'review applications, discuss deadlines');
-
-    setNewMessage(message);
-    setShowAITemplates(false);
-  };
-
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return;
-
-    const message: Message = {
-      id: `m${Date.now()}`,
-      senderId: 'counselor',
-      senderName: 'Ms. Johnson',
-      senderRole: 'counselor',
-      content: newMessage,
-      timestamp: 'Just now',
-      read: true
-    };
-
-    // Update conversation with new message
-    selectedConversation.messages.push(message);
-    selectedConversation.lastMessage = newMessage;
-    selectedConversation.lastMessageTime = 'Just now';
-
-    setNewMessage("");
-  };
-
-  const totalUnread = mockConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
-  const urgentConversations = mockConversations.filter(conv => conv.status === 'urgent').length;
-
+  // ─────────────────────────────────────────
+  // UI
+  // ─────────────────────────────────────────
   return (
     <div className="p-6 space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Messages</h1>
@@ -283,18 +226,14 @@ const Messages = () => {
             <Bell className="h-4 w-4 mr-2" />
             Notifications
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowBulkMessage(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowBulkMessage(true)}>
             <Users className="h-4 w-4 mr-2" />
             Bulk Message
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -304,7 +243,7 @@ const Messages = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Conversations</p>
-                <p className="text-2xl font-bold text-foreground">{mockConversations.length}</p>
+                <p className="text-2xl font-bold text-foreground">{conversations.length}</p>
               </div>
             </div>
           </CardContent>
@@ -332,7 +271,7 @@ const Messages = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Urgent</p>
-                <p className="text-2xl font-bold text-foreground">{urgentConversations}</p>
+                <p className="text-2xl font-bold text-foreground">{urgentCount}</p>
               </div>
             </div>
           </CardContent>
@@ -353,9 +292,9 @@ const Messages = () => {
         </Card>
       </div>
 
-      {/* Main Messages Interface */}
+      {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[700px]">
-        {/* Left Panel - Conversations List */}
+        {/* Conversations List */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <div className="space-y-4">
@@ -368,11 +307,10 @@ const Messages = () => {
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </div>
-              
-              {/* Search and Filter */}
+
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search conversations..."
                     value={searchTerm}
@@ -380,7 +318,7 @@ const Messages = () => {
                     className="pl-10"
                   />
                 </div>
-                
+
                 <Select value={filter} onValueChange={setFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter conversations" />
@@ -396,78 +334,92 @@ const Messages = () => {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent className="p-0">
             <div className="space-y-1 max-h-[500px] overflow-y-auto">
-              {filteredConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`p-4 hover:bg-muted/50 cursor-pointer border-l-4 transition-colors ${
-                    selectedConversation?.id === conversation.id 
-                      ? 'bg-muted border-l-primary' 
-                      : conversation.status === 'urgent' 
-                        ? 'border-l-destructive' 
-                        : 'border-l-transparent'
-                  }`}
-                  onClick={() => setSelectedConversation(conversation)}
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={conversation.studentAvatar} alt={conversation.studentName} />
-                      <AvatarFallback className="bg-gradient-secondary text-secondary-foreground">
-                        {conversation.studentName.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground truncate">
-                            {conversation.studentName}
+              {filteredConversations.map((conv) => {
+                const student = profiles[conv.student_id];
+                const parent = conv.parent_id ? profiles[conv.parent_id] : null;
+                const convMessages = messages[conv.id] || [];
+                const lastMsg = convMessages[convMessages.length - 1];
+                const unreadCount = convMessages.filter((m) => !m.read).length;
+                const initials = (student?.full_name || "?")
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("");
+
+                return (
+                  <div
+                    key={conv.id}
+                    className={`p-4 hover:bg-muted/50 cursor-pointer border-l-4 transition-colors ${
+                      selectedConversation?.id === conv.id
+                        ? "bg-muted border-l-primary"
+                        : conv.status === "urgent"
+                        ? "border-l-destructive"
+                        : "border-l-transparent"
+                    }`}
+                    onClick={() => setSelectedConversation(conv)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={student?.avatar_url} alt={student?.full_name} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground truncate">
+                              {student?.full_name || "Student"}
+                            </p>
+                            {parent && (
+                              <p className="text-xs text-muted-foreground">
+                                & {parent.full_name}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {unreadCount > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 flex items-center justify-center p-0 text-xs">
+                                {unreadCount}
+                              </Badge>
+                            )}
+                            {conv.status === "urgent" && (
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                            )}
+                          </div>
+                        </div>
+
+                        {lastMsg && (
+                          <p className="text-sm text-muted-foreground truncate mt-1">
+                            {lastMsg.content}
                           </p>
-                          {conversation.parentName && (
+                        )}
+
+                        <div className="flex items-center justify-between mt-2">
+                          {lastMsg && (
                             <p className="text-xs text-muted-foreground">
-                              & {conversation.parentName}
+                              {new Date(lastMsg.created_at).toLocaleString()}
                             </p>
                           )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {conversation.unreadCount > 0 && (
-                            <Badge variant="destructive" className="h-5 w-5 flex items-center justify-center p-0 text-xs">
-                              {conversation.unreadCount}
-                            </Badge>
-                          )}
-                          {conversation.status === 'urgent' && (
-                            <AlertTriangle className="h-4 w-4 text-destructive" />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground truncate mt-1">
-                        {conversation.lastMessage}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-xs text-muted-foreground">
-                          {conversation.lastMessageTime}
-                        </p>
-                        <div className="flex gap-1">
-                          {conversation.tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
+                          <div className="flex gap-1">
+                            {conv.tags?.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
 
-        {/* Right Panel - Conversation View */}
+        {/* Messages Panel */}
         <Card className="lg:col-span-2">
           {selectedConversation ? (
             <>
@@ -475,21 +427,33 @@ const Messages = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={selectedConversation.studentAvatar} alt={selectedConversation.studentName} />
-                      <AvatarFallback className="bg-gradient-secondary text-secondary-foreground">
-                        {selectedConversation.studentName.split(' ').map(n => n[0]).join('')}
+                      <AvatarImage
+                        src={profiles[selectedConversation.student_id]?.avatar_url}
+                        alt={profiles[selectedConversation.student_id]?.full_name}
+                      />
+                      <AvatarFallback>
+                        {(profiles[selectedConversation.student_id]?.full_name || "?")
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-foreground">
-                        {selectedConversation.studentName}
+                        {profiles[selectedConversation.student_id]?.full_name || "Conversation"}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {selectedConversation.participants.join(', ')}
+                        {[
+                          profiles[selectedConversation.student_id]?.full_name,
+                          selectedConversation.parent_id &&
+                            profiles[selectedConversation.parent_id]?.full_name,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm">
                       <Pin className="h-4 w-4" />
@@ -503,74 +467,69 @@ const Messages = () => {
                   </div>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="p-0 flex flex-col h-[550px]">
                 {/* Messages Area */}
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-                  {selectedConversation.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.senderRole === 'counselor' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[80%] ${message.senderRole === 'counselor' ? 'order-2' : 'order-1'}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          {message.senderRole !== 'counselor' && (
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-xs">
-                                {message.senderName.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getRoleColor(message.senderRole)}`}
+                  {(messages[selectedConversation.id] || []).map((msg) => {
+                    const isCounselor = msg.sender_id === selectedConversation.counselor_id;
+                    const senderProfile = profiles[msg.sender_id];
+                    const senderName = senderProfile?.full_name || "Unknown";
+                    const role =
+                      msg.sender_id === selectedConversation.counselor_id
+                        ? "counselor"
+                        : msg.sender_id === selectedConversation.student_id
+                        ? "student"
+                        : "parent";
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isCounselor ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`max-w-[80%] ${isCounselor ? "order-2" : "order-1"}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {!isCounselor && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs">
+                                  {senderName.split(" ").map((n: string) => n[0]).join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
+                              {role}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(msg.created_at).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div
+                            className={`p-3 rounded-lg ${
+                              isCounselor
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
                           >
-                            {message.senderRole}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {message.timestamp}
-                          </span>
-                        </div>
-                        
-                        <div 
-                          className={`p-3 rounded-lg ${
-                            message.senderRole === 'counselor' 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <p className="text-sm">{message.content}</p>
-                          
-                          {message.attachments && message.attachments.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {message.attachments.map((attachment, index) => (
-                                <div 
-                                  key={index}
-                                  className="flex items-center gap-2 p-2 bg-background/10 rounded"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  <span className="text-xs">{attachment.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-1 mt-1 justify-end">
-                          {message.read ? (
-                            <Eye className="h-3 w-3 text-muted-foreground" />
-                          ) : (
-                            <EyeOff className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {message.read ? 'Read' : 'Delivered'}
-                          </span>
+                            <p className="text-sm">{msg.content}</p>
+                          </div>
+
+                          <div className="flex items-center gap-1 mt-1 justify-end">
+                            {msg.read ? (
+                              <Eye className="h-3 w-3 text-muted-foreground" />
+                            ) : (
+                              <EyeOff className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {msg.read ? "Read" : "Delivered"}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                
+
                 {/* Message Composer */}
                 <div className="border-t border-border p-4 space-y-3">
                   {showAITemplates && (
@@ -581,36 +540,21 @@ const Messages = () => {
                             <Lightbulb className="h-4 w-4 text-primary" />
                             Message Templates
                           </h4>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setShowAITemplates(false)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => setShowAITemplates(false)}>
                             ×
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {messageTemplates.map((template) => (
-                            <Button
-                              key={template.id}
-                              variant="outline"
-                              size="sm"
-                              className="text-left h-auto p-2"
-                              onClick={() => generateTemplateMessage(template.id)}
-                            >
-                              <div>
-                                <p className="font-medium text-xs">{template.title}</p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {template.template.substring(0, 50)}...
-                                </p>
-                              </div>
+                          {["Deadline Reminder", "Essay Feedback", "Recommendation Status", "Meeting Reminder"].map((title) => (
+                            <Button key={title} variant="outline" size="sm" className="text-left h-auto p-2">
+                              <p className="font-medium text-xs">{title}</p>
                             </Button>
                           ))}
                         </div>
                       </CardContent>
                     </Card>
                   )}
-                  
+
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
                       <Textarea
@@ -618,8 +562,8 @@ const Messages = () => {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         className="min-h-[60px] resize-none pr-12"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
                             sendMessage();
                           }
@@ -631,19 +575,15 @@ const Messages = () => {
                         className="absolute top-2 right-2"
                         onClick={() => setShowAITemplates(!showAITemplates)}
                       >
-                        <Lightbulb className="h-4 w-4 text-ai-accent" />
+                        <Lightbulb className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex flex-col gap-1">
                       <Button variant="ghost" size="sm">
                         <Paperclip className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        onClick={sendMessage}
-                        disabled={!newMessage.trim()}
-                        size="sm"
-                      >
+                      <Button onClick={sendMessage} disabled={!newMessage.trim()} size="sm">
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
@@ -672,38 +612,42 @@ const Messages = () => {
               Send Bulk Message
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Select Recipients</label>
               <div className="space-y-2 max-h-40 overflow-y-auto border border-border rounded p-2">
-                {mockConversations.map((conv) => (
-                  <div key={conv.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={selectedStudents.includes(conv.studentId)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudents([...selectedStudents, conv.studentId]);
-                        } else {
-                          setSelectedStudents(selectedStudents.filter(id => id !== conv.studentId));
-                        }
-                      }}
-                    />
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={conv.studentAvatar} alt={conv.studentName} />
-                      <AvatarFallback className="text-xs">
-                        {conv.studentName.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{conv.studentName}</span>
-                    {conv.parentName && (
-                      <span className="text-xs text-muted-foreground">& {conv.parentName}</span>
-                    )}
-                  </div>
-                ))}
+                {conversations.map((conv) => {
+                  const student = profiles[conv.student_id];
+                  const parent = conv.parent_id ? profiles[conv.parent_id] : null;
+                  return (
+                    <div key={conv.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={selectedStudents.includes(conv.student_id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStudents([...selectedStudents, conv.student_id]);
+                          } else {
+                            setSelectedStudents(selectedStudents.filter((id) => id !== conv.student_id));
+                          }
+                        }}
+                      />
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={student?.avatar_url} alt={student?.full_name} />
+                        <AvatarFallback className="text-xs">
+                          {(student?.full_name || "?").split(" ").map((n: string) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{student?.full_name || "Student"}</span>
+                      {parent && (
+                        <span className="text-xs text-muted-foreground">& {parent.full_name}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium mb-2 block">Message</label>
               <Textarea
@@ -713,19 +657,16 @@ const Messages = () => {
                 className="min-h-[120px]"
               />
             </div>
-            
+
             <div className="flex gap-2">
-              <Button 
+              <Button
                 className="flex-1"
                 disabled={selectedStudents.length === 0 || !bulkMessage.trim()}
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send to {selectedStudents.length} recipient(s)
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setShowBulkMessage(false)}
-              >
+              <Button variant="outline" onClick={() => setShowBulkMessage(false)}>
                 Cancel
               </Button>
             </div>
