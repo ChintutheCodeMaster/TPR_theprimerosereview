@@ -33,6 +33,7 @@ import SubmitEssay from "./pages/SubmitEssay";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AddApplication from "./pages/AddApplication";
 import EditEssay from "./pages/EditEssay";
+import StudentMessages from "./pages/StudentMessages";
 
 const queryClient = new QueryClient();
 
@@ -237,6 +238,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
                 <AddApplication />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/student-messages" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentMessages />
               </ProtectedRoute>
             </AppLayout>
           } />

@@ -54,6 +54,11 @@ const studentItems = [{
   title: "My Stats",
   url: "/student-stats",
   icon: BarChart3
+}, {
+  title: "Messages",
+  url: "/student-messages",
+  icon: MessageSquare,
+  badge: 3
 }];
 
 const parentItems = [{
@@ -64,7 +69,7 @@ const parentItems = [{
 
 // Routes that belong to each role
 const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
-const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application'];
+const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages'];
 const parentRoutes = ['/parent-portal'];
 
 export function AppSidebar() {
