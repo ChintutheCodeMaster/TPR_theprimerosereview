@@ -180,7 +180,7 @@ const StudentDashboard = () => {
             </Avatar>
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">
-                Hi {data?.studentName}, you're {overallProgress}% on track!
+                Hi {data?.studentName}, you are {overallProgress}% on track!
               </h1>
               <p className="text-muted-foreground mt-1">
                 Keep up the great work! Here's your college application progress.
