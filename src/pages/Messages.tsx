@@ -72,9 +72,8 @@ const Messages = () => {
   const [bulkMessage, setBulkMessage] = useState("");
   const [showAITemplates, setShowAITemplates] = useState(false);
 
-  // ─────────────────────────────────────────
-  // Load Conversations
-  // ─────────────────────────────────────────
+
+  
   useEffect(() => {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -131,9 +130,7 @@ const Messages = () => {
     load();
   }, []);
 
-  // ─────────────────────────────────────────
-  // Send Message
-  // ─────────────────────────────────────────
+ 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
