@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +32,10 @@ import {
   MoreHorizontal,
   Pin,
   Archive,
-  Eye,
-  EyeOff,
-  FileText,
   Paperclip,
+  CheckCheck,
+  Check,
+  Plus,
 } from "lucide-react";
 
 type DBConversation = {
@@ -71,21 +71,29 @@ const Messages = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [bulkMessage, setBulkMessage] = useState("");
   const [showAITemplates, setShowAITemplates] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
+  // New conversation dialog
+  const [showNewConversation, setShowNewConversation] = useState(false);
+  const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [firstMessage, setFirstMessage] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  
   useEffect(() => {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
-      const userId = userData.user.id;
+      const uid = userData.user.id;
+      setUserId(uid);
 
       // Get conversations where user is involved
       const { data } = await supabase
         .from("conversations")
         .select("*")
-        .or(`student_id.eq.${userId},counselor_id.eq.${userId},parent_id.eq.${userId}`)
+        .or(`student_id.eq.${uid},counselor_id.eq.${uid},parent_id.eq.${uid}`)
         .order("created_at", { ascending: false });
 
       if (!data) return;
@@ -130,7 +138,164 @@ const Messages = () => {
     load();
   }, []);
 
- 
+  // ── Real-time subscription ─────────────────────────────────────
+  useEffect(() => {
+    if (conversations.length === 0) return;
+
+    const convIds = conversations.map((c) => c.id);
+
+    const channel = supabase
+      .channel("counselor-messages-rt")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const msg = payload.new as DBMessage;
+          if (!convIds.includes(msg.conversation_id)) return;
+          setMessages((prev) => ({
+            ...prev,
+            [msg.conversation_id]: [...(prev[msg.conversation_id] || []), msg],
+          }));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const msg = payload.new as DBMessage;
+          if (!convIds.includes(msg.conversation_id)) return;
+          setMessages((prev) => ({
+            ...prev,
+            [msg.conversation_id]: (prev[msg.conversation_id] || []).map((m) =>
+              m.id === msg.id ? msg : m
+            ),
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversations]);
+
+  // ── Auto-scroll ────────────────────────────────────────────────
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, selectedConversation]);
+
+  // ── Select conversation & mark as read ─────────────────────────
+  const selectConversation = async (conv: DBConversation) => {
+    setSelectedConversation(conv);
+
+    const unread = (messages[conv.id] || []).filter(
+      (m) => !m.read && m.sender_id !== userId
+    );
+    if (unread.length === 0) return;
+
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .in("id", unread.map((m) => m.id));
+
+    setMessages((prev) => ({
+      ...prev,
+      [conv.id]: (prev[conv.id] || []).map((m) =>
+        !m.read && m.sender_id !== userId ? { ...m, read: true } : m
+      ),
+    }));
+  };
+
+  // ── New Conversation ───────────────────────────────────────────
+  const openNewConversationDialog = async () => {
+    if (!userId) return;
+
+    // Load assigned students
+    const { data: assignments } = await supabase
+      .from("student_counselor_assignments")
+      .select("student_id")
+      .eq("counselor_id", userId);
+
+    if (!assignments || assignments.length === 0) {
+      setAssignedStudents([]);
+      setShowNewConversation(true);
+      return;
+    }
+
+    const studentIds = assignments.map((a) => a.student_id);
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("user_id", studentIds);
+
+    setAssignedStudents(profs || []);
+    setSelectedStudentId(profs?.[0]?.user_id ?? "");
+    setFirstMessage("");
+    setShowNewConversation(true);
+  };
+
+  const startConversation = async () => {
+    if (!selectedStudentId || !firstMessage.trim() || !userId) return;
+    setCreating(true);
+
+    // Check if conversation already exists
+    const existing = conversations.find(
+      (c) => c.student_id === selectedStudentId && c.counselor_id === userId
+    );
+
+    if (existing) {
+      // Just send the message in the existing conversation
+      const { data: msg } = await supabase
+        .from("messages")
+        .insert({ conversation_id: existing.id, sender_id: userId, content: firstMessage.trim() })
+        .select()
+        .single();
+      if (msg) {
+        setMessages((prev) => ({
+          ...prev,
+          [existing.id]: [...(prev[existing.id] || []), msg],
+        }));
+      }
+      setSelectedConversation(existing);
+      setShowNewConversation(false);
+      setCreating(false);
+      return;
+    }
+
+    // Create new conversation
+    const { data: conv } = await supabase
+      .from("conversations")
+      .insert({ student_id: selectedStudentId, counselor_id: userId, status: "active" })
+      .select()
+      .single();
+
+    if (!conv) { setCreating(false); return; }
+
+    // Send first message
+    const { data: msg } = await supabase
+      .from("messages")
+      .insert({ conversation_id: conv.id, sender_id: userId, content: firstMessage.trim() })
+      .select()
+      .single();
+
+    // Load the student profile if not already in map
+    if (!profiles[selectedStudentId]) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", selectedStudentId)
+        .single();
+      if (prof) setProfiles((prev) => ({ ...prev, [prof.user_id]: prof }));
+    }
+
+    setConversations((prev) => [conv, ...prev]);
+    setMessages((prev) => ({ ...prev, [conv.id]: msg ? [msg] : [] }));
+    setSelectedConversation(conv);
+    setShowNewConversation(false);
+    setFirstMessage("");
+    setCreating(false);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
@@ -300,8 +465,8 @@ const Messages = () => {
                   <MessageSquare className="h-5 w-5" />
                   Conversations
                 </CardTitle>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
+                <Button size="sm" onClick={openNewConversationDialog} title="New conversation">
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
@@ -355,7 +520,7 @@ const Messages = () => {
                         ? "border-l-destructive"
                         : "border-l-transparent"
                     }`}
-                    onClick={() => setSelectedConversation(conv)}
+                    onClick={() => selectConversation(conv)}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
@@ -511,22 +676,25 @@ const Messages = () => {
                             <p className="text-sm">{msg.content}</p>
                           </div>
 
-                          <div className="flex items-center gap-1 mt-1 justify-end">
-                            {msg.read ? (
-                              <Eye className="h-3 w-3 text-muted-foreground" />
-                            ) : (
-                              <EyeOff className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {msg.read ? "Read" : "Delivered"}
-                            </span>
-                          </div>
+                          {isCounselor && (
+                            <div className="flex items-center gap-1 mt-1 justify-end">
+                              {msg.read ? (
+                                <CheckCheck className="h-3 w-3 text-primary" />
+                              ) : (
+                                <Check className="h-3 w-3 text-muted-foreground" />
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {msg.read ? "Read" : "Delivered"}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
+                <div ref={bottomRef} />
                 {/* Message Composer */}
                 <div className="border-t border-border p-4 space-y-3">
                   {showAITemplates && (
@@ -599,6 +767,82 @@ const Messages = () => {
           )}
         </Card>
       </div>
+
+      {/* New Conversation Dialog */}
+      <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              New Conversation
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {assignedStudents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No assigned students found. Assign students first from the Students page.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Student</label>
+                  <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a student..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignedStudents.map((s) => (
+                        <SelectItem key={s.user_id} value={s.user_id}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={s.avatar_url} />
+                              <AvatarFallback className="text-[10px]">
+                                {(s.full_name || "S").split(" ").map((n: string) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            {s.full_name || s.email || "Student"}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Message</label>
+                  <Textarea
+                    placeholder="Type your first message..."
+                    value={firstMessage}
+                    onChange={(e) => setFirstMessage(e.target.value)}
+                    className="min-h-[100px]"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        startConversation();
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    disabled={!selectedStudentId || !firstMessage.trim() || creating}
+                    onClick={startConversation}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {creating ? "Starting..." : "Start Conversation"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowNewConversation(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Message Dialog */}
       <Dialog open={showBulkMessage} onOpenChange={setShowBulkMessage}>
