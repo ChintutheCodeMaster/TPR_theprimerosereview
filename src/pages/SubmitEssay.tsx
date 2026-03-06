@@ -69,71 +69,71 @@ const SubmitEssay = () => {
   }, []);
 
   // ── AI Essay Generation ────────────────────────────────────
-  const handleGenerateEssay = async () => {
+//   const handleGenerateEssay = async () => {
    
-    if (!prompt.trim()) {
-      toast.error("Please add an essay prompt first so AI knows what to write");
-      return;
-    }
+//     if (!prompt.trim()) {
+//       toast.error("Please add an essay prompt first so AI knows what to write");
+//       return;
+//     }
 
-    setIsGenerating(true);
-    try {
-      const wordTarget = effectiveWordLimit ?? 650;
+//     setIsGenerating(true);
+//     try {
+//       const wordTarget = effectiveWordLimit ?? 650;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
-          system: `You are an expert college admissions essay writer. 
-You write authentic, personal, and compelling college application essays that sound like a real student — not AI. 
-Your essays are specific, use vivid details, show genuine reflection, and connect personal experiences to future goals.
-NEVER use clichés. NEVER start with "In today's world" or similar generic openings.
-Write in first person. Be specific and authentic.`,
-          messages: [
-            {
-              role: "user",
-              content: `Write a college application essay based on this prompt:
+//       const response = await fetch("https://api.anthropic.com/v1/messages", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           "x-api-key": ANTHROPIC_KEY,
+//           "anthropic-version": "2023-06-01",
+//           "anthropic-dangerous-direct-browser-access": "true",
+//         },
+//         body: JSON.stringify({
+//           model: "claude-sonnet-4-20250514",
+//           max_tokens: 2000,
+//           system: `You are an expert college admissions essay writer. 
+// You write authentic, personal, and compelling college application essays that sound like a real student — not AI. 
+// Your essays are specific, use vivid details, show genuine reflection, and connect personal experiences to future goals.
+// NEVER use clichés. NEVER start with "In today's world" or similar generic openings.
+// Write in first person. Be specific and authentic.`,
+//           messages: [
+//             {
+//               role: "user",
+//               content: `Write a college application essay based on this prompt:
 
-"${prompt.trim()}"
+// "${prompt.trim()}"
 
-${title.trim() ? `Essay title/topic: ${title.trim()}` : ""}
-${targetSchool.trim() ? `Target school: ${targetSchool.trim()}` : ""}
-Target word count: approximately ${wordTarget} words.
+// ${title.trim() ? `Essay title/topic: ${title.trim()}` : ""}
+// ${targetSchool.trim() ? `Target school: ${targetSchool.trim()}` : ""}
+// Target word count: approximately ${wordTarget} words.
 
-Write a complete, polished essay that sounds authentic and personal. 
-Use a compelling opening, specific details and examples, genuine reflection, and a strong conclusion.
-Do NOT include any preamble, explanation, or notes — just the essay itself.`,
-            },
-          ],
-        }),
-      });
+// Write a complete, polished essay that sounds authentic and personal. 
+// Use a compelling opening, specific details and examples, genuine reflection, and a strong conclusion.
+// Do NOT include any preamble, explanation, or notes — just the essay itself.`,
+//             },
+//           ],
+//         }),
+//       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err?.error?.message ?? "AI generation failed");
-      }
+//       if (!response.ok) {
+//         const err = await response.json();
+//         throw new Error(err?.error?.message ?? "AI generation failed");
+//       }
 
-      const data = await response.json();
-      const generatedText = data.content
-        .filter((b: any) => b.type === "text")
-        .map((b: any) => b.text)
-        .join("\n");
+//       const data = await response.json();
+//       const generatedText = data.content
+//         .filter((b: any) => b.type === "text")
+//         .map((b: any) => b.text)
+//         .join("\n");
 
-      setContent(generatedText.trim());
-      toast.success("Essay draft generated! Review and edit it to make it your own.");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to generate essay. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+//       setContent(generatedText.trim());
+//       toast.success("Essay draft generated! Review and edit it to make it your own.");
+//     } catch (error: any) {
+//       toast.error(error.message || "Failed to generate essay. Please try again.");
+//     } finally {
+//       setIsGenerating(false);
+//     }
+//   };
 
   // ── Submit ────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -317,7 +317,7 @@ Do NOT include any preamble, explanation, or notes — just the essay itself.`,
                 </div>
               )}
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="prompt">Essay Prompt</Label>
                 <div className="relative">
                   <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -330,7 +330,7 @@ Do NOT include any preamble, explanation, or notes — just the essay itself.`,
                     rows={3}
                   />
                 </div>
-              </div>
+              </div> */}
 
             </CardContent>
           </Card>
@@ -410,7 +410,7 @@ Do NOT include any preamble, explanation, or notes — just the essay itself.`,
             <CardContent className="space-y-3">
 
               {/* AI Generate banner */}
-              <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              {/* <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
                 <Sparkles className="h-4 w-4 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">Generate with AI</p>
@@ -445,7 +445,7 @@ Do NOT include any preamble, explanation, or notes — just the essay itself.`,
                     </>
                   )}
                 </Button>
-              </div>
+              </div> */}
 
               {/* Loading state */}
               {isGenerating && (

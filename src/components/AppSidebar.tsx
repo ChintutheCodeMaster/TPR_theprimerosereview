@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, Lock } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type UserRole = 'counselor' | 'student' | 'parent';
 
@@ -84,60 +83,28 @@ export function AppSidebar() {
     return 'counselor';
   }, [currentPath]);
 
-  const getNavCls = ({ isActive }: { isActive: boolean }) => 
+  const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground";
 
-  const getDisabledCls = () => 
-    "opacity-50 cursor-not-allowed pointer-events-none text-muted-foreground";
-
-  const renderMenuItem = (item: typeof mainItems[0], allowedRole: UserRole) => {
-    const isDisabled = currentRole !== allowedRole;
-    
-    if (isDisabled) {
-      return (
-        <SidebarMenuItem key={item.title}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${getDisabledCls()}`}>
-                  <item.icon className="h-4 w-4" />
-                  {open && (
-                    <>
-                      <span className="flex-1">{item.title}</span>
-                      <Lock className="h-3 w-3" />
-                    </>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Available for {allowedRole === 'counselor' ? 'counselors' : allowedRole === 'student' ? 'students' : 'parents'} only</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </SidebarMenuItem>
-      );
-    }
-
-    return (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton asChild>
-          <NavLink to={item.url} end className={getNavCls}>
-            <item.icon className="h-4 w-4" />
-            {open && (
-              <>
-                <span>{item.title}</span>
-                {'badge' in item && item.badge && (
-                  <Badge variant="destructive" className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs">
-                    {item.badge}
-                  </Badge>
-                )}
-              </>
-            )}
-          </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
-  };
+  const renderMenuItem = (item: typeof mainItems[0]) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton asChild>
+        <NavLink to={item.url} end className={getNavCls}>
+          <item.icon className="h-4 w-4" />
+          {open && (
+            <>
+              <span>{item.title}</span>
+              {'badge' in item && item.badge && (
+                <Badge variant="destructive" className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {item.badge}
+                </Badge>
+              )}
+            </>
+          )}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
     <>
@@ -158,50 +125,38 @@ export function AppSidebar() {
             </div>
           </div>
 
-          {/* Main Navigation - Counselor */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              Counselor
-              {currentRole === 'counselor' && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
-              )}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {mainItems.map(item => renderMenuItem(item, 'counselor'))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {currentRole === 'counselor' && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Counselor</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {mainItems.map(item => renderMenuItem(item))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
-          {/* Student Portal Navigation */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              Student Portal
-              {currentRole === 'student' && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
-              )}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {studentItems.map(item => renderMenuItem(item, 'student'))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {currentRole === 'student' && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Student Portal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {studentItems.map(item => renderMenuItem(item))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
-          {/* Parent Portal Navigation */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              Parent Portal
-              {currentRole === 'parent' && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Active</Badge>
-              )}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {parentItems.map(item => renderMenuItem(item, 'parent'))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {currentRole === 'parent' && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Parent Portal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {parentItems.map(item => renderMenuItem(item))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
         </SidebarContent>
       </Sidebar>

@@ -308,7 +308,7 @@ const StudentDashboard = () => {
           >Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <Button variant="outline" className="h-16 flex-col gap-2"
             onClick={() => navigate('/submit-essay')}>
               <Upload className="h-5 w-5" />
@@ -333,6 +333,14 @@ const StudentDashboard = () => {
             >
               <Award className="h-5 w-5 text-primary" />
               Rec Letters
+            </Button>
+             <Button
+              variant="outline"
+              className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
+              onClick={() => navigate('/add-application')}
+            >
+               <FileText className="h-5 w-5" />
+              Add Application
             </Button>
           </div>
         </CardContent>
