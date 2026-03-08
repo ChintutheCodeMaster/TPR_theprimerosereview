@@ -155,7 +155,7 @@ export const StudentEssayFeedback = () => {
     <div className="space-y-4">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <MessageSquare className="h-5 w-5 text-primary" />
-        Essay Feedback
+        Essay Feedbackk
       </h2>
 
       <div className="grid gap-4">
