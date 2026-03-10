@@ -775,6 +775,10 @@ export type Database = {
     }
     Functions: {
       get_my_counselor_id: { Args: never; Returns: string }
+      link_parent_to_student: {
+        Args: { _counselor_invite_code: string; _parent_email: string }
+        Returns: string
+      }
       get_student_stats: {
         Args: never
         Returns: Json

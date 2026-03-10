@@ -13,6 +13,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteCodeParam = searchParams.get('invite');
+  const roleParam = searchParams.get('role');
 
   const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,10 +44,13 @@ const Signup = () => {
  
 
 useEffect(() => {
-  if (inviteCodeParam) {
+  if (roleParam === 'parent') {
+    setSelectedRole('parent');
+    if (inviteCodeParam) setInvitationCode(inviteCodeParam);
+  } else if (inviteCodeParam) {
     setSelectedRole('student');
   }
-}, [inviteCodeParam]);
+}, [inviteCodeParam, roleParam]);
 
   const getRoleIcon = (role: string, size = "h-8 w-8") => {
     switch (role) {
@@ -155,7 +159,7 @@ useEffect(() => {
 
             if (!inviteData) {
               throw new Error("Invalid or expired invite link");
-}
+            }
 
             const { error: assignError } = await supabase
               .from('student_counselor_assignments')
@@ -165,6 +169,24 @@ useEffect(() => {
               });
 
             if (assignError) throw assignError;
+
+            // Send parent invite email if parent email was provided
+            if (parentEmail.trim()) {
+              try {
+                await supabase.functions.invoke('send-parent-invite', {
+                  body: {
+                    parentEmail: parentEmail.trim(),
+                    parentName: parentName.trim() || undefined,
+                    studentName: fullName,
+                    counselorCode: inviteCodeParam,
+                    appUrl: window.location.origin,
+                  },
+                });
+              } catch (e) {
+                // Non-fatal — signup succeeded even if email fails
+                console.error('Failed to send parent invite email:', e);
+              }
+            }
           }
         }
 
@@ -185,14 +207,31 @@ useEffect(() => {
           if (counselorError) throw counselorError;
         }
 
-        // Parent-specific update
-        if (selectedRole === 'parent' && invitationCode) {
-          const { error: linkError } = await supabase
-            .from('parent_student_assignments')
-            .update({ parent_id: data.user.id })
-            .eq('invitation_code', invitationCode);
-          if (linkError) toast.error("Invalid invitation code");
+        // Parent-specific: link to student via counselor invite code
+        if (selectedRole === 'parent') {
+          if (!invitationCode.trim()) throw new Error("Invite code is required for parent registration");
+          const { error: linkError } = await supabase.rpc('link_parent_to_student', {
+            _counselor_invite_code: invitationCode.trim(),
+            _parent_email: email.trim(),
+          });
+          if (linkError) throw new Error(linkError.message);
         }
+      }
+
+      // Send welcome email (non-fatal)
+      try {
+        await fetch("https://fkvfngdwblbalrompzdj.supabase.co/functions/v1/send-welcome-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            fullName,
+            role: selectedRole,
+            appUrl: window.location.origin,
+          }),
+        });
+      } catch (e) {
+        console.error("Failed to send welcome email:", e);
       }
 
       toast.success("Account created successfully!");
@@ -235,10 +274,10 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Step 1: Role selection */}
+          {/* Step 1: Role selection — counselor or student only */}
           {!selectedRole && (
-            <div className="grid grid-cols-3 gap-3">
-              {(['counselor', 'student', 'parent'] as const).map((role) => (
+            <div className="grid grid-cols-2 gap-3">
+              {(['counselor', 'student'] as const).map((role) => (
                 <button
                   key={role}
                   onClick={() => setSelectedRole(role)}
