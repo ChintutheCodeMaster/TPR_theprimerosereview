@@ -239,8 +239,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "onboarding@resend.dev", // ← swap for your verified domain email when ready
-        to: email,
+        from: "onboarding@resend.dev",
+        to: "sumeetb271001@gmail.com", // TODO: remove once domain is verified on resend.com/domains
         subject,
         html,
       }),
