@@ -273,7 +273,41 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
           : `Saved as version ${nextVersion}`,
       });
 
-      if (status === 'sent') onClose();
+      if (status === 'sent') {
+        // Notify student via email — fire and forget
+        try {
+          const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
+            supabase.from('profiles').select('email').eq('user_id', essay.studentId ?? '').maybeSingle(),
+            supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle(),
+          ]);
+
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('[send-counselor-feedback] Profiles fetched', { studentProfile, counselorProfile });
+          console.log('[send-counselor-feedback] Calling edge function...');
+          const res = await fetch(
+            "https://fkvfngdwblbalrompzdj.supabase.co/functions/v1/send-counselor-feedback",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({
+                studentEmail: studentProfile?.email || 'no-email@unknown.com',
+                studentName: essay.studentName,
+                counselorName: counselorProfile?.full_name || 'Your counselor',
+                essayLabel: essay.title,
+                personalMessage: personalMessage || '',
+                appUrl: window.location.origin,
+              }),
+            }
+          );
+          console.log('[send-counselor-feedback] Done', res.status);
+        } catch (notifyError) {
+          console.error('Failed to send feedback notification:', notifyError);
+        }
+        onClose();
+      }
     } catch (error) {
       console.error("Save error:", error);
       toast({

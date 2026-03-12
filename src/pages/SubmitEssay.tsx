@@ -187,6 +187,41 @@ const SubmitEssay = () => {
 
       setIsSuccess(true);
       toast.success("Essay submitted successfully!");
+
+      // Notify counselor — fire and forget (don't block success state)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
+          supabase.from("profiles").select("full_name, email").eq("user_id", user.id).maybeSingle(),
+          supabase.from("profiles").select("full_name, email").eq("user_id", counselorId).maybeSingle(),
+        ]);
+
+        console.log("[send-new-essay-notification] Profiles fetched", { studentProfile, counselorProfile });
+        console.log("[send-new-essay-notification] Calling edge function...");
+
+        const res = await fetch(
+          "https://fkvfngdwblbalrompzdj.supabase.co/functions/v1/send-new-essay-notification",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              counselorEmail: counselorProfile?.email || "no-email@unknown.com",
+              counselorName:  counselorProfile?.full_name || "Counselor",
+              studentName:    studentProfile?.full_name || "Your student",
+              essayLabel:     essayTitle,
+              applicationName: targetSchool.trim() || (slotLabel ?? undefined),
+              appUrl:         window.location.origin,
+            }),
+          }
+        );
+        console.log("[send-new-essay-notification] Done", res.status);
+      } catch (notifyError) {
+        // Notification failure should never break the submission flow
+        console.error("Failed to send essay notification:", notifyError);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to submit essay");
     } finally {

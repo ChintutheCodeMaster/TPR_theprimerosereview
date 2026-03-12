@@ -27,7 +27,8 @@ import {
   Trophy,
   LayoutGrid,
   List,
-  Loader2
+  Loader2,
+  Send
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -270,6 +271,72 @@ const Students = () => {
   // ─── Student Detail Dialog (shared between list + grid) ──────
   const StudentDialog = ({ student }: { student: Student }) => {
     const StatusIcon = getStatusIcon(student.status)
+    const [isSendingAlert, setIsSendingAlert] = useState(false)
+
+    const handleSendAtRiskAlert = async () => {
+      setIsSendingAlert(true)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Not authenticated')
+
+        const [{ data: counselorProfile }, { data: parentProfile }] = await Promise.all([
+          supabase.from('profiles').select('full_name, email').eq('user_id', user.id).maybeSingle(),
+          supabase.from('student_profiles').select('parent_name, parent_email').eq('user_id', student.id).maybeSingle(),
+        ])
+
+        // Build risk reasons from real student data
+        const reasons: string[] = []
+        if (student.essaysSubmitted === 0 && student.totalEssays > 0) {
+          reasons.push(`No essays submitted yet (0 of ${student.totalEssays})`)
+        }
+        if (student.completionPercentage < 40) {
+          reasons.push(`Application completion is critically low (${student.completionPercentage}%)`)
+        }
+        if (student.upcomingDeadlines >= 3) {
+          reasons.push(`${student.upcomingDeadlines} upcoming deadlines require action`)
+        }
+        if (student.recommendationsSubmitted === 0 && student.recommendationsRequested > 0) {
+          reasons.push('No recommendation letters received yet')
+        }
+        if (reasons.length === 0) reasons.push('Student progress requires your attention')
+
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('[send-at-risk-alert] Calling edge function', {
+          studentEmail: student.email,
+          studentName: student.name,
+          parentEmail: parentProfile?.parent_email,
+          counselorEmail: counselorProfile?.email,
+          riskReasons: reasons,
+        });
+        const res = await fetch(
+          "https://fkvfngdwblbalrompzdj.supabase.co/functions/v1/send-at-risk",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              studentEmail: student.email,
+              studentName: student.name,
+              parentEmail: parentProfile?.parent_email || null,
+              parentName: parentProfile?.parent_name || null,
+              counselorEmail: counselorProfile?.email || null,
+              counselorName: counselorProfile?.full_name || 'Your counselor',
+              riskReasons: reasons,
+              appUrl: window.location.origin,
+            }),
+          }
+        );
+        console.log('[send-at-risk-alert] Done', res.status);
+        toast({ title: 'At-Risk Alert Sent', description: `Alert sent to ${student.name} and their parent.` })
+      } catch (error: any) {
+        toast({ title: 'Failed to send alert', description: error.message, variant: 'destructive' })
+      } finally {
+        setIsSendingAlert(false)
+      }
+    }
+
     return (
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -285,10 +352,25 @@ const Students = () => {
                 {student.school_name && <span>· {student.school_name}</span>}
                 {student.graduation_year && <span>· Class of {student.graduation_year}</span>}
               </div>
-              <Badge variant={getStatusColor(student.status) as any} className="mt-1">
-                <StatusIcon className="h-3 w-3 mr-1" />
-                {student.status.replace('-', ' ')}
-              </Badge>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={getStatusColor(student.status) as any}>
+                  <StatusIcon className="h-3 w-3 mr-1" />
+                  {student.status.replace('-', ' ')}
+                </Badge>
+                {student.status === 'at-risk' && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleSendAtRiskAlert}
+                    disabled={isSendingAlert}
+                  >
+                    {isSendingAlert
+                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      : <Send className="h-3 w-3 mr-1" />}
+                    Send Alert
+                  </Button>
+                )}
+              </div>
             </div>
           </DialogTitle>
         </DialogHeader>
