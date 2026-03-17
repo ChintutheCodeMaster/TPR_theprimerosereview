@@ -26,6 +26,7 @@ import StudentRecommendationLetters from "./pages/StudentRecommendationLetters";
 import CounselorRecommendationLetters from "./pages/CounselorRecommendationLetters";
 import EssayAnalytics from "./pages/EssayAnalytics";
 import NotFound from "./pages/NotFound";
+import TeacherRecommendationPage from "./pages/TeacherRecommendationPage";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
 import Signup from "./pages/SignUp";
@@ -94,6 +95,7 @@ const App = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/teacher-rec/:token" element={<TeacherRecommendationPage />} />
 
           {/* ── Counselor-only routes ── */}
           <Route path="/dashboard" element={
