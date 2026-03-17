@@ -27,6 +27,8 @@ import {
   Calendar,
   AlertCircle,
   Loader2,
+  Link,
+  Copy,
 } from "lucide-react";
 
 const CounselorRecommendationLetters = () => {
@@ -299,12 +301,69 @@ const CounselorRecommendationLetters = () => {
               </CardContent>
             </Card>
 
+            {/* Teacher Link */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Link className="h-4 w-4 text-primary" />
+                  Teacher Link
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {selectedRequest.teacher_token ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Share this private link with{" "}
+                      <strong>{selectedRequest.referee_name}</strong>
+                      {selectedRequest.teacher_email && (
+                        <> ({selectedRequest.teacher_email})</>
+                      )}{" "}
+                      so they can write the first draft directly.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={`${window.location.origin}/teacher-rec/${selectedRequest.teacher_token}`}
+                        className="text-xs font-mono bg-muted"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}/teacher-rec/${selectedRequest.teacher_token}`
+                          );
+                          toast({ title: "Link copied to clipboard" });
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {selectedRequest.teacher_draft ? (
+                      <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
+                        Teacher has submitted their draft — it's loaded in the editor.
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Waiting for teacher to submit their draft…
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No teacher token found for this request.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Counselor Notes + Generate */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  AI Generation
+                  AI Generation (fallback)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -352,8 +411,8 @@ const CounselorRecommendationLetters = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  placeholder="The generated letter will appear here. You can also write or edit directly."
-                  value={generatedLetter || selectedRequest.generated_letter || ""}
+                  placeholder="The teacher's draft or AI-generated letter will appear here. You can edit directly."
+                  value={generatedLetter || selectedRequest.generated_letter || selectedRequest.teacher_draft || ""}
                   onChange={(e) => setGeneratedLetter(e.target.value)}
                   rows={20}
                   className="font-serif resize-none"
@@ -362,7 +421,7 @@ const CounselorRecommendationLetters = () => {
                   onClick={handleSend}
                   disabled={
                     sendLetter.isPending ||
-                    (!generatedLetter && !selectedRequest.generated_letter)
+                    (!generatedLetter && !selectedRequest.generated_letter && !selectedRequest.teacher_draft)
                   }
                   className="w-full"
                 >

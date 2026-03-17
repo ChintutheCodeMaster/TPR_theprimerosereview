@@ -18,6 +18,10 @@ export interface RecommendationWithProfile extends RecommendationRequest {
     avatar_url: string | null;
     email: string | null;
   } | null;
+  // Teacher fields added via migration (not yet in generated types)
+  teacher_token?: string | null;
+  teacher_email?: string | null;
+  teacher_draft?: string | null;
 }
 
 /* ============================================================
