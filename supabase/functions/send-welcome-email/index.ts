@@ -208,6 +208,98 @@ const counselorHtml = (fullName: string, appUrl: string) => `
 </body>
 </html>`;
 
+const parentHtml = (fullName: string, appUrl: string) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome to The Primrose Review</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#6d28d9,#9333ea);padding:36px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">
+                The Primrose Review
+              </h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">
+                College Application Support Platform
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 20px;color:#111827;font-size:16px;">
+                Hi ${fullName},
+              </p>
+
+              <p style="margin:0 0 16px;color:#374151;font-size:16px;line-height:1.7;">
+                Welcome to <strong>The Primrose Review</strong>! Your parent account is all set up.
+              </p>
+
+              <p style="margin:0 0 28px;color:#374151;font-size:16px;line-height:1.7;">
+                You now have visibility into your child's college application journey. Here's what you can do from your parent portal:
+              </p>
+
+              <!-- Feature list -->
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin-bottom:32px;">
+                <table cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
+                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
+                      <span style="color:#374151;font-size:14px;">Track your child's application progress and deadlines</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
+                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
+                      <span style="color:#374151;font-size:14px;">Stay informed on milestones and outstanding tasks</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;">
+                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
+                      <span style="color:#374151;font-size:14px;">Communicate with your child's counselor</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- CTA -->
+              <div style="text-align:center;margin-bottom:32px;">
+                <a href="${appUrl}"
+                   style="display:inline-block;background:linear-gradient(135deg,#6d28d9,#9333ea);color:#ffffff;text-decoration:none;padding:15px 36px;border-radius:10px;font-size:16px;font-weight:600;">
+                  Go to My Portal &rarr;
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+                You're receiving this because you just created a parent account on The Primrose Review.<br />
+                If this wasn't you, please ignore this email.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -224,13 +316,15 @@ serve(async (req) => {
     const displayName = fullName || "there";
     const baseUrl = appUrl || "https://primrosereview.com";
 
-    const isCounselor = role === "counselor";
-    const subject = isCounselor
-      ? "Welcome to The Primrose Review — Your counselor account is ready"
-      : "Welcome to The Primrose Review — Your account is ready";
-    const html = isCounselor
-      ? counselorHtml(displayName, baseUrl)
-      : studentHtml(displayName, baseUrl);
+    const subject =
+      role === "counselor" ? "Welcome to The Primrose Review — Your counselor account is ready" :
+      role === "parent"    ? "Welcome to The Primrose Review — Your parent account is ready" :
+                             "Welcome to The Primrose Review — Your account is ready";
+
+    const html =
+      role === "counselor" ? counselorHtml(displayName, baseUrl) :
+      role === "parent"    ? parentHtml(displayName, baseUrl) :
+                             studentHtml(displayName, baseUrl);
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
