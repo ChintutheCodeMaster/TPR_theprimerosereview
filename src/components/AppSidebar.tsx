@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -64,12 +64,16 @@ const parentItems = [{
   title: "Parent Portal",
   url: "/parent-portal",
   icon: Home
+}, {
+  title: "School Activities",
+  url: "/school-activities",
+  icon: PartyPopper
 }];
 
 // Routes that belong to each role
 const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
 const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages'];
-const parentRoutes = ['/parent-portal'];
+const parentRoutes = ['/parent-portal', '/school-activities'];
 
 export function AppSidebar() {
   const { open } = useSidebar();

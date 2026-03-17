@@ -19,6 +19,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import StudentPersonalArea from "./pages/StudentPersonalArea";
 import StudentStats from "./pages/StudentStats";
 import ParentPortal from "./pages/ParentPortal";
+import SchoolActivities from "./pages/SchoolActivities";
 import AddStudent from "./pages/AddStudent";
 import CheckDeadlines from "./pages/CheckDeadlines";
 import ViewReports from "./pages/ViewReports";
@@ -257,6 +258,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['parent']}>
                 <ParentPortal />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/school-activities" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['parent']}>
+                <SchoolActivities />
               </ProtectedRoute>
             </AppLayout>
           } />
