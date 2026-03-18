@@ -244,7 +244,7 @@ const counselorAlertHtml = (
                 </table>
               </div>
               ` : ""}
-
+              
               <p style="margin:0 0 28px;color:#374151;font-size:14px;line-height:1.7;">
                 Monitor ${studentName}'s progress from your dashboard and follow up directly if needed.
               </p>
