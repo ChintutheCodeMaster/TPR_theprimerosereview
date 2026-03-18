@@ -358,7 +358,7 @@ const fetchEssays = async () => {
                 </Button>
               </CardContent>
             </Card>
-            <CounselorFeedbackHistory studentName={essay.studentName} />
+            <CounselorFeedbackHistory essayId={essay.id} />
           </TabsContent>
 
           {/* AI Analysis Tab */}

@@ -444,6 +444,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
           student_id: essay.studentId,
           counselor_id: user.id,
           version: nextVersion,
+          essay_content: essay.content,
           feedback_items: JSON.parse(JSON.stringify(feedbackItems)),
           manual_notes: manualNote || null,
           personal_message: personalMessage || null,

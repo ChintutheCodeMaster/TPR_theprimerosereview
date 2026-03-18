@@ -19,6 +19,10 @@ import {
   Shield,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Heart,
+  Zap,
+  Star,
 } from "lucide-react";
 
 interface RecData {
@@ -139,9 +143,11 @@ const TeacherRecommendationPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-10 w-10 animate-spin text-purple-600 mx-auto" />
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mx-auto shadow-lg">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
           <p className="text-purple-700 font-medium text-sm">Loading your request…</p>
         </div>
       </div>
@@ -150,9 +156,9 @@ const TeacherRecommendationPage = () => {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 flex items-center justify-center px-4">
         <div className="text-center space-y-4 max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-red-100 border border-red-200 flex items-center justify-center mx-auto">
             <AlertCircle className="h-8 w-8 text-red-500" />
           </div>
           <h1 className="text-xl font-bold text-gray-800">Link not found or expired</h1>
@@ -164,19 +170,19 @@ const TeacherRecommendationPage = () => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 flex items-center justify-center px-4">
         <div className="text-center space-y-5 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-            <CheckCircle className="h-10 w-10 text-green-500" />
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mx-auto shadow-xl">
+            <CheckCircle className="h-12 w-12 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Thank you, {rec?.referee_name}!</h1>
-          <p className="text-gray-500">
-            Your draft for <strong>{rec?.student_name ?? "the student"}</strong> has been submitted.
+          <p className="text-gray-500 leading-relaxed">
+            Your draft for <strong className="text-gray-700">{rec?.student_name ?? "the student"}</strong> has been submitted.
             The counselor will review, refine if needed, and send the final letter on your behalf.
           </p>
-          <div className="flex items-center justify-center gap-2 text-purple-600 text-sm font-medium">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 text-violet-700 text-sm font-medium">
             <GraduationCap className="h-4 w-4" />
-            <span>The Primrose Review</span>
+            The Primrose Review
           </div>
         </div>
       </div>
@@ -186,38 +192,85 @@ const TeacherRecommendationPage = () => {
   const hasStudentAnswers =
     rec?.meaningful_project || rec?.best_moment || rec?.difficulties_overcome || rec?.personal_notes;
 
+  // Per-field color themes for student context
+  const contextFields = [
+    {
+      key: "relationship_duration",
+      label: "How long they've known you",
+      value: rec?.relationship_duration,
+      bg: "bg-indigo-50 border border-indigo-100",
+      dot: "bg-indigo-400",
+      label_color: "text-indigo-500",
+    },
+    {
+      key: "relationship_capacity",
+      label: "How closely you worked together",
+      value: rec?.relationship_capacity,
+      bg: "bg-violet-50 border border-violet-100",
+      dot: "bg-violet-400",
+      label_color: "text-violet-500",
+    },
+    {
+      key: "meaningful_project",
+      label: "Most meaningful project together",
+      value: rec?.meaningful_project,
+      bg: "bg-pink-50 border border-pink-100",
+      dot: "bg-pink-400",
+      label_color: "text-pink-500",
+    },
+    {
+      key: "best_moment",
+      label: "A moment they were at their best",
+      value: rec?.best_moment,
+      bg: "bg-amber-50 border border-amber-100",
+      dot: "bg-amber-400",
+      label_color: "text-amber-500",
+    },
+    {
+      key: "difficulties_overcome",
+      label: "Difficulties they overcame",
+      value: rec?.difficulties_overcome,
+      bg: "bg-emerald-50 border border-emerald-100",
+      dot: "bg-emerald-400",
+      label_color: "text-emerald-600",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50">
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-700 py-10 px-6 text-center text-white shadow-lg">
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-            <GraduationCap className="h-6 w-6 text-white" />
+      <div className="bg-gradient-to-r from-purple-800 via-violet-700 to-indigo-700 py-12 px-6 text-center text-white shadow-xl relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-x-1/3 translate-y-1/3 pointer-events-none" />
+
+        <div className="relative flex items-center justify-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+            <GraduationCap className="h-7 w-7 text-white" />
           </div>
           <span className="text-2xl font-bold tracking-tight">The Primrose Review</span>
         </div>
-        <p className="text-purple-200 text-sm font-medium tracking-wide uppercase">
+        <div className="relative inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/25 text-purple-200 text-sm font-medium tracking-wide">
+          <Star className="h-3 w-3" />
           Recommendation Letter Portal
-        </p>
+        </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
 
-        {/* About TPR — collapsible intro */}
-        <Card className="border-purple-100 shadow-sm overflow-hidden">
-          <button
-            className="w-full text-left"
-            onClick={() => setIntroExpanded(v => !v)}
-          >
-            <CardHeader className="pb-3 hover:bg-purple-50/50 transition-colors">
-              <CardTitle className="flex items-center justify-between text-base text-purple-800">
+        {/* About TPR — collapsible */}
+        <Card className="border-violet-100 shadow-sm overflow-hidden">
+          <button className="w-full text-left" onClick={() => setIntroExpanded(v => !v)}>
+            <CardHeader className="pb-3 hover:bg-violet-50/60 transition-colors">
+              <CardTitle className="flex items-center justify-between text-base text-violet-800">
                 <span className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
                   About The Primrose Review
                 </span>
                 {introExpanded
-                  ? <ChevronUp className="h-4 w-4 text-purple-400" />
-                  : <ChevronDown className="h-4 w-4 text-purple-400" />
+                  ? <ChevronUp className="h-4 w-4 text-violet-400" />
+                  : <ChevronDown className="h-4 w-4 text-violet-400" />
                 }
               </CardTitle>
             </CardHeader>
@@ -233,18 +286,38 @@ const TeacherRecommendationPage = () => {
               <p>
                 Unlike services that write for students, TPR works <em>with</em> students: our AI suggests,
                 refines, and guides, but the student's own voice, experiences, and ideas remain at the centre.
-                Counselors oversee every step, ensuring every piece reflects the real person behind the application.
+                Counselors oversee every step.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 {[
-                  { icon: <Shield className="h-4 w-4 text-purple-600" />, label: "Ethical AI use", desc: "Students guide the AI — not the other way around." },
-                  { icon: <GraduationCap className="h-4 w-4 text-purple-600" />, label: "Counselor-led", desc: "Every letter is reviewed before it reaches a university." },
-                  { icon: <Sparkles className="h-4 w-4 text-purple-600" />, label: "Authentic voice", desc: "AI as a tool, not a ghostwriter." },
+                  {
+                    icon: <Shield className="h-4 w-4 text-white" />,
+                    label: "Ethical AI use",
+                    desc: "Students guide the AI — not the other way around.",
+                    gradient: "from-indigo-500 to-blue-500",
+                    bg: "bg-indigo-50 border-indigo-100",
+                  },
+                  {
+                    icon: <GraduationCap className="h-4 w-4 text-white" />,
+                    label: "Counselor-led",
+                    desc: "Every letter is reviewed before it reaches a university.",
+                    gradient: "from-emerald-500 to-teal-500",
+                    bg: "bg-emerald-50 border-emerald-100",
+                  },
+                  {
+                    icon: <Sparkles className="h-4 w-4 text-white" />,
+                    label: "Authentic voice",
+                    desc: "AI as a tool, not a ghostwriter.",
+                    gradient: "from-amber-500 to-orange-400",
+                    bg: "bg-amber-50 border-amber-100",
+                  },
                 ].map(item => (
-                  <div key={item.label} className="rounded-lg bg-purple-50 p-3 space-y-1">
-                    <div className="flex items-center gap-1.5 font-medium text-gray-800">
-                      {item.icon}
-                      {item.label}
+                  <div key={item.label} className={`rounded-xl border p-3 space-y-2 ${item.bg}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm`}>
+                        {item.icon}
+                      </div>
+                      <span className="font-semibold text-gray-800 text-sm">{item.label}</span>
                     </div>
                     <p className="text-xs text-gray-500">{item.desc}</p>
                   </div>
@@ -255,159 +328,186 @@ const TeacherRecommendationPage = () => {
         </Card>
 
         {/* Request intro */}
-        <Card className="border-purple-100 shadow-sm">
+        <Card className="border-violet-200 shadow-sm bg-gradient-to-br from-violet-50 to-indigo-50">
           <CardContent className="p-6">
-            <h1 className="text-xl font-bold text-gray-800 mb-2">
-              Recommendation Request for{" "}
-              <span className="text-purple-700">{rec?.student_name ?? "Student"}</span>
-            </h1>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              Hello <strong>{rec?.referee_name}</strong> — {rec?.student_name ?? "this student"} has asked you
-              to write a recommendation letter as part of their college application through The Primrose Review.
-              Below you'll find the context they shared to help you write the letter. You can write it yourself
-              or use the <strong>AI Draft</strong> tool to generate a starting point — then personalise it in
-              your own words before submitting. The counselor will review everything before it is sent.
-            </p>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shrink-0">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-800 mb-1.5">
+                  Recommendation Request for{" "}
+                  <span className="text-violet-700">{rec?.student_name ?? "Student"}</span>
+                </h1>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  Hello <strong className="text-gray-700">{rec?.referee_name}</strong> —{" "}
+                  {rec?.student_name ?? "this student"} has asked you to write a recommendation letter
+                  as part of their college application through The Primrose Review. Below you'll find
+                  the context they shared to help you write the letter. You can write it yourself or
+                  use the <strong>AI Draft</strong> tool as a starting point — then personalise it
+                  before submitting.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Student context */}
-        <Card className="border-purple-100 shadow-sm">
+        <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-gray-800">
-              <User className="h-4 w-4 text-purple-600" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
+              </div>
               Student's Context
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            {rec?.relationship_duration && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">How long they've known you</p>
-                <p className="text-gray-800">{rec.relationship_duration}</p>
-              </div>
+          <CardContent className="space-y-3 text-sm">
+
+            {contextFields.map(field =>
+              field.value ? (
+                <div key={field.key} className={`rounded-xl px-4 py-3 ${field.bg}`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${field.dot} shrink-0`} />
+                    <p className={`font-semibold text-xs uppercase tracking-wide ${field.label_color}`}>
+                      {field.label}
+                    </p>
+                  </div>
+                  <p className="text-gray-800 pl-3.5">{field.value}</p>
+                </div>
+              ) : null
             )}
-            {rec?.relationship_capacity && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">How closely you worked together</p>
-                <p className="text-gray-800">{rec.relationship_capacity}</p>
-              </div>
-            )}
-            {rec?.meaningful_project && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Most meaningful project together</p>
-                <p className="text-gray-800">{rec.meaningful_project}</p>
-              </div>
-            )}
-            {rec?.best_moment && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">A moment they were at their best</p>
-                <p className="text-gray-800">{rec.best_moment}</p>
-              </div>
-            )}
-            {rec?.difficulties_overcome && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Difficulties they overcame</p>
-                <p className="text-gray-800">{rec.difficulties_overcome}</p>
-              </div>
-            )}
+
             {rec?.strengths && rec.strengths.length > 0 && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-2">Strengths they highlighted</p>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="rounded-xl bg-purple-50 border border-purple-100 px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                  <p className="font-semibold text-xs uppercase tracking-wide text-purple-500">
+                    Strengths they highlighted
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-3.5">
                   {rec.strengths.map(s => (
-                    <Badge key={s} className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-xs">
+                    <span
+                      key={s}
+                      className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-xs font-medium"
+                    >
                       {s}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
               </div>
             )}
+
             {rec?.personal_notes && (
-              <div className="rounded-lg bg-purple-50 border border-purple-100 px-4 py-3">
-                <p className="font-semibold text-purple-600 text-xs uppercase tracking-wide mb-1">Personal notes from student</p>
-                <p className="text-gray-700 italic">"{rec.personal_notes}"</p>
+              <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Heart className="h-3 w-3 text-rose-400 shrink-0" />
+                  <p className="font-semibold text-xs uppercase tracking-wide text-rose-500">
+                    Personal note from student
+                  </p>
+                </div>
+                <p className="text-gray-700 italic pl-4">"{rec.personal_notes}"</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* AI Draft generation */}
-        <Card className="border-purple-100 shadow-sm">
+        {/* AI Draft — gradient card like ParentPortal's AI Insights */}
+        <Card className="border-2 border-violet-200 shadow-sm bg-gradient-to-br from-violet-50 via-white to-indigo-50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              AI-Assisted Draft
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-base text-gray-800">AI-Assisted Draft</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">Powered by The Primrose Review</p>
+              </div>
+              <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 border border-violet-200">
+                AI Tool
+              </span>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-gray-500">
               Not sure where to start? Let AI generate a first draft based on the student's answers above.
               It will be written in your voice as{" "}
-              <strong>{rec?.referee_name}</strong>
-              {rec?.referee_role ? ` (${rec.referee_role})` : ""}. You can then edit it freely before submitting.
+              <strong className="text-gray-700">{rec?.referee_name}</strong>
+              {rec?.referee_role ? ` (${rec.referee_role})` : ""}. Edit freely before submitting.
             </p>
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Your notes for the AI <span className="text-gray-400 font-normal">(optional)</span>
+                Your notes for the AI{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <Textarea
                 value={teacherPrompt}
                 onChange={e => setTeacherPrompt(e.target.value)}
                 placeholder="e.g. Focus on their leadership during the science fair, mention their curiosity and how they handled setbacks…"
                 rows={4}
-                className="resize-none border-gray-200 focus:border-purple-400 focus:ring-purple-400 text-sm"
+                className="resize-none border-violet-200 focus:border-violet-400 focus:ring-violet-400 text-sm bg-white"
               />
               <p className="text-xs text-gray-400">
-                Add anything specific you'd like the AI to highlight or emphasise. This is combined with the student's answers above.
+                Add anything specific you'd like highlighted. Combined with the student's answers above.
               </p>
             </div>
+
             <Button
               onClick={handleGenerateAI}
               disabled={isGenerating || !hasStudentAnswers}
-              variant="outline"
-              className="w-full border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400"
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-sm border-0"
             >
               {isGenerating ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating draft…</>
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Bear with us, please…</>
               ) : (
                 <><Sparkles className="h-4 w-4 mr-2" />Generate AI Draft</>
               )}
             </Button>
+
             {!hasStudentAnswers && (
-              <p className="text-xs text-center text-amber-600">
-                The student hasn't completed their questionnaire yet — AI draft will be available once they do.
-              </p>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                <p className="text-xs text-amber-700">
+                  The student hasn't completed their questionnaire yet — AI draft available once they do.
+                </p>
+              </div>
             )}
             <p className="text-xs text-center text-gray-400">
-              The AI uses only the information the student provided. No details are added or invented.
+              The AI uses only the information the student provided. Nothing is added or invented.
             </p>
           </CardContent>
         </Card>
 
         {/* Draft editor */}
-        <Card className="border-purple-100 shadow-sm">
+        <Card className="border-blue-100 shadow-sm bg-gradient-to-br from-blue-50/40 via-white to-indigo-50/40">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
-              <Award className="h-4 w-4 text-purple-600" />
-              Write Your Recommendation Letter
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-sm">
+                <Award className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-base text-gray-800">Write Your Recommendation Letter</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-500">
-              Write or paste your letter below. You can use the AI draft above as a starting point and edit
-              it freely. The counselor will review before sending to the university.
+              Write or paste your letter below. You can use the AI draft above as a starting point.
+              The counselor will review everything before sending to the university.
             </p>
             <Textarea
               value={draft}
               onChange={e => setDraft(e.target.value)}
               placeholder={"To Whom It May Concern,\n\nIt is my great pleasure to recommend…"}
               rows={18}
-              className="font-serif text-sm resize-none border-gray-200 focus:border-purple-400 focus:ring-purple-400"
+              className="font-serif text-sm resize-none border-blue-200 focus:border-blue-400 focus:ring-blue-400 bg-white"
             />
+
+            {/* Submit button */}
             <Button
               onClick={handleSubmit}
               disabled={submitting || !draft.trim()}
-              className="w-full bg-purple-700 hover:bg-purple-800 text-white shadow-sm"
+              className="w-full bg-gradient-to-r from-purple-700 via-violet-700 to-indigo-700 hover:from-purple-800 hover:via-violet-800 hover:to-indigo-800 text-white shadow-md border-0"
               size="lg"
             >
               {submitting
@@ -415,6 +515,21 @@ const TeacherRecommendationPage = () => {
                 : <><Send className="h-4 w-4 mr-2" />Submit Draft to Counselor</>
               }
             </Button>
+
+            {/* Trust signals */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {[
+                { icon: <Shield className="h-3.5 w-3.5" />, text: "Secure", color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
+                { icon: <Zap className="h-3.5 w-3.5" />,    text: "Instant delivery", color: "text-amber-600 bg-amber-50 border-amber-100" },
+                { icon: <Clock className="h-3.5 w-3.5" />,   text: "Editable on request", color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
+              ].map(item => (
+                <div key={item.text} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium ${item.color}`}>
+                  {item.icon}
+                  {item.text}
+                </div>
+              ))}
+            </div>
+
             <p className="text-xs text-center text-gray-400">
               Once submitted you won't be able to edit your draft. Contact the counselor if changes are needed.
             </p>
@@ -422,15 +537,16 @@ const TeacherRecommendationPage = () => {
         </Card>
 
         {/* Footer */}
-        <div className="text-center pb-6">
-          <div className="flex items-center justify-center gap-2 text-purple-600 text-sm font-medium mb-1">
+        <div className="text-center pb-6 space-y-2">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 text-violet-700 text-sm font-medium">
             <GraduationCap className="h-4 w-4" />
-            <span>The Primrose Review</span>
+            The Primrose Review
           </div>
           <p className="text-xs text-gray-400">
             Helping students tell their story — ethically, authentically, and with heart.
           </p>
         </div>
+
       </div>
     </div>
   );
