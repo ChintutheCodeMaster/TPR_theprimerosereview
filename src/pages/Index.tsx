@@ -22,6 +22,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { useIndexDashboard } from "@/hooks/useIndexDashboard";
+import { ActionItemsSection } from "@/components/ActionItemsSection";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -35,10 +36,12 @@ const getStatusColor = (status: string) => {
 const Index = () => {
   const navigate = useNavigate();
   const [studentsOpen, setStudentsOpen] = useState(false);
+  const [studentsAtRiskOpen, setStudentsAtRiskOpen] = useState(false);
   const [essaysOpen, setEssaysOpen] = useState(false);
 
   const {
     students,
+    studentsAtRisk,
     allStudents,
     essays,
     isLoadingStudents,
@@ -85,73 +88,130 @@ const Index = () => {
       )}
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
 
-        {/* Students Needing Attention */}
-        <Collapsible open={studentsOpen} onOpenChange={setStudentsOpen}>
-          <Card className="p-6">
-            <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity gap-5">
-                <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
-                  <Users className="h-6 w-6 text-primary" />
-                  Students Needing Attention
-                  <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    {isLoadingStudents ? "…" : students.length}
-                  </span>
-                </h2>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate("/add-student");
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Student
-                  </Button>
-                  {studentsOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </div>
-            </CollapsibleTrigger>
+        {/* Students Needing Attention + Students at Risk (side by side) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-            <CollapsibleContent className="mt-6">
-              {isLoadingStudents ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-24 w-full rounded-lg" />
-                  ))}
+          {/* Students Needing Attention */}
+          <Collapsible open={studentsOpen} onOpenChange={setStudentsOpen}>
+            <Card className="p-6">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity gap-5">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                    <Users className="h-6 w-6 text-primary" />
+                    Students Needing Attention
+                    <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                      {isLoadingStudents ? "…" : students.length}
+                    </span>
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/add-student");
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Student
+                    </Button>
+                    {studentsOpen ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
-              ) : students.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  <p className="text-sm">
-                    {allStudents.length === 0
-                      ? "No students assigned yet."
-                      : "All students are on track! 🎉"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {students.map((student) => (
-                    <StudentCard
-                      key={student.id}
-                      student={student}
-                      onViewStudent={(id) => navigate(`/students?id=${id}`)}
-                    />
-                  ))}
-                </div>
-              )}
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+              </CollapsibleTrigger>
 
-        {/* Essays for Review */}
+              <CollapsibleContent className="mt-6">
+                {isLoadingStudents ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : students.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm">
+                      {allStudents.length === 0
+                        ? "No students assigned yet."
+                        : "No students need attention right now."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {students.map((student) => (
+                      <StudentCard
+                        key={student.id}
+                        student={student}
+                        onViewStudent={(id) => navigate(`/students?id=${id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Students at Risk */}
+          <Collapsible open={studentsAtRiskOpen} onOpenChange={setStudentsAtRiskOpen}>
+            <Card className="p-6">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity gap-5">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                    <AlertCircle className="h-6 w-6 text-destructive" />
+                    Students at Risk
+                    <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                      {isLoadingStudents ? "…" : studentsAtRisk.length}
+                    </span>
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    {studentsAtRiskOpen ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="mt-6">
+                {isLoadingStudents ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : studentsAtRisk.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm">
+                      {allStudents.length === 0
+                        ? "No students assigned yet."
+                        : "No students are at risk. Great work! 🎉"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {studentsAtRisk.map((student) => (
+                      <StudentCard
+                        key={student.id}
+                        student={student}
+                        onViewStudent={(id) => navigate(`/students?id=${id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </div>
+
+        {/* Essays for Review (full width below) */}
         <Collapsible open={essaysOpen} onOpenChange={setEssaysOpen}>
           <Card className="p-6">
             <CollapsibleTrigger asChild>
@@ -241,6 +301,9 @@ const Index = () => {
 
       {/* Counselor Insights */}
       <CounselorInsights />
+
+      {/* Action Items */}
+      <ActionItemsSection />
 
       {/* Quick Actions */}
       <Card className="p-6">

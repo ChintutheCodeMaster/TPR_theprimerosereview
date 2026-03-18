@@ -23,9 +23,24 @@ export interface CriterionScore {
   color: string;
 }
 
+export interface AnalysisIssue {
+  id: string;
+  criterionId: string;
+  criterionName: string;
+  color: string;
+  startIndex: number;
+  endIndex: number;
+  highlightedText: string;
+  problemType: string;
+  problemDescription: string;
+  recommendation: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
 export interface AnalysisResult {
   overallScore: number;
   criteria?: CriterionScore[] | Record<string, number>;
+  issues?: AnalysisIssue[];
   strengths?: string[];
   improvements?: string[];
 }

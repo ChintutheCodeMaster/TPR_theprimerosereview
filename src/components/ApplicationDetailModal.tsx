@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Calendar,
@@ -28,9 +35,13 @@ import {
   MessageSquare,
   Send,
   Star,
+  Users,
+  Mail,
 } from "lucide-react";
 import { useApplicationEssays } from "@/hooks/useApplicationEssays";
 import { useSubmitApplication } from "@/hooks/useSubmitApplication";
+import { useApplicationRecommendations } from "@/hooks/useApplicationRecommendations";
+import type { ApplicationRecommendation } from "@/hooks/useApplicationRecommendations";
 import type { ApplicationWithProfile } from "@/hooks/useApplications";
 import type {
   ApplicationEssaySlotWithDraft,
@@ -279,6 +290,140 @@ const SlotCard = ({
   );
 };
 
+// ─── Recommendation Helpers ────────────────────────────────────────────────────
+
+const REC_STATUS_STYLES: Record<ApplicationRecommendation["status"], string> = {
+  draft:       "bg-gray-100 text-gray-600 border-gray-200",
+  pending:     "bg-yellow-500/10 text-yellow-700 border-yellow-300",
+  in_progress: "bg-blue-500/10 text-blue-700 border-blue-300",
+  sent:        "bg-green-500/10 text-green-700 border-green-300",
+};
+
+const REC_STATUS_LABELS: Record<ApplicationRecommendation["status"], string> = {
+  draft:       "Draft",
+  pending:     "Requested",
+  in_progress: "In Progress",
+  sent:        "Submitted",
+};
+
+const RecCard = ({
+  rec,
+  updateRecStatus,
+}: {
+  rec: ApplicationRecommendation;
+  updateRecStatus: ReturnType<typeof useApplicationRecommendations>["updateRecStatus"];
+}) => (
+  <div className="flex items-center justify-between gap-3 p-3 border border-border rounded-xl bg-card">
+    <div className="flex items-center gap-3 min-w-0">
+      <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
+        <Users className="h-4 w-4 text-primary" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold truncate">{rec.referee_name}</p>
+        {rec.referee_role && (
+          <p className="text-xs text-muted-foreground truncate">{rec.referee_role}</p>
+        )}
+        {rec.teacher_email && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+            <Mail className="h-3 w-3" />{rec.teacher_email}
+          </p>
+        )}
+      </div>
+    </div>
+    <Select
+      value={rec.status}
+      onValueChange={(val) =>
+        updateRecStatus.mutate({ id: rec.id, status: val as ApplicationRecommendation["status"] })
+      }
+      disabled={updateRecStatus.isPending}
+    >
+      <SelectTrigger className={`h-7 w-[120px] text-xs font-medium border rounded-full px-2 ${REC_STATUS_STYLES[rec.status]}`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {(Object.keys(REC_STATUS_LABELS) as ApplicationRecommendation["status"][]).map((s) => (
+          <SelectItem key={s} value={s} className="text-xs">
+            {REC_STATUS_LABELS[s]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+
+const AddRecForm = ({
+  studentId,
+  applicationId,
+  addRecommendation,
+  onDone,
+}: {
+  studentId: string;
+  applicationId: string;
+  addRecommendation: ReturnType<typeof useApplicationRecommendations>["addRecommendation"];
+  onDone: () => void;
+}) => {
+  const [name, setName]   = useState("");
+  const [role, setRole]   = useState("");
+  const [email, setEmail] = useState("");
+
+  return (
+    <div className="border border-dashed border-border rounded-xl p-4 space-y-3 bg-muted/30">
+      <p className="text-sm font-semibold">New Recommendation Request</p>
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Referee Name *</label>
+        <Input
+          placeholder='e.g. "Dr. Sarah Johnson"'
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Role / Title (optional)</label>
+        <Input
+          placeholder='e.g. "AP Chemistry Teacher"'
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Email (optional)</label>
+        <Input
+          type="email"
+          placeholder="teacher@school.edu"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          disabled={!name.trim() || addRecommendation.isPending}
+          onClick={() =>
+            addRecommendation.mutate(
+              {
+                student_id:   studentId,
+                referee_name: name.trim(),
+                referee_role: role.trim() || undefined,
+                teacher_email: email.trim() || undefined,
+              },
+              { onSuccess: onDone }
+            )
+          }
+        >
+          {addRecommendation.isPending
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            : <Plus className="h-3.5 w-3.5 mr-1" />}
+          Add
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onDone}>Cancel</Button>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Modal ────────────────────────────────────────────────────────────────
 
 export const ApplicationDetailModal = ({
@@ -291,7 +436,8 @@ export const ApplicationDetailModal = ({
   onClose: () => void;
 }) => {
   const navigate = useNavigate();
-  const [showAddSlot, setShowAddSlot]           = useState(false);
+  const [showAddSlot, setShowAddSlot]             = useState(false);
+  const [showAddRec, setShowAddRec]               = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [submitNotes, setSubmitNotes]             = useState("");
 
@@ -302,6 +448,14 @@ export const ApplicationDetailModal = ({
   } = useApplicationEssays(application?.id ?? null);
 
   const { submitApplication } = useSubmitApplication();
+
+  const {
+    recommendations,
+    isLoading: isLoadingRecs,
+    addRecommendation,
+    sentCount,
+    totalCount,
+  } = useApplicationRecommendations(application?.id ?? null);
 
   if (!application) return null;
 
@@ -485,22 +639,64 @@ export const ApplicationDetailModal = ({
             )}
 
             {/* Recommendations */}
-            <div className="pt-2 border-t border-border">
-              <div className="flex items-center justify-between mb-3">
+            <div className="pt-2 border-t border-border space-y-3">
+              <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-sm">Recommendations</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {application.recommendations_submitted}/{application.recommendations_requested} submitted
+                    {isLoadingRecs ? "…" : `${sentCount}/${totalCount} submitted`}
                   </p>
                 </div>
-                <Badge variant="outline" className="text-xs">Coming soon</Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={() => setShowAddRec(true)}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />Add
+                </Button>
               </div>
-              <Progress
-                value={application.recommendations_requested > 0
-                  ? (application.recommendations_submitted / application.recommendations_requested) * 100
-                  : 0}
-                className="h-1.5"
-              />
+
+              {totalCount > 0 && (
+                <Progress
+                  value={totalCount > 0 ? (sentCount / totalCount) * 100 : 0}
+                  className="h-1.5"
+                />
+              )}
+
+              {isLoadingRecs ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
+                  ))}
+                </div>
+              ) : recommendations.length === 0 && !showAddRec ? (
+                <div className="border border-dashed border-border rounded-xl p-6 text-center">
+                  <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-xs font-medium mb-1">No recommendations added yet</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Add the referees this application requires.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setShowAddRec(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Referee
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recommendations.map((rec) => (
+                    <RecCard key={rec.id} rec={rec} updateRecStatus={updateRecStatus} />
+                  ))}
+                </div>
+              )}
+
+              {showAddRec && (
+                <AddRecForm
+                  studentId={application.student_id}
+                  applicationId={application.id}
+                  addRecommendation={addRecommendation}
+                  onDone={() => setShowAddRec(false)}
+                />
+              )}
             </div>
           </div>
         </ScrollArea>

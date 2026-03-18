@@ -194,13 +194,17 @@ export const useIndexDashboard = () => {
     },
   });
 
-  // Show only students that need attention or are at risk
   const studentsNeedingAttention = students.filter(
-    (s) => s.status !== "on-track"
+    (s) => s.status === "needs-attention"
+  );
+
+  const studentsAtRisk = students.filter(
+    (s) => s.status === "at-risk"
   );
 
   return {
     students: studentsNeedingAttention,
+    studentsAtRisk,
     allStudents: students,
     essays,
     isLoadingStudents,

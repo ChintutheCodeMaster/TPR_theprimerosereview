@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/Usestudentpersonalarea";
+import { useStudentPersonalArea, type EssayFeedback, type AnalysisIssue } from "@/hooks/Usestudentpersonalarea";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, GraduationCap } from "lucide-react";
 import { useApplications } from "@/hooks/useApplications";
@@ -84,6 +84,89 @@ const StudentPersonalArea = () => {
   const essayFeedback = selectedEssay
     ? getFeedbackForEssay(selectedEssay.essay_title)
     : [];
+
+  const [hoveredFeedbackId, setHoveredFeedbackId] = useState<string | null>(null);
+  const feedbackCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Scroll feedback card into view when a margin icon is hovered
+  useEffect(() => {
+    if (hoveredFeedbackId && feedbackCardRefs.current[hoveredFeedbackId]) {
+      feedbackCardRefs.current[hoveredFeedbackId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [hoveredFeedbackId]);
+
+  // Flatten all issues from all feedback entries for this essay
+  const allIssues = useMemo((): AnalysisIssue[] => {
+    return essayFeedback.flatMap(fb => fb.ai_analysis?.issues ?? []);
+  }, [essayFeedback]);
+
+  // Split essay into paragraphs with offsets
+  const paragraphData = useMemo(() => {
+    const content = selectedEssay?.essay_content ?? '';
+    const lines = content.split('\n');
+    let offset = 0;
+    return lines.map((text, i) => {
+      const start = offset;
+      const end = offset + text.length;
+      offset = end + 1;
+      return { text, start, end, index: i };
+    });
+  }, [selectedEssay?.essay_content]);
+
+  // Map paragraph → issues in that paragraph
+  const paragraphIssueMap = useMemo(() => {
+    const map = new Map<number, AnalysisIssue[]>();
+    for (const issue of allIssues) {
+      for (const para of paragraphData) {
+        if (issue.startIndex >= para.start && issue.startIndex <= para.end) {
+          map.set(para.index, [...(map.get(para.index) ?? []), issue]);
+          break;
+        }
+      }
+    }
+    return map;
+  }, [allIssues, paragraphData]);
+
+  // Render a paragraph with inline highlights
+  const renderParagraph = (paraText: string, paraStart: number, paraIssues: AnalysisIssue[]) => {
+    if (!paraIssues.length) return <span>{paraText}</span>;
+    const segments: JSX.Element[] = [];
+    let lastIdx = 0;
+    const adjusted = paraIssues
+      .map(issue => ({
+        issue,
+        relStart: Math.max(0, issue.startIndex - paraStart),
+        relEnd: Math.min(paraText.length, issue.endIndex - paraStart),
+      }))
+      .filter(a => a.relStart < a.relEnd)
+      .sort((a, b) => a.relStart - b.relStart);
+
+    for (const { issue, relStart, relEnd } of adjusted) {
+      if (relStart > lastIdx)
+        segments.push(<span key={`pre-${issue.id}`}>{paraText.slice(lastIdx, relStart)}</span>);
+      const isActive = hoveredFeedbackId === issue.id;
+      segments.push(
+        <span
+          key={`hl-${issue.id}`}
+          className="cursor-pointer px-0.5 rounded transition-all"
+          style={{
+            backgroundColor: `${issue.color}${isActive ? '55' : '25'}`,
+            borderBottom: `2px solid ${issue.color}`,
+            outline: isActive ? `2px solid ${issue.color}` : undefined,
+            outlineOffset: '1px',
+          }}
+          onMouseEnter={() => setHoveredFeedbackId(issue.id)}
+          onMouseLeave={() => setHoveredFeedbackId(null)}
+        >
+          {paraText.slice(relStart, relEnd)}
+        </span>
+      );
+      lastIdx = relEnd;
+    }
+    if (lastIdx < paraText.length)
+      segments.push(<span key="rest">{paraText.slice(lastIdx)}</span>);
+    return segments;
+  };
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -444,40 +527,102 @@ const StudentPersonalArea = () => {
       </Tabs>
 
       {/* ── Essay Detail Modal ── */}
-      <Dialog open={!!selectedEssay} onOpenChange={() => setSelectedEssay(null)}>
-        <DialogContent className="max-w-[900px] h-[85vh] p-0 flex flex-col">
-          <DialogHeader className="p-6 pb-4 border-b">
+      <Dialog open={!!selectedEssay} onOpenChange={() => { setSelectedEssay(null); setHoveredFeedbackId(null); }}>
+        <DialogContent className="max-w-[95vw] w-[1200px] h-[88vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-xl">{selectedEssay?.essay_title}</DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <DialogTitle className="text-lg">{selectedEssay?.essay_title}</DialogTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {new Date(selectedEssay?.created_at ?? "").toLocaleDateString()}
                 </p>
               </div>
               <Badge className={getStatusColor(selectedEssay?.status ?? "")}>
                 {getStatusIcon(selectedEssay?.status ?? "")}
-                <span className="ml-1 capitalize">
-                  {getStatusLabel(selectedEssay?.status ?? "")}
-                </span>
+                <span className="ml-1 capitalize">{getStatusLabel(selectedEssay?.status ?? "")}</span>
               </Badge>
             </div>
           </DialogHeader>
 
           <div className="flex-1 flex overflow-hidden">
-            {/* Essay content */}
-            <div className="flex-1 border-r flex flex-col">
+
+            {/* ── Left sidebar: score + criteria ── */}
+            {essayFeedback.some(fb => fb.ai_analysis?.overallScore) && (
+              <div className="w-[140px] shrink-0 border-r flex flex-col gap-4 p-4 overflow-y-auto">
+                {essayFeedback.map(fb => fb.ai_analysis?.overallScore ? (
+                  <div key={fb.id}>
+                    <Card className="bg-gradient-to-br from-primary/5 to-primary/10 mb-3">
+                      <CardContent className="p-3 text-center">
+                        <Star className="h-4 w-4 text-primary mx-auto mb-1" />
+                        <div className="text-2xl font-bold text-primary">{fb.ai_analysis!.overallScore}</div>
+                        <div className="text-[10px] text-muted-foreground">/100</div>
+                      </CardContent>
+                    </Card>
+                    {Array.isArray(fb.ai_analysis?.criteria) && fb.ai_analysis!.criteria.map((c: any) => (
+                      <div key={c.id} className="space-y-1 mb-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                          <span className="text-[10px] text-muted-foreground truncate">{c.name?.split(' & ')[0]}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Progress value={c.score} className="h-1.5 flex-1" />
+                          <span className="text-[10px] font-medium w-5 text-right">{c.score}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null)}
+              </div>
+            )}
+
+            {/* ── Center: essay with highlights + margin icons ── */}
+            <div className="flex-1 flex flex-col min-w-0 border-r">
               {selectedEssay?.essay_prompt && (
-                <div className="p-4 border-b bg-muted/30">
-                  <p className="text-sm text-muted-foreground font-medium">Prompt:</p>
-                  <p className="text-sm mt-1">{selectedEssay.essay_prompt}</p>
+                <div className="px-5 py-3 border-b bg-muted/30 shrink-0">
+                  <p className="text-xs text-muted-foreground font-medium">Prompt</p>
+                  <p className="text-xs mt-0.5">{selectedEssay.essay_prompt}</p>
+                </div>
+              )}
+              {allIssues.length > 0 && (
+                <div className="px-5 py-2 border-b bg-muted/20 shrink-0">
+                  <p className="text-xs text-muted-foreground">
+                    Hover highlighted text or 💬 icons to see your counselor's comments
+                  </p>
                 </div>
               )}
               <ScrollArea className="flex-1">
-                <div className="p-4">
+                <div className="p-5">
                   {selectedEssay?.essay_content ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {selectedEssay.essay_content}
-                    </p>
+                    <div className="space-y-0">
+                      {paragraphData.map((para) => {
+                        const paraIssues = paragraphIssueMap.get(para.index) ?? [];
+                        return (
+                          <div key={para.index} className="flex gap-2 group/para min-h-[1.5em]">
+                            <div className="flex-1 text-sm leading-relaxed text-foreground">
+                              {para.text.trim() === ''
+                                ? <span>&nbsp;</span>
+                                : renderParagraph(para.text, para.start, paraIssues)
+                              }
+                            </div>
+                            {/* Margin icons */}
+                            <div className="w-6 shrink-0 flex flex-col items-center gap-0.5 pt-0.5">
+                              {paraIssues.map((issue) => (
+                                <button
+                                  key={issue.id}
+                                  className="opacity-0 group-hover/para:opacity-100 transition-opacity rounded-full p-0.5 hover:bg-muted"
+                                  style={{ color: issue.color }}
+                                  onMouseEnter={() => setHoveredFeedbackId(issue.id)}
+                                  onMouseLeave={() => setHoveredFeedbackId(null)}
+                                  title={issue.problemType}
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5 fill-current" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -488,144 +633,90 @@ const StudentPersonalArea = () => {
               </ScrollArea>
             </div>
 
-            {/* Feedback panel */}
-            <div className="w-[350px] flex flex-col">
-              <div className="p-4 border-b bg-primary/5">
-                <h3 className="font-semibold flex items-center gap-2">
+            {/* ── Right: feedback panel ── */}
+            <div className="w-[320px] shrink-0 flex flex-col">
+              <div className="px-4 py-3 border-b bg-primary/5 shrink-0">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-primary" />
                   Counselor Feedback
                 </h3>
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-4">
-                  {essayFeedback.length > 0 ? (
-                    <div className="space-y-4">
-                      {essayFeedback.map((fb) => (
-                        <Card key={fb.id} className="bg-card">
-                          <CardContent className="p-4 space-y-3">
-                            {fb.ai_analysis?.overallScore && (
-                              <div className="flex items-center gap-2 pb-3 border-b">
-                                <Star className="h-5 w-5 text-primary" />
-                                <span className="font-bold text-lg">
-                                  {fb.ai_analysis.overallScore}/100
-                                </span>
-                              </div>
-                            )}
-
-                            {fb.personal_message && (
-                              <div className="bg-primary/10 p-3 rounded-lg">
-                                <p className="text-xs font-medium text-primary mb-1">
-                                  Personal Note:
-                                </p>
-                                <p className="text-sm">{fb.personal_message}</p>
-                              </div>
-                            )}
-
-                            {fb.feedback_items.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                  Feedback Points:
-                                </p>
-                                {fb.feedback_items.map((item, idx) => (
-                                  <div
-                                    key={item.id ?? idx}
-                                    className={`p-2 rounded text-sm ${
-                                      item.type === "strength"
-                                        ? "bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500"
-                                        : "bg-orange-50 dark:bg-orange-950/30 border-l-2 border-orange-500"
-                                    }`}
-                                  >
-                                    {item.category && (
-                                      <span
-                                        className={`text-[10px] font-medium block ${
-                                          item.type === "strength"
-                                            ? "text-green-600"
-                                            : "text-orange-600"
-                                        }`}
-                                      >
-                                        {item.type === "strength" ? "✓" : "→"} {item.category}
-                                      </span>
-                                    )}
-                                    <p className="text-xs mt-0.5">{item.text}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {fb.ai_analysis?.criteria && (
-                              <div className="pt-2 border-t">
-                                <p className="text-xs font-medium text-muted-foreground mb-2">
-                                  Score Breakdown:
-                                </p>
-                                <div className="space-y-1.5">
-                                  {Array.isArray(fb.ai_analysis.criteria)
-                                    ? fb.ai_analysis.criteria.map((c) => (
-                                        <div key={c.id} className="flex items-center gap-2">
-                                          <div
-                                            className="w-2 h-2 rounded-full"
-                                            style={{ backgroundColor: c.color }}
-                                          />
-                                          <span className="text-xs flex-1 truncate">{c.name}</span>
-                                          <span className="text-xs font-medium">{c.score}</span>
-                                        </div>
-                                      ))
-                                    : Object.entries(fb.ai_analysis.criteria).map(([key, val]) => (
-                                        <div key={key} className="flex items-center gap-2">
-                                          <div className="w-2 h-2 rounded-full bg-primary" />
-                                          <span className="text-xs flex-1 truncate capitalize">
-                                            {key}
-                                          </span>
-                                          <span className="text-xs font-medium">{val}</span>
-                                        </div>
-                                      ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {fb.ai_analysis?.strengths && (
-                              <div className="pt-2 border-t">
-                                <p className="text-xs font-medium text-green-600 mb-1">
-                                  ✓ Strengths:
-                                </p>
-                                <ul className="text-xs space-y-1 text-muted-foreground">
-                                  {fb.ai_analysis.strengths.map((s, i) => (
-                                    <li key={i}>• {s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {fb.ai_analysis?.improvements && (
-                              <div className="pt-2">
-                                <p className="text-xs font-medium text-orange-600 mb-1">
-                                  → To Improve:
-                                </p>
-                                <ul className="text-xs space-y-1 text-muted-foreground">
-                                  {fb.ai_analysis.improvements.map((s, i) => (
-                                    <li key={i}>• {s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            <p className="text-[10px] text-muted-foreground pt-2">
-                              Received:{" "}
-                              {fb.sent_at
-                                ? new Date(fb.sent_at).toLocaleDateString()
-                                : "Recently"}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
+                <div className="p-3 space-y-3">
+                  {essayFeedback.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
                       <p className="text-sm">No feedback yet</p>
-                      <p className="text-xs mt-1">
-                        Your counselor will review your essay soon
-                      </p>
+                      <p className="text-xs mt-1">Your counselor will review your essay soon</p>
                     </div>
+                  ) : (
+                    essayFeedback.map((fb) => (
+                      <div key={fb.id} className="space-y-2">
+                        {fb.personal_message && (
+                          <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
+                            <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
+                            <p className="text-xs">{fb.personal_message}</p>
+                          </div>
+                        )}
+
+                        {/* AI issue cards — connected to highlights */}
+                        {allIssues.map((issue) => {
+                          const isActive = hoveredFeedbackId === issue.id;
+                          return (
+                            <div
+                              key={issue.id}
+                              ref={el => { feedbackCardRefs.current[issue.id] = el; }}
+                              className="rounded-xl border p-3 space-y-1.5 transition-all cursor-default"
+                              style={{
+                                borderColor: isActive ? issue.color : undefined,
+                                backgroundColor: isActive ? `${issue.color}12` : undefined,
+                                boxShadow: isActive ? `0 0 0 2px ${issue.color}40` : undefined,
+                              }}
+                              onMouseEnter={() => setHoveredFeedbackId(issue.id)}
+                              onMouseLeave={() => setHoveredFeedbackId(null)}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: issue.color }} />
+                                  <span className="text-xs font-semibold truncate">{issue.criterionName}</span>
+                                </div>
+                                <Badge
+                                  variant={issue.severity === 'high' ? 'destructive' : issue.severity === 'medium' ? 'secondary' : 'outline'}
+                                  className="text-[10px] shrink-0"
+                                >
+                                  {issue.severity}
+                                </Badge>
+                              </div>
+                              <p className="text-xs font-medium text-foreground">{issue.problemType}</p>
+                              <p className="text-xs text-muted-foreground leading-snug">{issue.problemDescription}</p>
+                              <div className="pt-1.5 border-t border-border">
+                                <p className="text-xs text-primary leading-snug">💡 {issue.recommendation}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Manual/general feedback items without a position */}
+                        {fb.feedback_items
+                          .filter(item => !allIssues.some(iss => iss.id === item.id))
+                          .map((item, idx) => (
+                            <div
+                              key={item.id ?? idx}
+                              className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5"
+                            >
+                              {item.criterionName && (
+                                <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
+                              )}
+                              <p className="text-xs leading-snug">{item.text}</p>
+                            </div>
+                          ))
+                        }
+
+                        <p className="text-[10px] text-muted-foreground text-right pt-1">
+                          Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
+                        </p>
+                      </div>
+                    ))
                   )}
                 </div>
               </ScrollArea>

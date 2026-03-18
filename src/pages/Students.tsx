@@ -74,6 +74,71 @@ const computeCompletion = (essaysSubmitted: number, totalEssays: number, recsSub
   return Math.round(essayScore + recScore)
 }
 
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'on-track': return 'default'
+    case 'needs-attention': return 'secondary'
+    case 'at-risk': return 'destructive'
+    default: return 'outline'
+  }
+}
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'on-track': return CheckCircle
+    case 'needs-attention': return Clock
+    case 'at-risk': return AlertTriangle
+    default: return User
+  }
+}
+
+const getRiskReasons = (student: Student): string[] => {
+  const reasons: string[] = []
+  if (student.essaysSubmitted === 0 && student.totalEssays > 0)
+    reasons.push(`No essays submitted (0/${student.totalEssays})`)
+  if (student.completionPercentage < 40)
+    reasons.push(`Completion critically low (${student.completionPercentage}%)`)
+  if (student.upcomingDeadlines >= 3)
+    reasons.push(`${student.upcomingDeadlines} upcoming deadlines`)
+  if (student.recommendationsSubmitted === 0 && student.recommendationsRequested > 0)
+    reasons.push('No recommendation letters received')
+  if (reasons.length === 0)
+    reasons.push('Overall progress requires attention')
+  return reasons
+}
+
+const AtRiskBadge = ({ student }: { student: Student }) => {
+  const StatusIcon = getStatusIcon(student.status)
+  const reasons = student.status === 'at-risk' ? getRiskReasons(student) : []
+
+  return (
+    <div className="relative inline-block group/risk">
+      <Badge variant={getStatusColor(student.status) as any} className="flex items-center gap-1 w-fit cursor-default">
+        <StatusIcon className="h-3 w-3" />
+        {student.status.replace('-', ' ')}
+      </Badge>
+      {student.status === 'at-risk' && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[9999]
+                        hidden group-hover/risk:block
+                        w-56 bg-destructive text-destructive-foreground
+                        text-xs rounded-xl shadow-lg px-3 py-2.5 space-y-1.5
+                        pointer-events-none">
+          {/* Arrow pointing up */}
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2
+                          border-4 border-transparent border-b-destructive" />
+          <p className="font-semibold mb-1">Why at risk:</p>
+          {reasons.map((r, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className="mt-0.5 shrink-0">•</span>
+              <span className="leading-snug">{r}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const Students = () => {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
@@ -240,23 +305,6 @@ const Students = () => {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'on-track': return 'default'
-      case 'needs-attention': return 'secondary'
-      case 'at-risk': return 'destructive'
-      default: return 'outline'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'on-track': return CheckCircle
-      case 'needs-attention': return Clock
-      case 'at-risk': return AlertTriangle
-      default: return User
-    }
-  }
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -657,7 +705,7 @@ const Students = () => {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <Card>
+        <Card className="overflow-visible">
           <Table>
             <TableHeader>
               <TableRow>
@@ -672,7 +720,6 @@ const Students = () => {
             </TableHeader>
             <TableBody>
               {filteredStudents.map(student => {
-                const StatusIcon = getStatusIcon(student.status)
                 return (
                   <Dialog key={student.id}>
                     <DialogTrigger asChild>
@@ -706,10 +753,7 @@ const Students = () => {
                         <TableCell>{student.essaysSubmitted}/{student.totalEssays}</TableCell>
                         <TableCell>{student.upcomingDeadlines}</TableCell>
                         <TableCell>
-                          <Badge variant={getStatusColor(student.status) as any} className="flex items-center gap-1 w-fit">
-                            <StatusIcon className="h-3 w-3" />
-                            {student.status.replace('-', ' ')}
-                          </Badge>
+                          <AtRiskBadge student={student} />
                         </TableCell>
                       </TableRow>
                     </DialogTrigger>
@@ -726,7 +770,6 @@ const Students = () => {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredStudents.map(student => {
-            const StatusIcon = getStatusIcon(student.status)
             return (
               <Dialog key={student.id}>
                 <DialogTrigger asChild>
@@ -751,10 +794,7 @@ const Students = () => {
                             </div>
                           </div>
                         </div>
-                        <Badge variant={getStatusColor(student.status) as any} className="flex items-center gap-1">
-                          <StatusIcon className="h-3 w-3" />
-                          {student.status.replace('-', ' ')}
-                        </Badge>
+                        <AtRiskBadge student={student} />
                       </div>
 
                       <div className="mb-4">

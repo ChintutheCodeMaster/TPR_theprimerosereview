@@ -3,11 +3,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Mail,
-  CheckCircle2,
-  AlertCircle,
   GraduationCap,
   Target,
-  CalendarCheck,
 } from "lucide-react";
 import {
   PieChart,
@@ -49,9 +46,9 @@ export const CounselorInsights = () => {
 
   if (isLoading) return <LoadingSkeleton />;
 
-  const rec  = data?.recommendations ?? { pending: 0, inProgress: 0, sent: 0, total: 0 };
-  const apps = data?.applications    ?? { submitted: 0, inProgress: 0, notStarted: 0, total: 0 };
-  const actionItems = data?.actionItems ?? [];
+  const rec        = data?.recommendations ?? { pending: 0, inProgress: 0, sent: 0, total: 0 };
+  const apps       = data?.applications    ?? { submitted: 0, inProgress: 0, notStarted: 0, total: 0 };
+  const actionItems = data?.actionItems   ?? [];
 
   const recommendationPieData = [
     { name: "Sent",        value: rec.sent,       color: "hsl(var(--success))"  },
@@ -60,10 +57,9 @@ export const CounselorInsights = () => {
   ];
 
   const weeklyBarData = [
-    { name: "Essays in review",    value: actionItems.find((a) => a.label.includes("Essays"))?.count   ?? 0 },
-    // { name: "Meetings",  value: actionItems.find((a) => a.label.includes("meetings"))?.count ?? 0 },
-    { name: "Deadlines", value: actionItems.find((a) => a.label.includes("Deadlines"))?.count ?? 0 },
-    { name: "Recs",      value: rec.sent },
+    { name: "Essays in review", value: actionItems.find((a: { label: string }) => a.label.includes("Essays"))?.count   ?? 0 },
+    { name: "Deadlines",        value: actionItems.find((a: { label: string }) => a.label.includes("Deadlines"))?.count ?? 0 },
+    { name: "Recs",             value: rec.sent },
   ];
 
   const safePct = (num: number, den: number) =>
@@ -213,39 +209,8 @@ export const CounselorInsights = () => {
           )}
         </Card>
 
-        {/* Action Items */}
-        <Card className="p-5 bg-gradient-to-br from-muted/50 to-muted border-muted-foreground/20">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-muted-foreground/20">
-              <CalendarCheck className="h-5 w-5 text-foreground" />
-            </div>
-            <h3 className="font-semibold text-foreground">Action Items</h3>
-          </div>
-          <div className="space-y-2">
-            {actionItems.map((task, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center p-2 rounded-lg bg-background/50"
-              >
-                <div className="flex items-center gap-2">
-                  {task.urgent ? (
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="text-sm text-foreground">{task.label}</span>
-                </div>
-                <span
-                  className={`font-bold ${
-                    task.urgent ? "text-destructive" : "text-foreground"
-                  }`}
-                >
-                  {task.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {/* Applications Progress spans full width when alone */}
+
       </div>
     </div>
   );
