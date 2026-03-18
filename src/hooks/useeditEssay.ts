@@ -12,6 +12,7 @@ export interface EssayData {
   status: string;
   feedback_items: any[] | null;
   personal_message: string | null;
+  track_changes: any[] | null;
   created_at: string;
   updated_at: string;
 }

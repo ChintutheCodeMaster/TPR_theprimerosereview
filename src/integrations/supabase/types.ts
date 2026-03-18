@@ -186,6 +186,7 @@ export type Database = {
           sent_at: string | null
           status: string
           student_id: string
+          track_changes: Json | null
           updated_at: string
         }
         Insert: {
@@ -202,6 +203,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           student_id: string
+          track_changes?: Json | null
           updated_at?: string
         }
         Update: {
@@ -218,6 +220,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           student_id?: string
+          track_changes?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -235,6 +238,7 @@ export type Database = {
           ai_analysis: Json | null
           status: string
           sent_at: string | null
+          track_changes: Json | null
           created_at: string
         }
         Insert: {
@@ -249,6 +253,7 @@ export type Database = {
           ai_analysis?: Json | null
           status?: string
           sent_at?: string | null
+          track_changes?: Json | null
           created_at?: string
         }
         Update: {
@@ -263,6 +268,7 @@ export type Database = {
           ai_analysis?: Json | null
           status?: string
           sent_at?: string | null
+          track_changes?: Json | null
           created_at?: string
         }
         Relationships: [

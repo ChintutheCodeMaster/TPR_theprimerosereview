@@ -142,9 +142,25 @@ const studentIds = assignments?.map((a) => a.student_id) ?? [];
 //   })
 // );
 
-const { data: atRiskData } = await supabase.rpc("get_at_risk_students");
+const atRiskCount = studentIds.filter(studentId => {
+  const studentEssays = (essayStatsRes.data ?? []).filter(e => e.student_id === studentId);
+  const totalEssays = studentEssays.length;
+  const essaysSubmitted = studentEssays.filter(e =>
+    ["sent", "read", "approved"].includes(e.status)
+  ).length;
 
-const atRiskStudents = atRiskData?.length ?? 0;
+  const studentRecs = (recsRes.data ?? []).filter(r => r.student_id === studentId);
+  const recsRequested = studentRecs.length;
+  const recsSubmitted = studentRecs.filter(r => r.status === "sent").length;
+
+  const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
+  const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
+  const completion = Math.round(essayScore + recScore);
+
+  return completion < 40;
+}).length;
+
+const atRiskStudents = atRiskCount;
 
 return {
   totalStudents: studentIds.length,

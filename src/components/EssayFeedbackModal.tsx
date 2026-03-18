@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   History,
   MessageCircle,
+  Strikethrough,
 } from "lucide-react";
 
 interface AnalysisIssue {
@@ -56,6 +57,8 @@ interface FeedbackItem {
   source: 'ai' | 'manual';
   criterionName?: string;
   color?: string;
+  startIndex?: number;
+  endIndex?: number;
 }
 
 interface HistoryEntry {
@@ -83,6 +86,99 @@ interface EssayFeedbackModalProps {
   essay: Essay;
 }
 
+// ── Track Changes ──────────────────────────────────────────────
+export interface TrackedChange {
+  id: string;
+  originalText: string;
+  suggestedText: string;
+  startIndex: number;
+  endIndex: number;
+}
+
+interface PendingSelection {
+  startIndex: number;
+  endIndex: number;
+  selectedText: string;
+  rect: DOMRect;
+}
+
+// ── Paragraph Segments ─────────────────────────────────────────
+type ParagraphSegment =
+  | { kind: 'text'; text: string }
+  | { kind: 'ai'; text: string; issue: AnalysisIssue }
+  | { kind: 'change'; originalText: string; suggestedText: string; changeId: string };
+
+function buildParagraphSegments(
+  paraText: string,
+  paraStart: number,
+  aiIssues: AnalysisIssue[],
+  paraChanges: TrackedChange[],
+): ParagraphSegment[] {
+  if (!aiIssues.length && !paraChanges.length) {
+    return [{ kind: 'text', text: paraText }];
+  }
+
+  type Ann = {
+    relStart: number;
+    relEnd: number;
+    priority: number;
+    issue?: AnalysisIssue;
+    change?: TrackedChange;
+  };
+
+  const annotations: Ann[] = [];
+
+  for (const issue of aiIssues) {
+    const relStart = Math.max(0, issue.startIndex - paraStart);
+    const relEnd = Math.min(paraText.length, issue.endIndex - paraStart);
+    if (relStart < relEnd) {
+      annotations.push({ relStart, relEnd, priority: 1, issue });
+    }
+  }
+
+  for (const change of paraChanges) {
+    const relStart = Math.max(0, change.startIndex - paraStart);
+    const relEnd = Math.min(paraText.length, change.endIndex - paraStart);
+    if (relStart < relEnd) {
+      annotations.push({ relStart, relEnd, priority: 2, change });
+    }
+  }
+
+  // Sort by start position; tracked changes take priority over AI issues on ties
+  annotations.sort((a, b) => {
+    if (a.relStart !== b.relStart) return a.relStart - b.relStart;
+    return b.priority - a.priority;
+  });
+
+  const segments: ParagraphSegment[] = [];
+  let lastIdx = 0;
+
+  for (const ann of annotations) {
+    if (ann.relStart < lastIdx) continue; // skip overlaps
+    if (ann.relStart > lastIdx) {
+      segments.push({ kind: 'text', text: paraText.slice(lastIdx, ann.relStart) });
+    }
+    if (ann.issue) {
+      segments.push({ kind: 'ai', text: paraText.slice(ann.relStart, ann.relEnd), issue: ann.issue });
+    } else if (ann.change) {
+      segments.push({
+        kind: 'change',
+        originalText: paraText.slice(ann.relStart, ann.relEnd),
+        suggestedText: ann.change.suggestedText,
+        changeId: ann.change.id,
+      });
+    }
+    lastIdx = ann.relEnd;
+  }
+
+  if (lastIdx < paraText.length) {
+    segments.push({ kind: 'text', text: paraText.slice(lastIdx) });
+  }
+
+  return segments;
+}
+
+// ── Component ──────────────────────────────────────────────────
 export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModalProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,8 +191,16 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Track Changes state
+  const [trackedChanges, setTrackedChanges] = useState<TrackedChange[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [suggestionInput, setSuggestionInput] = useState("");
+
   const { toast } = useToast();
   const commentRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const essayRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const essayContent = essay.content;
 
@@ -112,18 +216,30 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     }
   }, [isOpen]);
 
-  // Scroll the right-panel comment card into view when hovering a margin icon
+  // Scroll right-panel comment card into view on hover
   useEffect(() => {
     if (hoveredCommentId && commentRefs.current[hoveredCommentId]) {
       commentRefs.current[hoveredCommentId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [hoveredCommentId]);
 
+  // Dismiss popover on click outside
+  useEffect(() => {
+    if (!pendingSelection) return;
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPendingSelection(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [pendingSelection]);
+
   const loadExistingFeedback = async () => {
     try {
       const { data, error } = await supabase
         .from('essay_feedback')
-        .select('feedback_items, manual_notes, personal_message, ai_analysis')
+        .select('feedback_items, manual_notes, personal_message, ai_analysis, track_changes')
         .eq('id', essay.id)
         .single();
 
@@ -133,6 +249,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
         setFeedbackItems((data.feedback_items as unknown as FeedbackItem[]) || []);
         setManualNote(data.manual_notes || "");
         setPersonalMessage(data.personal_message || "");
+        setTrackedChanges((data.track_changes as unknown as TrackedChange[]) || []);
 
         if (data.ai_analysis) {
           setAnalysis(data.ai_analysis as unknown as AnalysisResult);
@@ -198,6 +315,8 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
       source: 'ai',
       criterionName: issue.criterionName,
       color: issue.color,
+      startIndex: issue.startIndex,
+      endIndex: issue.endIndex,
     }]);
     toast({ title: "Added to Feedback" });
   };
@@ -216,6 +335,79 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     setFeedbackItems(prev => prev.filter(item => item.id !== id));
   };
 
+  // ── Track Changes handlers ─────────────────────────────────────
+  const handleMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !essayRef.current) return;
+
+    const selectedText = sel.toString();
+    if (!selectedText.trim()) return;
+
+    const range = sel.getRangeAt(0);
+
+    // Find the paragraph div containing the selection start
+    let startNode: Node | null = range.startContainer;
+    let startParaDiv: Element | null = null;
+    while (startNode && startNode !== essayRef.current) {
+      if (startNode instanceof Element && startNode.hasAttribute('data-para-start')) {
+        startParaDiv = startNode;
+        break;
+      }
+      startNode = startNode.parentNode;
+    }
+
+    // Find the paragraph div containing the selection end
+    let endNode: Node | null = range.endContainer;
+    let endParaDiv: Element | null = null;
+    while (endNode && endNode !== essayRef.current) {
+      if (endNode instanceof Element && endNode.hasAttribute('data-para-start')) {
+        endParaDiv = endNode;
+        break;
+      }
+      endNode = endNode.parentNode;
+    }
+
+    // Only allow single-paragraph selections
+    if (!startParaDiv || startParaDiv !== endParaDiv) return;
+
+    const paraStart = parseInt(startParaDiv.getAttribute('data-para-start') || '0');
+
+    // Measure text offset from the start of the paragraph to the selection start
+    const preRange = document.createRange();
+    preRange.setStart(startParaDiv, 0);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const offsetWithinPara = preRange.toString().length;
+
+    const globalStart = paraStart + offsetWithinPara;
+    const globalEnd = globalStart + selectedText.length;
+
+    const rect = range.getBoundingClientRect();
+    setPendingSelection({ startIndex: globalStart, endIndex: globalEnd, selectedText, rect });
+    setSuggestionInput("");
+  };
+
+  const applyTrackedChange = () => {
+    if (!pendingSelection || !suggestionInput.trim()) return;
+
+    const newChange: TrackedChange = {
+      id: `tc-${Date.now()}`,
+      originalText: pendingSelection.selectedText,
+      suggestedText: suggestionInput.trim(),
+      startIndex: pendingSelection.startIndex,
+      endIndex: pendingSelection.endIndex,
+    };
+
+    setTrackedChanges(prev => [...prev, newChange]);
+    setPendingSelection(null);
+    setSuggestionInput("");
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const removeTrackedChange = (id: string) => {
+    setTrackedChanges(prev => prev.filter(c => c.id !== id));
+  };
+
+  // ── Save / Restore ─────────────────────────────────────────────
   const saveFeedback = async (status: 'draft' | 'in_progress' | 'sent') => {
     setIsSaving(true);
     try {
@@ -236,6 +428,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
           manual_notes: manualNote || null,
           personal_message: personalMessage || null,
           ai_analysis: analysis ? JSON.parse(JSON.stringify(analysis)) : null,
+          track_changes: JSON.parse(JSON.stringify(trackedChanges)),
           status,
           sent_at: status === 'sent' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
@@ -255,6 +448,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
           manual_notes: manualNote || null,
           personal_message: personalMessage || null,
           ai_analysis: analysis ? JSON.parse(JSON.stringify(analysis)) : null,
+          track_changes: JSON.parse(JSON.stringify(trackedChanges)),
           status,
           sent_at: status === 'sent' ? new Date().toISOString() : null,
         });
@@ -319,7 +513,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     toast({ title: `Restored version ${entry.version}` });
   };
 
-  // ── Paragraph splitting ─────────────────────────────────────
+  // ── Paragraph splitting ────────────────────────────────────────
   const paragraphData = useMemo(() => {
     const lines = essayContent.split('\n');
     let offset = 0;
@@ -331,7 +525,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     });
   }, [essayContent]);
 
-  // Map paragraph index → issues that start in that paragraph
+  // Map paragraph index → AI issues in that paragraph
   const paragraphIssueMap = useMemo(() => {
     const map = new Map<number, AnalysisIssue[]>();
     if (!analysis?.issues) return map;
@@ -346,54 +540,56 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     return map;
   }, [analysis?.issues, paragraphData]);
 
-  // Render a single paragraph with inline highlights
-  const renderParagraphContent = (paraText: string, paraStart: number, paraIssues: AnalysisIssue[]) => {
-    if (!paraIssues.length) return <span>{paraText}</span>;
-
-    const segments: JSX.Element[] = [];
-    let lastIdx = 0;
-
-    const adjusted = paraIssues
-      .map(issue => ({
-        issue,
-        relStart: Math.max(0, issue.startIndex - paraStart),
-        relEnd: Math.min(paraText.length, issue.endIndex - paraStart),
-      }))
-      .filter(a => a.relStart < a.relEnd)
-      .sort((a, b) => a.relStart - b.relStart);
-
-    for (const { issue, relStart, relEnd } of adjusted) {
-      if (relStart > lastIdx) {
-        segments.push(<span key={`pre-${issue.id}`}>{paraText.slice(lastIdx, relStart)}</span>);
+  // Map paragraph index → tracked changes in that paragraph
+  const paragraphChangeMap = useMemo(() => {
+    const map = new Map<number, TrackedChange[]>();
+    for (const change of trackedChanges) {
+      for (const para of paragraphData) {
+        if (change.startIndex >= para.start && change.startIndex <= para.end) {
+          map.set(para.index, [...(map.get(para.index) ?? []), change]);
+          break;
+        }
       }
-      const isActive = hoveredCommentId === issue.id;
-      segments.push(
+    }
+    return map;
+  }, [trackedChanges, paragraphData]);
+
+  // Render a single paragraph segment
+  const renderSegment = (seg: ParagraphSegment, key: string | number) => {
+    if (seg.kind === 'text') {
+      return <span key={key}>{seg.text}</span>;
+    }
+    if (seg.kind === 'ai') {
+      const isActive = hoveredCommentId === seg.issue.id;
+      return (
         <span
-          key={`hl-${issue.id}`}
+          key={key}
           className="cursor-pointer px-0.5 rounded transition-all"
           style={{
-            backgroundColor: `${issue.color}${isActive ? '55' : '25'}`,
-            borderBottom: `2px solid ${issue.color}`,
-            outline: isActive ? `2px solid ${issue.color}` : undefined,
+            backgroundColor: `${seg.issue.color}${isActive ? '55' : '25'}`,
+            borderBottom: `2px solid ${seg.issue.color}`,
+            outline: isActive ? `2px solid ${seg.issue.color}` : undefined,
             outlineOffset: '1px',
           }}
-          onMouseEnter={() => setHoveredCommentId(issue.id)}
+          onMouseEnter={() => setHoveredCommentId(seg.issue.id)}
           onMouseLeave={() => setHoveredCommentId(null)}
         >
-          {paraText.slice(relStart, relEnd)}
+          {seg.text}
         </span>
       );
-      lastIdx = relEnd;
     }
-
-    if (lastIdx < paraText.length) {
-      segments.push(<span key="rest">{paraText.slice(lastIdx)}</span>);
+    if (seg.kind === 'change') {
+      return (
+        <span key={key} className="inline">
+          <del className="text-red-500 bg-red-50 line-through px-0.5 rounded-sm">{seg.originalText}</del>
+          <ins className="text-green-700 bg-green-50 no-underline px-0.5 rounded-sm font-medium ml-0.5">{seg.suggestedText}</ins>
+        </span>
+      );
     }
-
-    return segments;
+    return null;
   };
 
-  // ── History Panel ──────────────────────────────────────────
+  // ── History Panel ──────────────────────────────────────────────
   if (showHistory) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -465,7 +661,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     );
   }
 
-  // ── Preview Mode ───────────────────────────────────────────
+  // ── Preview Mode ───────────────────────────────────────────────
   if (showPreview) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -498,6 +694,25 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
                   <CardContent className="p-4">
                     <p className="text-sm font-medium text-primary mb-2">Personal Note:</p>
                     <p className="text-foreground">{personalMessage}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {trackedChanges.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-1.5">
+                      <Strikethrough className="h-4 w-4" />
+                      Suggested Edits ({trackedChanges.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {trackedChanges.map(change => (
+                      <div key={change.id} className="p-2 rounded border text-sm space-y-0.5">
+                        <del className="text-red-500 line-through block">{change.originalText}</del>
+                        <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               )}
@@ -564,7 +779,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     );
   }
 
-  // ── Main Editor ────────────────────────────────────────────
+  // ── Main Editor ────────────────────────────────────────────────
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 flex flex-col">
@@ -652,15 +867,13 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
             </Card>
           </div>
 
-          {/* ── Center: Essay with margin comment icons ── */}
+          {/* ── Center: Essay with inline highlights + tracked changes ── */}
           <div className="flex-1 flex flex-col min-w-0 border-r">
             <div className="px-4 py-2 border-b bg-muted/30 shrink-0">
               <p className="text-xs text-muted-foreground">
                 {isAnalyzing
-                  ? "Analyzing essay…"
-                  : analysis
-                    ? "Hover highlighted text or click 💬 icons in the margin to see comments"
-                    : "Essay content"}
+                  ? "Bear with us, this might take a moment…"
+                  : "Select any text to suggest a replacement — or hover highlights to see AI comments"}
               </p>
             </div>
             <ScrollArea className="flex-1">
@@ -669,24 +882,34 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
                   <div className="flex items-center justify-center h-40">
                     <div className="text-center">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />
-                      <p className="text-sm text-muted-foreground">Analyzing essay...</p>
+                      <p className="text-sm text-muted-foreground">Bear with us, please…</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-0">
+                  <div
+                    ref={essayRef}
+                    className="space-y-0 select-text cursor-text"
+                    onMouseUp={handleMouseUp}
+                  >
                     {paragraphData.map((para) => {
                       const paraIssues = paragraphIssueMap.get(para.index) ?? [];
+                      const paraChanges = paragraphChangeMap.get(para.index) ?? [];
                       const isEmpty = para.text.trim() === '';
+                      const segments = buildParagraphSegments(para.text, para.start, paraIssues, paraChanges);
                       return (
                         <div key={para.index} className="flex gap-2 group/para min-h-[1.5em]">
                           {/* Paragraph text */}
-                          <div className="flex-1 text-sm leading-relaxed text-foreground">
+                          <div
+                            className="flex-1 text-sm leading-relaxed text-foreground"
+                            data-para-start={para.start}
+                            data-para-index={para.index}
+                          >
                             {isEmpty
                               ? <span>&nbsp;</span>
-                              : renderParagraphContent(para.text, para.start, paraIssues)
+                              : segments.map((seg, i) => renderSegment(seg, i))
                             }
                           </div>
-                          {/* Margin icons */}
+                          {/* Margin icons for AI issues */}
                           <div className="w-6 shrink-0 flex flex-col items-center gap-0.5 pt-0.5">
                             {paraIssues.map((issue) => (
                               <button
@@ -710,7 +933,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
             </ScrollArea>
           </div>
 
-          {/* ── Right panel: Comments + Feedback draft ── */}
+          {/* ── Right panel: Comments + Track Changes + Feedback draft ── */}
           <div className="w-[320px] shrink-0 flex flex-col">
 
             {/* AI Comments */}
@@ -785,8 +1008,40 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
               </ScrollArea>
             </div>
 
+            {/* Track Changes */}
+            <div className="border-b shrink-0">
+              <div className="px-4 py-2 border-b bg-muted/30">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Strikethrough className="h-3.5 w-3.5" />
+                  Track Changes ({trackedChanges.length})
+                </p>
+              </div>
+              {trackedChanges.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3 px-4">
+                  Select text in the essay to suggest a replacement
+                </p>
+              ) : (
+                <div className="p-3 space-y-1.5 max-h-40 overflow-y-auto">
+                  {trackedChanges.map(change => (
+                    <div key={change.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 group/tc text-xs">
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <del className="text-red-500 line-through block truncate">{change.originalText}</del>
+                        <ins className="text-green-700 no-underline block truncate font-medium">{change.suggestedText}</ins>
+                      </div>
+                      <button
+                        className="opacity-0 group-hover/tc:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0 mt-1"
+                        onClick={() => removeTrackedChange(change.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Feedback Draft */}
-            <div className="h-[45%] flex flex-col min-h-0">
+            <div className="h-[35%] flex flex-col min-h-0">
               <div className="px-4 py-2 border-b bg-muted/30 shrink-0">
                 <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Pencil className="h-3.5 w-3.5" />
@@ -844,6 +1099,53 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
             </div>
           </div>
         </div>
+
+        {/* ── Track Changes Popover ── */}
+        {pendingSelection && (
+          <div
+            ref={popoverRef}
+            className="fixed z-[200] bg-white border border-border rounded-xl shadow-2xl p-3 w-72"
+            style={{
+              top: Math.max(8, pendingSelection.rect.top - 140),
+              left: Math.min(pendingSelection.rect.left, window.innerWidth - 300),
+            }}
+          >
+            <p className="text-xs text-muted-foreground mb-1">Replace selected text:</p>
+            <p className="text-xs font-medium text-red-600 line-through mb-2 truncate">
+              "{pendingSelection.selectedText}"
+            </p>
+            <input
+              autoFocus
+              className="w-full text-sm border border-border rounded-lg px-2.5 py-1.5 mb-2 focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+              placeholder="Type your suggestion..."
+              value={suggestionInput}
+              onChange={(e) => setSuggestionInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && suggestionInput.trim()) applyTrackedChange();
+                if (e.key === 'Escape') setPendingSelection(null);
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 h-7 text-xs"
+                onClick={applyTrackedChange}
+                disabled={!suggestionInput.trim()}
+              >
+                Apply Change
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setPendingSelection(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
       </DialogContent>
     </Dialog>
   );

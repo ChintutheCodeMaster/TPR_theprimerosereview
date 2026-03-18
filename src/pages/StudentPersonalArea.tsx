@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useStudentPersonalArea, type EssayFeedback, type AnalysisIssue } from "@/hooks/Usestudentpersonalarea";
+import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/Usestudentpersonalarea";
+import type { TrackedChange } from "@/components/EssayFeedbackModal";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, GraduationCap } from "lucide-react";
 import { useApplications } from "@/hooks/useApplications";
@@ -26,6 +27,7 @@ import {
   TrendingUp,
   MessageCircle,
   Loader2,
+  Strikethrough,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -85,19 +87,9 @@ const StudentPersonalArea = () => {
     ? getFeedbackForEssay(selectedEssay.essay_title)
     : [];
 
-  const [hoveredFeedbackId, setHoveredFeedbackId] = useState<string | null>(null);
-  const feedbackCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // Scroll feedback card into view when a margin icon is hovered
-  useEffect(() => {
-    if (hoveredFeedbackId && feedbackCardRefs.current[hoveredFeedbackId]) {
-      feedbackCardRefs.current[hoveredFeedbackId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [hoveredFeedbackId]);
-
-  // Flatten all issues from all feedback entries for this essay
-  const allIssues = useMemo((): AnalysisIssue[] => {
-    return essayFeedback.flatMap(fb => fb.ai_analysis?.issues ?? []);
+  // Collect all tracked changes from sent feedback for this essay
+  const trackedChanges = useMemo((): TrackedChange[] => {
+    return essayFeedback.flatMap(fb => fb.track_changes ?? []);
   }, [essayFeedback]);
 
   // Split essay into paragraphs with offsets
@@ -113,52 +105,42 @@ const StudentPersonalArea = () => {
     });
   }, [selectedEssay?.essay_content]);
 
-  // Map paragraph → issues in that paragraph
-  const paragraphIssueMap = useMemo(() => {
-    const map = new Map<number, AnalysisIssue[]>();
-    for (const issue of allIssues) {
+  // Map paragraph index → tracked changes in that paragraph
+  const paragraphChangeMap = useMemo(() => {
+    const map = new Map<number, TrackedChange[]>();
+    for (const change of trackedChanges) {
       for (const para of paragraphData) {
-        if (issue.startIndex >= para.start && issue.startIndex <= para.end) {
-          map.set(para.index, [...(map.get(para.index) ?? []), issue]);
+        if (change.startIndex >= para.start && change.startIndex <= para.end) {
+          map.set(para.index, [...(map.get(para.index) ?? []), change]);
           break;
         }
       }
     }
     return map;
-  }, [allIssues, paragraphData]);
+  }, [trackedChanges, paragraphData]);
 
-  // Render a paragraph with inline highlights
-  const renderParagraph = (paraText: string, paraStart: number, paraIssues: AnalysisIssue[]) => {
-    if (!paraIssues.length) return <span>{paraText}</span>;
+  // Render a paragraph with tracked changes inline
+  const renderParagraph = (paraText: string, paraStart: number, paraChanges: TrackedChange[]) => {
+    if (!paraChanges.length) return <span>{paraText}</span>;
     const segments: JSX.Element[] = [];
     let lastIdx = 0;
-    const adjusted = paraIssues
-      .map(issue => ({
-        issue,
-        relStart: Math.max(0, issue.startIndex - paraStart),
-        relEnd: Math.min(paraText.length, issue.endIndex - paraStart),
+    const sorted = [...paraChanges]
+      .map(c => ({
+        change: c,
+        relStart: Math.max(0, c.startIndex - paraStart),
+        relEnd: Math.min(paraText.length, c.endIndex - paraStart),
       }))
       .filter(a => a.relStart < a.relEnd)
       .sort((a, b) => a.relStart - b.relStart);
 
-    for (const { issue, relStart, relEnd } of adjusted) {
+    for (const { change, relStart, relEnd } of sorted) {
+      if (relStart < lastIdx) continue;
       if (relStart > lastIdx)
-        segments.push(<span key={`pre-${issue.id}`}>{paraText.slice(lastIdx, relStart)}</span>);
-      const isActive = hoveredFeedbackId === issue.id;
+        segments.push(<span key={`pre-${change.id}`}>{paraText.slice(lastIdx, relStart)}</span>);
       segments.push(
-        <span
-          key={`hl-${issue.id}`}
-          className="cursor-pointer px-0.5 rounded transition-all"
-          style={{
-            backgroundColor: `${issue.color}${isActive ? '55' : '25'}`,
-            borderBottom: `2px solid ${issue.color}`,
-            outline: isActive ? `2px solid ${issue.color}` : undefined,
-            outlineOffset: '1px',
-          }}
-          onMouseEnter={() => setHoveredFeedbackId(issue.id)}
-          onMouseLeave={() => setHoveredFeedbackId(null)}
-        >
-          {paraText.slice(relStart, relEnd)}
+        <span key={`tc-${change.id}`} className="inline">
+          <del className="text-red-500 bg-red-50 line-through px-0.5 rounded-sm">{paraText.slice(relStart, relEnd)}</del>
+          <ins className="text-green-700 bg-green-50 no-underline px-0.5 rounded-sm font-medium ml-0.5">{change.suggestedText}</ins>
         </span>
       );
       lastIdx = relEnd;
@@ -575,7 +557,7 @@ const StudentPersonalArea = () => {
               </div>
             )}
 
-            {/* ── Center: essay with highlights + margin icons ── */}
+            {/* ── Center: essay with tracked changes ── */}
             <div className="flex-1 flex flex-col min-w-0 border-r">
               {selectedEssay?.essay_prompt && (
                 <div className="px-5 py-3 border-b bg-muted/30 shrink-0">
@@ -583,10 +565,12 @@ const StudentPersonalArea = () => {
                   <p className="text-xs mt-0.5">{selectedEssay.essay_prompt}</p>
                 </div>
               )}
-              {allIssues.length > 0 && (
+              {trackedChanges.length > 0 && (
                 <div className="px-5 py-2 border-b bg-muted/20 shrink-0">
                   <p className="text-xs text-muted-foreground">
-                    Hover highlighted text or 💬 icons to see your counselor's comments
+                    Your counselor suggested edits are shown inline —{" "}
+                    <del className="text-red-500">original</del>{" "}
+                    <ins className="text-green-700 no-underline font-medium">replacement</ins>
                   </p>
                 </div>
               )}
@@ -595,29 +579,14 @@ const StudentPersonalArea = () => {
                   {selectedEssay?.essay_content ? (
                     <div className="space-y-0">
                       {paragraphData.map((para) => {
-                        const paraIssues = paragraphIssueMap.get(para.index) ?? [];
+                        const paraChanges = paragraphChangeMap.get(para.index) ?? [];
                         return (
-                          <div key={para.index} className="flex gap-2 group/para min-h-[1.5em]">
-                            <div className="flex-1 text-sm leading-relaxed text-foreground">
+                          <div key={para.index} className="min-h-[1.5em]">
+                            <div className="text-sm leading-relaxed text-foreground">
                               {para.text.trim() === ''
                                 ? <span>&nbsp;</span>
-                                : renderParagraph(para.text, para.start, paraIssues)
+                                : renderParagraph(para.text, para.start, paraChanges)
                               }
-                            </div>
-                            {/* Margin icons */}
-                            <div className="w-6 shrink-0 flex flex-col items-center gap-0.5 pt-0.5">
-                              {paraIssues.map((issue) => (
-                                <button
-                                  key={issue.id}
-                                  className="opacity-0 group-hover/para:opacity-100 transition-opacity rounded-full p-0.5 hover:bg-muted"
-                                  style={{ color: issue.color }}
-                                  onMouseEnter={() => setHoveredFeedbackId(issue.id)}
-                                  onMouseLeave={() => setHoveredFeedbackId(null)}
-                                  title={issue.problemType}
-                                >
-                                  <MessageCircle className="h-3.5 w-3.5 fill-current" />
-                                </button>
-                              ))}
                             </div>
                           </div>
                         );
@@ -652,6 +621,8 @@ const StudentPersonalArea = () => {
                   ) : (
                     essayFeedback.map((fb) => (
                       <div key={fb.id} className="space-y-2">
+
+                        {/* Personal note */}
                         {fb.personal_message && (
                           <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
                             <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
@@ -659,58 +630,34 @@ const StudentPersonalArea = () => {
                           </div>
                         )}
 
-                        {/* AI issue cards — connected to highlights */}
-                        {allIssues.map((issue) => {
-                          const isActive = hoveredFeedbackId === issue.id;
-                          return (
-                            <div
-                              key={issue.id}
-                              ref={el => { feedbackCardRefs.current[issue.id] = el; }}
-                              className="rounded-xl border p-3 space-y-1.5 transition-all cursor-default"
-                              style={{
-                                borderColor: isActive ? issue.color : undefined,
-                                backgroundColor: isActive ? `${issue.color}12` : undefined,
-                                boxShadow: isActive ? `0 0 0 2px ${issue.color}40` : undefined,
-                              }}
-                              onMouseEnter={() => setHoveredFeedbackId(issue.id)}
-                              onMouseLeave={() => setHoveredFeedbackId(null)}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: issue.color }} />
-                                  <span className="text-xs font-semibold truncate">{issue.criterionName}</span>
-                                </div>
-                                <Badge
-                                  variant={issue.severity === 'high' ? 'destructive' : issue.severity === 'medium' ? 'secondary' : 'outline'}
-                                  className="text-[10px] shrink-0"
-                                >
-                                  {issue.severity}
-                                </Badge>
+                        {/* Tracked changes list */}
+                        {fb.track_changes?.length > 0 && (
+                          <div className="rounded-xl border p-3 space-y-2 bg-muted/20">
+                            <p className="text-xs font-semibold flex items-center gap-1.5">
+                              <Strikethrough className="h-3.5 w-3.5" />
+                              Suggested Edits ({fb.track_changes.length})
+                            </p>
+                            {fb.track_changes.map((change) => (
+                              <div key={change.id} className="space-y-0.5 text-xs border-t pt-1.5 border-border/50">
+                                <del className="text-red-500 line-through block">{change.originalText}</del>
+                                <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
                               </div>
-                              <p className="text-xs font-medium text-foreground">{issue.problemType}</p>
-                              <p className="text-xs text-muted-foreground leading-snug">{issue.problemDescription}</p>
-                              <div className="pt-1.5 border-t border-border">
-                                <p className="text-xs text-primary leading-snug">💡 {issue.recommendation}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            ))}
+                          </div>
+                        )}
 
-                        {/* Manual/general feedback items without a position */}
-                        {fb.feedback_items
-                          .filter(item => !allIssues.some(iss => iss.id === item.id))
-                          .map((item, idx) => (
-                            <div
-                              key={item.id ?? idx}
-                              className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5"
-                            >
-                              {item.criterionName && (
-                                <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
-                              )}
-                              <p className="text-xs leading-snug">{item.text}</p>
-                            </div>
-                          ))
-                        }
+                        {/* Counselor-added feedback items only */}
+                        {fb.feedback_items.map((item, idx) => (
+                          <div
+                            key={item.id ?? idx}
+                            className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5"
+                          >
+                            {item.criterionName && (
+                              <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
+                            )}
+                            <p className="text-xs leading-snug">{item.text}</p>
+                          </div>
+                        ))}
 
                         <p className="text-[10px] text-muted-foreground text-right pt-1">
                           Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}

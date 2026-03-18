@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -7,15 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Star, 
-  MessageSquare, 
-  Clock, 
+import {
+  Star,
+  MessageSquare,
+  Clock,
   CheckCircle,
   Eye,
-  Loader2
+  Loader2,
+  Strikethrough,
 } from "lucide-react";
 import { format } from "date-fns";
+import type { TrackedChange } from "@/components/EssayFeedbackModal";
 
 interface FeedbackItem {
   id: string;
@@ -46,6 +48,7 @@ interface EssayFeedback {
   ai_analysis: AnalysisResult | null;
   feedback_items: FeedbackItem[];
   personal_message: string | null;
+  track_changes: TrackedChange[];
   status: string;
   created_at: string;
   sent_at: string | null;
@@ -98,6 +101,7 @@ export const StudentEssayFeedback = () => {
         ai_analysis: item.ai_analysis as unknown as AnalysisResult | null,
         feedback_items: (item.feedback_items as unknown as FeedbackItem[]) || [],
         personal_message: item.personal_message,
+        track_changes: (item.track_changes as unknown as TrackedChange[]) || [],
         status: item.status,
         created_at: item.created_at,
         sent_at: item.sent_at,
@@ -279,6 +283,49 @@ export const StudentEssayFeedback = () => {
                           </Card>
                         )}
 
+                        {/* Tracked Changes */}
+                        {feedback.track_changes?.length > 0 && (
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm flex items-center gap-1.5">
+                                <Strikethrough className="h-4 w-4" />
+                                Suggested Edits ({feedback.track_changes.length})
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <p className="text-xs text-muted-foreground mb-3">
+                                Your counselor suggested the following changes to your essay:
+                              </p>
+                              {/* Essay with inline tracked changes */}
+                              <div className="p-3 bg-muted/30 rounded-lg text-sm leading-relaxed">
+                                {(() => {
+                                  const content = feedback.essay_content;
+                                  const changes = [...feedback.track_changes].sort((a, b) => a.startIndex - b.startIndex);
+                                  const parts: React.ReactNode[] = [];
+                                  let lastIdx = 0;
+                                  for (const change of changes) {
+                                    if (change.startIndex < lastIdx) continue;
+                                    if (change.startIndex > lastIdx) {
+                                      parts.push(<span key={`t-${lastIdx}`}>{content.slice(lastIdx, change.startIndex)}</span>);
+                                    }
+                                    parts.push(
+                                      <span key={`c-${change.id}`} className="inline">
+                                        <del className="text-red-500 bg-red-50 line-through px-0.5 rounded-sm">{change.originalText}</del>
+                                        <ins className="text-green-700 bg-green-50 no-underline px-0.5 rounded-sm font-medium ml-0.5">{change.suggestedText}</ins>
+                                      </span>
+                                    );
+                                    lastIdx = change.endIndex;
+                                  }
+                                  if (lastIdx < content.length) {
+                                    parts.push(<span key="t-end">{content.slice(lastIdx)}</span>);
+                                  }
+                                  return <p className="whitespace-pre-wrap">{parts}</p>;
+                                })()}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                         {/* Feedback Items */}
                         <Card>
                           <CardHeader className="pb-3">
@@ -289,8 +336,8 @@ export const StudentEssayFeedback = () => {
                               <div key={item.id || index} className="p-3 rounded-lg border">
                                 <div className="flex items-start gap-2">
                                   {item.color && (
-                                    <div 
-                                      className="w-3 h-3 rounded-full mt-1 flex-shrink-0" 
+                                    <div
+                                      className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
                                       style={{ backgroundColor: item.color }}
                                     />
                                   )}

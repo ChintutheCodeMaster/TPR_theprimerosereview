@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   MessageCircle,
   Clock,
   RotateCcw,
+  Strikethrough,
+  Eye,
+  Pencil,
 } from "lucide-react";
 
 const countWords = (text: string) =>
@@ -30,6 +33,24 @@ const getStatusColor = (status: string) => {
   }
 };
 
+interface PendingChange {
+  id: string;
+  originalText: string;
+  suggestedText: string;
+  startIndex: number;
+  endIndex: number;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+interface AnnotatedFeedback {
+  id: string;
+  text: string;
+  color?: string;
+  criterionName?: string;
+  startIndex: number;
+  endIndex: number;
+}
+
 const EditEssay = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,12 +61,18 @@ const EditEssay = () => {
   const [content, setContent] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'review'>('edit');
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
 
-  // Populate editor once essay loads
   useEffect(() => {
     if (essay) {
       setContent(essay.essay_content);
       setWordCount(countWords(essay.essay_content));
+      const raw = (essay.track_changes as Array<{
+        id: string; originalText: string; suggestedText: string;
+        startIndex: number; endIndex: number;
+      }> | null) ?? [];
+      setPendingChanges(raw.map(c => ({ ...c, status: 'pending' as const })));
     }
   }, [essay]);
 
@@ -53,6 +80,154 @@ const EditEssay = () => {
     setContent(value);
     setWordCount(countWords(value));
     setHasChanges(value !== essay?.essay_content);
+  };
+
+  // Feedback items that have position data (from AI issues the counselor explicitly added)
+  const annotatedFeedback: AnnotatedFeedback[] = useMemo(() => {
+    if (!essay?.feedback_items) return [];
+    return (essay.feedback_items as any[])
+      .filter(item => typeof item.startIndex === 'number' && typeof item.endIndex === 'number')
+      .map(item => ({
+        id: item.id,
+        text: item.text,
+        color: item.color,
+        criterionName: item.criterionName,
+        startIndex: item.startIndex,
+        endIndex: item.endIndex,
+      }));
+  }, [essay?.feedback_items]);
+
+  const hasReviewContent = pendingChanges.length > 0 || annotatedFeedback.length > 0;
+  const acceptedCount = pendingChanges.filter(c => c.status === 'accepted').length;
+  const rejectedCount = pendingChanges.filter(c => c.status === 'rejected').length;
+  const pendingCount  = pendingChanges.filter(c => c.status === 'pending').length;
+
+  const acceptChange = (id: string) =>
+    setPendingChanges(prev => prev.map(c => c.id === id ? { ...c, status: 'accepted' } : c));
+
+  const rejectChange = (id: string) =>
+    setPendingChanges(prev => prev.map(c => c.id === id ? { ...c, status: 'rejected' } : c));
+
+  const undoChange = (id: string) =>
+    setPendingChanges(prev => prev.map(c => c.id === id ? { ...c, status: 'pending' } : c));
+
+  const acceptAll = () =>
+    setPendingChanges(prev => prev.map(c => c.status === 'pending' ? { ...c, status: 'accepted' } : c));
+
+  const rejectAll = () =>
+    setPendingChanges(prev => prev.map(c => c.status === 'pending' ? { ...c, status: 'rejected' } : c));
+
+  // Apply accepted changes to editor content (from end→start to keep indices valid)
+  const applyAcceptedChanges = () => {
+    const accepted = pendingChanges.filter(c => c.status === 'accepted');
+    if (!accepted.length) return;
+    const sorted = [...accepted].sort((a, b) => b.startIndex - a.startIndex);
+    let newContent = essay!.essay_content;
+    for (const change of sorted) {
+      newContent =
+        newContent.slice(0, change.startIndex) +
+        change.suggestedText +
+        newContent.slice(change.endIndex);
+    }
+    setContent(newContent);
+    setWordCount(countWords(newContent));
+    setHasChanges(newContent !== essay!.essay_content);
+    setPendingChanges(prev => prev.filter(c => c.status !== 'accepted'));
+    setViewMode('edit');
+  };
+
+  // Render essay text with inline track-change markups and feedback highlights
+  const renderReview = (): React.ReactNode[] => {
+    const baseText = essay!.essay_content;
+
+    type Ann =
+      | { type: 'change';   data: PendingChange;      start: number; end: number }
+      | { type: 'feedback'; data: AnnotatedFeedback;  start: number; end: number };
+
+    const anns: Ann[] = [
+      ...pendingChanges
+        .filter(c => c.status !== 'rejected')
+        .map(c => ({ type: 'change' as const, data: c, start: c.startIndex, end: c.endIndex })),
+      ...annotatedFeedback
+        .map(f => ({ type: 'feedback' as const, data: f, start: f.startIndex, end: f.endIndex })),
+    ].sort((a, b) => a.start - b.start);
+
+    const parts: React.ReactNode[] = [];
+    let pos = 0;
+
+    for (const ann of anns) {
+      if (ann.start < pos) continue; // skip overlaps
+
+      if (ann.start > pos) {
+        parts.push(<span key={`p-${pos}`}>{baseText.slice(pos, ann.start)}</span>);
+      }
+
+      if (ann.type === 'change') {
+        const c = ann.data;
+        if (c.status === 'pending') {
+          parts.push(
+            <span key={`ch-${c.id}`} className="inline">
+              <del className="text-red-500 bg-red-50 line-through px-0.5 rounded-sm">{c.originalText}</del>
+              <ins className="text-green-700 bg-green-50 no-underline px-0.5 rounded-sm font-medium ml-0.5">{c.suggestedText}</ins>
+              <span className="inline-flex gap-0.5 ml-1 align-middle">
+                <button
+                  onClick={() => acceptChange(c.id)}
+                  className="text-[10px] leading-none bg-green-500 text-white px-1.5 py-0.5 rounded hover:bg-green-600 font-medium"
+                  title="Accept change"
+                >✓</button>
+                <button
+                  onClick={() => rejectChange(c.id)}
+                  className="text-[10px] leading-none bg-red-400 text-white px-1.5 py-0.5 rounded hover:bg-red-500 font-medium"
+                  title="Reject change"
+                >✗</button>
+              </span>
+            </span>
+          );
+        } else if (c.status === 'accepted') {
+          parts.push(
+            <span key={`ch-${c.id}`} className="inline">
+              <ins className="text-green-700 bg-green-100 no-underline px-0.5 rounded-sm font-medium">{c.suggestedText}</ins>
+              <button
+                onClick={() => undoChange(c.id)}
+                className="text-[10px] leading-none bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded hover:bg-gray-300 ml-0.5 align-middle"
+                title="Undo accept"
+              >↩</button>
+            </span>
+          );
+        }
+      } else {
+        const f = ann.data;
+        const color = f.color || '#8b5cf6';
+        parts.push(
+          <span
+            key={`fb-${f.id}`}
+            className="relative group cursor-help"
+            style={{
+              backgroundColor: color + '22',
+              borderBottom: `2px solid ${color}`,
+              borderRadius: '2px',
+            }}
+          >
+            {baseText.slice(ann.start, ann.end)}
+            {/* Hover tooltip */}
+            <span className="absolute bottom-full left-0 z-20 hidden group-hover:block w-72 p-3 bg-popover border border-border shadow-lg rounded-lg text-xs leading-relaxed pointer-events-none mb-1">
+              {f.criterionName && (
+                <span className="block font-semibold mb-1" style={{ color }}>{f.criterionName}</span>
+              )}
+              {f.text}
+            </span>
+          </span>
+        );
+      }
+
+      pos = ann.end;
+    }
+
+    if (pos < baseText.length) {
+      parts.push(<span key="p-end">{baseText.slice(pos)}</span>);
+    }
+
+    return parts;
   };
 
   // ── Loading ──────────────────────────────────────────────
@@ -146,16 +321,87 @@ const EditEssay = () => {
               </Card>
             )}
 
-            <Card className="border-2 focus-within:border-primary/50 transition-colors">
-              <CardContent className="p-0">
-                <Textarea
-                  value={content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  className="min-h-[600px] resize-none border-0 focus-visible:ring-0 text-base leading-relaxed p-6 font-serif"
-                  placeholder="Start writing your essay..."
-                />
-              </CardContent>
-            </Card>
+            {/* Edit / Review toggle */}
+            {hasReviewContent && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === 'edit' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('edit')}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Edit
+                </Button>
+                <Button
+                  variant={viewMode === 'review' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('review')}
+                >
+                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                  Review Changes
+                  {pendingCount > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 px-1">
+                      {pendingCount}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {viewMode === 'review' ? (
+              <Card className="border-2">
+                <CardContent className="p-0">
+                  {/* Status bar */}
+                  {pendingChanges.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-muted/30 text-xs">
+                      <span className="text-green-600 font-medium">{acceptedCount} accepted</span>
+                      <span className="text-red-500 font-medium">{rejectedCount} rejected</span>
+                      <span className="text-muted-foreground">{pendingCount} pending</span>
+                      {pendingCount > 0 && (
+                        <>
+                          <button
+                            onClick={acceptAll}
+                            className="text-green-600 hover:underline font-medium"
+                          >
+                            Accept all
+                          </button>
+                          <button
+                            onClick={rejectAll}
+                            className="text-red-500 hover:underline font-medium"
+                          >
+                            Reject all
+                          </button>
+                        </>
+                      )}
+                      {acceptedCount > 0 && (
+                        <Button
+                          size="sm"
+                          className="ml-auto h-6 text-xs"
+                          onClick={applyAcceptedChanges}
+                        >
+                          Apply {acceptedCount} to editor →
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {/* Inline essay with annotations */}
+                  <div className="min-h-[600px] text-base leading-relaxed p-6 font-serif whitespace-pre-wrap overflow-visible">
+                    {renderReview()}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-2 focus-within:border-primary/50 transition-colors">
+                <CardContent className="p-0">
+                  <Textarea
+                    value={content}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className="min-h-[600px] resize-none border-0 focus-visible:ring-0 text-base leading-relaxed p-6 font-serif"
+                    placeholder="Start writing your essay..."
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
               <span>{wordCount} words</span>
@@ -203,6 +449,39 @@ const EditEssay = () => {
               </CardContent>
             </Card>
 
+            {/* Suggested edits summary */}
+            {pendingChanges.length > 0 && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <Strikethrough className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium text-foreground">
+                      Suggested Edits
+                    </p>
+                    <Badge variant="secondary" className="text-xs ml-auto">
+                      {pendingCount} pending
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your counselor suggested {pendingChanges.length}{" "}
+                    {pendingChanges.length === 1 ? "change" : "changes"}. Switch
+                    to Review mode to accept or reject them inline.
+                  </p>
+                  {viewMode !== 'review' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setViewMode('review')}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      Review Changes
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Counselor feedback */}
             {hasFeedback ? (
               <Card>
@@ -244,6 +523,14 @@ const EditEssay = () => {
                               <span className="text-[10px] text-muted-foreground font-medium">
                                 {item.criterionName}
                               </span>
+                            )}
+                            {typeof item.startIndex === 'number' && (
+                              <button
+                                className="text-[10px] text-primary ml-auto hover:underline"
+                                onClick={() => setViewMode('review')}
+                              >
+                                View in essay →
+                              </button>
                             )}
                           </div>
                         )}

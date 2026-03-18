@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import type { TrackedChange } from "@/components/EssayFeedbackModal";
 
 type EssayFeedbackRow = Database["public"]["Tables"]["essay_feedback"]["Row"];
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
@@ -53,6 +54,7 @@ export interface EssayFeedback {
   ai_analysis: AnalysisResult | null;
   feedback_items: FeedbackItem[];
   personal_message: string | null;
+  track_changes: TrackedChange[];
   status: string;
   created_at: string;
   sent_at: string | null;
@@ -91,6 +93,7 @@ export const useStudentPersonalArea = () => {
         ai_analysis: row.ai_analysis as unknown as AnalysisResult | null,
         feedback_items: (row.feedback_items as unknown as FeedbackItem[]) ?? [],
         personal_message: row.personal_message,
+        track_changes: (row.track_changes as unknown as TrackedChange[]) ?? [],
         status: row.status,
         created_at: row.created_at,
         sent_at: row.sent_at,
@@ -126,6 +129,7 @@ export const useStudentPersonalArea = () => {
         ai_analysis: row.ai_analysis as unknown as AnalysisResult | null,
         feedback_items: (row.feedback_items as unknown as FeedbackItem[]) ?? [],
         personal_message: row.personal_message,
+        track_changes: (row.track_changes as unknown as TrackedChange[]) ?? [],
         status: row.status,
         created_at: row.created_at,
         sent_at: row.sent_at,
