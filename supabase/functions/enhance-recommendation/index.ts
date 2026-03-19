@@ -13,9 +13,9 @@ serve(async (req) => {
   try {
     const { studentAnswers, counselorNotes, teacherAnswers, studentName, refereeName, refereeRole } = await req.json();
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY2 = Deno.env.get("ANTHROPIC_API_KEY2");
+    if (!ANTHROPIC_API_KEY2) {
+      throw new Error("ANTHROPIC_API_KEY2 is not configured");
     }
 
     const systemPrompt = `You are the world's best college counselor and recommendation letter writer. 
@@ -56,18 +56,20 @@ ${counselorNotes || 'None'}
 
 Write a professional recommendation letter that captures the essence of this student's journey and potential.`;
 
-    console.log("Sending request to Lovable AI...");
+    console.log("Sending request to Anthropic Claude...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY2,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
@@ -94,7 +96,7 @@ Write a professional recommendation letter that captures the essence of this stu
     }
 
     const data = await response.json();
-    const generatedLetter = data.choices?.[0]?.message?.content;
+    const generatedLetter = data.content?.[0]?.text;
 
     if (!generatedLetter) {
       throw new Error("No content generated");
