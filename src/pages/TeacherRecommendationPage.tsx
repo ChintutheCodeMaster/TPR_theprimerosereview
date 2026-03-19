@@ -53,6 +53,9 @@ const TeacherRecommendationPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [introExpanded, setIntroExpanded] = useState(false);
   const [teacherPrompt, setTeacherPrompt] = useState("");
+  const [teacherQ1, setTeacherQ1] = useState("");
+  const [teacherQ2, setTeacherQ2] = useState("");
+  const [teacherQ3, setTeacherQ3] = useState("");
 
   useEffect(() => {
     if (token) fetchRec();
@@ -90,6 +93,11 @@ const TeacherRecommendationPage = () => {
           refereeName: rec.referee_name,
           refereeRole: rec.referee_role ?? "",
           counselorNotes: teacherPrompt,
+          teacherAnswers: {
+            proudMoment: teacherQ1,
+            classHighlight: teacherQ2,
+            anythingElse: teacherQ3,
+          },
           studentAnswers: {
             relationshipDuration: rec.relationship_duration,
             relationshipCapacity: rec.relationship_capacity,
@@ -437,20 +445,69 @@ const TeacherRecommendationPage = () => {
               {rec?.referee_role ? ` (${rec.referee_role})` : ""}. Edit freely before submitting.
             </p>
 
+            {/* Teacher questions */}
+            <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                A few quick questions to personalise the draft
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Can you give us an example of how — in an extracurricular, your field, or the classroom — this student made you proud?{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <Textarea
+                  value={teacherQ1}
+                  onChange={e => setTeacherQ1(e.target.value)}
+                  placeholder="e.g. During the robotics competition they stayed late every night for two weeks and rallied the whole team when morale was low…"
+                  rows={3}
+                  className="resize-none border-indigo-200 focus:border-indigo-400 focus:ring-indigo-400 text-sm bg-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Describe a situation in class or at school you would like to highlight about this student.{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <Textarea
+                  value={teacherQ2}
+                  onChange={e => setTeacherQ2(e.target.value)}
+                  placeholder="e.g. They asked the most thoughtful question during our unit on climate policy — one that even made me rethink my own perspective…"
+                  rows={3}
+                  className="resize-none border-indigo-200 focus:border-indigo-400 focus:ring-indigo-400 text-sm bg-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Anything else about this student you would like to include?{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <Textarea
+                  value={teacherQ3}
+                  onChange={e => setTeacherQ3(e.target.value)}
+                  placeholder="e.g. They volunteer at the local shelter on weekends and have a remarkable ability to connect with people from all walks of life…"
+                  rows={3}
+                  className="resize-none border-indigo-200 focus:border-indigo-400 focus:ring-indigo-400 text-sm bg-white"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Your notes for the AI{" "}
+                Additional notes for the AI{" "}
                 <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <Textarea
                 value={teacherPrompt}
                 onChange={e => setTeacherPrompt(e.target.value)}
                 placeholder="e.g. Focus on their leadership during the science fair, mention their curiosity and how they handled setbacks…"
-                rows={4}
+                rows={3}
                 className="resize-none border-violet-200 focus:border-violet-400 focus:ring-violet-400 text-sm bg-white"
               />
               <p className="text-xs text-gray-400">
-                Add anything specific you'd like highlighted. Combined with the student's answers above.
+                Any extra direction for the AI — combined with your answers above and the student's context.
               </p>
             </div>
 

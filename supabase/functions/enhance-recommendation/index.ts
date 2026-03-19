@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { studentAnswers, counselorNotes, studentName, refereeName, refereeRole } = await req.json();
+    const { studentAnswers, counselorNotes, teacherAnswers, studentName, refereeName, refereeRole } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -46,7 +46,12 @@ STUDENT'S ANSWERS:
 - Key Strengths: ${studentAnswers.strengths?.join(', ') || 'Not provided'}
 - Personal Notes: ${studentAnswers.personalNotes || 'Not provided'}
 
-COUNSELOR'S ADDITIONAL NOTES:
+TEACHER'S OWN OBSERVATIONS:
+- A moment that made them proud of the student: ${teacherAnswers?.proudMoment || 'Not provided'}
+- Situation in class or school to highlight: ${teacherAnswers?.classHighlight || 'Not provided'}
+- Anything else to include: ${teacherAnswers?.anythingElse || 'Not provided'}
+
+ADDITIONAL NOTES FROM THE TEACHER:
 ${counselorNotes || 'None'}
 
 Write a professional recommendation letter that captures the essence of this student's journey and potential.`;
