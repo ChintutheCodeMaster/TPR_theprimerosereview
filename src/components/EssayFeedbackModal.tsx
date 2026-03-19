@@ -590,11 +590,19 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     return null;
   };
 
-  // ── History Panel ──────────────────────────────────────────────
-  if (showHistory) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[700px] h-[80vh] p-0 flex flex-col">
+  // ── Single Dialog — content swaps based on view state ──────────
+  const dialogSizeClass = showHistory
+    ? "max-w-[700px] h-[80vh] p-0 flex flex-col"
+    : showPreview
+    ? "max-w-[800px] h-[80vh] p-0 flex flex-col"
+    : "max-w-[95vw] w-[1400px] h-[90vh] p-0 flex flex-col";
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className={dialogSizeClass}>
+
+        {/* ── History view ── */}
+        {showHistory && (<>
           <DialogHeader className="p-6 pb-0">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)}>
@@ -657,16 +665,10 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
               </div>
             )}
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+        </>)}
 
-  // ── Preview Mode ───────────────────────────────────────────────
-  if (showPreview) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[800px] h-[80vh] p-0 flex flex-col">
+        {/* ── Preview view ── */}
+        {showPreview && (<>
           <DialogHeader className="p-6 pb-0">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
@@ -775,15 +777,10 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+        </>)}
 
-  // ── Main Editor ────────────────────────────────────────────────
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 flex flex-col">
+        {/* ── Main Editor view ── */}
+        {!showHistory && !showPreview && (<>
 
         {/* Header */}
         <DialogHeader className="px-6 py-4 border-b shrink-0">
@@ -1146,6 +1143,8 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
             </div>
           </div>
         )}
+
+        </>)}
 
       </DialogContent>
     </Dialog>
