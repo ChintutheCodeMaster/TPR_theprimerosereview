@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
 import {
   ArrowLeft,
@@ -20,16 +19,43 @@ import {
   Loader2,
   CheckCircle,
   Sparkles,
-  RefreshCw,
+  ScanText,
+  MessageSquare,
+  X,
 } from "lucide-react";
 
+const SUPABASE_URL = "https://fkvfngdwblbalrompzdj.supabase.co";
 const WORD_LIMIT_OPTIONS = [250, 500, 650, 750, 1000];
+
+interface CriterionScore {
+  id: string;
+  name: string;
+  score: number;
+  color: string;
+}
+
+interface AnalysisIssue {
+  id: string;
+  criterionName: string;
+  color: string;
+  highlightedText: string;
+  problemType: string;
+  problemDescription: string;
+  recommendation: string;
+  severity: "low" | "medium" | "high";
+}
+
+interface AnalysisResult {
+  overallScore: number;
+  criteria: CriterionScore[];
+  issues: AnalysisIssue[];
+}
 
 const SubmitEssay = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Read slot context from URL params (set by ApplicationDetailModal)
   const slotId        = searchParams.get("slotId");
   const applicationId = searchParams.get("applicationId");
   const slotLabel     = searchParams.get("label");
@@ -38,10 +64,9 @@ const SubmitEssay = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess]       = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [counselorId, setCounselorId]   = useState<string | null>(null);
 
-  // Form fields — pre-fill from slot context if available
+  // Form fields
   const [title, setTitle]               = useState(slotLabel ?? "");
   const [prompt, setPrompt]             = useState(slotPrompt ?? "");
   const [content, setContent]           = useState("");
@@ -56,84 +81,92 @@ const SubmitEssay = () => {
   const effectiveWordLimit = wordLimit ?? (customWordLimit ? parseInt(customWordLimit) : null);
   const isOverLimit        = effectiveWordLimit ? wordCount > effectiveWordLimit : false;
 
-  // Fetch counselor id on mount
+  // Selection-based coaching
+  const [selectedText, setSelectedText]         = useState("");
+  const [selectionFeedback, setSelectionFeedback] = useState<string | null>(null);
+  const [isCoaching, setIsCoaching]             = useState(false);
+
+  // Full essay analysis
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isAnalysing, setIsAnalysing]       = useState(false);
+
   useEffect(() => {
     const fetchCounselor = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { data: anyRole } = await supabase.rpc('get_any_counselor_id');
       if (anyRole) setCounselorId(anyRole);
     };
     fetchCounselor();
   }, []);
 
-  // ── AI Essay Generation ────────────────────────────────────
-//   const handleGenerateEssay = async () => {
-   
-//     if (!prompt.trim()) {
-//       toast.error("Please add an essay prompt first so AI knows what to write");
-//       return;
-//     }
+  // ── Text selection handler ────────────────────────────────
+  const handleSelectionChange = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const text  = el.value.substring(start, end).trim();
+    if (text.length > 20) {
+      setSelectedText(text);
+      setSelectionFeedback(null);
+    } else {
+      setSelectedText("");
+    }
+  };
 
-//     setIsGenerating(true);
-//     try {
-//       const wordTarget = effectiveWordLimit ?? 650;
+  const handleGetCoaching = async () => {
+    if (!selectedText) return;
+    setIsCoaching(true);
+    setSelectionFeedback(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/coach-essay-section`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ selectedText, essayPrompt: prompt }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectionFeedback(data.feedback ?? null);
+      }
+    } catch {
+      toast.error("Couldn't fetch coaching right now. Try again.");
+    } finally {
+      setIsCoaching(false);
+    }
+  };
 
-//       const response = await fetch("https://api.anthropic.com/v1/messages", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//           "x-api-key": ANTHROPIC_KEY,
-//           "anthropic-version": "2023-06-01",
-//           "anthropic-dangerous-direct-browser-access": "true",
-//         },
-//         body: JSON.stringify({
-//           model: "claude-sonnet-4-20250514",
-//           max_tokens: 2000,
-//           system: `You are an expert college admissions essay writer. 
-// You write authentic, personal, and compelling college application essays that sound like a real student — not AI. 
-// Your essays are specific, use vivid details, show genuine reflection, and connect personal experiences to future goals.
-// NEVER use clichés. NEVER start with "In today's world" or similar generic openings.
-// Write in first person. Be specific and authentic.`,
-//           messages: [
-//             {
-//               role: "user",
-//               content: `Write a college application essay based on this prompt:
-
-// "${prompt.trim()}"
-
-// ${title.trim() ? `Essay title/topic: ${title.trim()}` : ""}
-// ${targetSchool.trim() ? `Target school: ${targetSchool.trim()}` : ""}
-// Target word count: approximately ${wordTarget} words.
-
-// Write a complete, polished essay that sounds authentic and personal. 
-// Use a compelling opening, specific details and examples, genuine reflection, and a strong conclusion.
-// Do NOT include any preamble, explanation, or notes — just the essay itself.`,
-//             },
-//           ],
-//         }),
-//       });
-
-//       if (!response.ok) {
-//         const err = await response.json();
-//         throw new Error(err?.error?.message ?? "AI generation failed");
-//       }
-
-//       const data = await response.json();
-//       const generatedText = data.content
-//         .filter((b: any) => b.type === "text")
-//         .map((b: any) => b.text)
-//         .join("\n");
-
-//       setContent(generatedText.trim());
-//       toast.success("Essay draft generated! Review and edit it to make it your own.");
-//     } catch (error: any) {
-//       toast.error(error.message || "Failed to generate essay. Please try again.");
-//     } finally {
-//       setIsGenerating(false);
-//     }
-//   };
+  // ── Full essay analysis ───────────────────────────────────
+  const handleAnalyseEssay = async () => {
+    if (!content.trim()) return;
+    setIsAnalysing(true);
+    setAnalysisResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/analyze-essay`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ essayContent: content, prompt }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalysisResult(data);
+      } else {
+        toast.error("Analysis failed. Please try again.");
+      }
+    } catch {
+      toast.error("Couldn't analyse the essay right now.");
+    } finally {
+      setIsAnalysing(false);
+    }
+  };
 
   // ── Submit ────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,7 +186,6 @@ const SubmitEssay = () => {
         ? `${title.trim()} — ${targetSchool.trim()}`
         : title.trim();
 
-      // Step 1 — Insert essay_feedback row
       const { data: essayData, error: essayError } = await supabase
         .from("essay_feedback")
         .insert({
@@ -169,7 +201,6 @@ const SubmitEssay = () => {
 
       if (essayError) throw essayError;
 
-      // Step 2 — If coming from a slot, link essay back to the slot
       if (slotId && essayData?.id) {
         const { error: slotError } = await supabase
           .from("application_essays")
@@ -180,15 +211,12 @@ const SubmitEssay = () => {
           })
           .eq("id", slotId);
 
-        if (slotError) {
-          console.error("Failed to link essay to slot:", slotError);
-        }
+        if (slotError) console.error("Failed to link essay to slot:", slotError);
       }
 
       setIsSuccess(true);
       toast.success("Essay submitted successfully!");
 
-      // Notify counselor — fire and forget (don't block success state)
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
@@ -196,30 +224,22 @@ const SubmitEssay = () => {
           supabase.from("profiles").select("full_name, email").eq("user_id", counselorId).maybeSingle(),
         ]);
 
-        console.log("[send-new-essay-notification] Profiles fetched", { studentProfile, counselorProfile });
-        console.log("[send-new-essay-notification] Calling edge function...");
-
-        const res = await fetch(
-          "https://fkvfngdwblbalrompzdj.supabase.co/functions/v1/send-new-essay-notification",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-            body: JSON.stringify({
-              counselorEmail: counselorProfile?.email || "no-email@unknown.com",
-              counselorName:  counselorProfile?.full_name || "Counselor",
-              studentName:    studentProfile?.full_name || "Your student",
-              essayLabel:     essayTitle,
-              applicationName: targetSchool.trim() || (slotLabel ?? undefined),
-              appUrl:         window.location.origin,
-            }),
-          }
-        );
-        console.log("[send-new-essay-notification] Done", res.status);
+        await fetch(`${SUPABASE_URL}/functions/v1/send-new-essay-notification`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            counselorEmail:  counselorProfile?.email || "no-email@unknown.com",
+            counselorName:   counselorProfile?.full_name || "Counselor",
+            studentName:     studentProfile?.full_name || "Your student",
+            essayLabel:      essayTitle,
+            applicationName: targetSchool.trim() || (slotLabel ?? undefined),
+            appUrl:          window.location.origin,
+          }),
+        });
       } catch (notifyError) {
-        // Notification failure should never break the submission flow
         console.error("Failed to send essay notification:", notifyError);
       }
     } catch (error: any) {
@@ -229,7 +249,7 @@ const SubmitEssay = () => {
     }
   };
 
-  // ── Success state ──────────────────────────────────────────
+  // ── Success ───────────────────────────────────────────────
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex items-center justify-center p-6">
@@ -250,9 +270,7 @@ const SubmitEssay = () => {
           <div className="flex flex-col gap-3">
             <Button
               onClick={() =>
-                applicationId
-                  ? navigate(`/student-personal-area?tab=applications`)
-                  : navigate(-1)
+                applicationId ? navigate(`/student-personal-area?tab=applications`) : navigate(-1)
               }
               className="w-full"
             >
@@ -270,6 +288,9 @@ const SubmitEssay = () => {
                   setTargetSchool("");
                   setWordLimit(null);
                   setCustomWordLimit("");
+                  setAnalysisResult(null);
+                  setSelectedText("");
+                  setSelectionFeedback(null);
                 }}
               >
                 Submit Another Essay
@@ -281,10 +302,12 @@ const SubmitEssay = () => {
     );
   }
 
+  const showAnalysisPanel = analysisResult !== null || isAnalysing;
+
   // ── Form ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className={`mx-auto space-y-6 transition-all duration-300 ${showAnalysisPanel ? "max-w-6xl" : "max-w-3xl"}`}>
 
         <div className="flex items-center gap-4">
           <Button variant="ghost" className="gap-2" onClick={() => navigate(-1)}>
@@ -301,250 +324,348 @@ const SubmitEssay = () => {
               : "Your counselor will review and provide feedback"}
           </p>
           {slotId && (
-            <Badge variant="outline" className="mt-2">
-              Linked to application slot
-            </Badge>
+            <Badge variant="outline" className="mt-2">Linked to application slot</Badge>
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className={`gap-6 ${showAnalysisPanel ? "grid grid-cols-[1fr_380px]" : ""}`}>
 
-          {/* Essay Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-5 w-5 text-primary" />
-                Essay Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* ── Left column: form ── */}
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-              <div className="space-y-2">
-                <Label htmlFor="title">
-                  Essay Title <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Common App Personal Statement"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              {!slotId && (
+            {/* Essay Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Essay Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="targetSchool">Target School</Label>
+                  <Label htmlFor="title">
+                    Essay Title <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
-                    <School className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="targetSchool"
-                      value={targetSchool}
-                      onChange={(e) => setTargetSchool(e.target.value)}
-                      placeholder="e.g. MIT, Harvard, Stanford..."
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Common App Personal Statement"
                       className="pl-10"
+                      required
                     />
                   </div>
                 </div>
-              )}
 
-              {/* <div className="space-y-2">
-                <Label htmlFor="prompt">Essay Prompt</Label>
-                <div className="relative">
-                  <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Textarea
-                    id="prompt"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Paste the essay prompt here..."
-                    className="pl-10 resize-none"
-                    rows={3}
-                  />
-                </div>
-              </div> */}
+                {!slotId && (
+                  <div className="space-y-2">
+                    <Label htmlFor="targetSchool">Target School</Label>
+                    <div className="relative">
+                      <School className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="targetSchool"
+                        value={targetSchool}
+                        onChange={(e) => setTargetSchool(e.target.value)}
+                        placeholder="e.g. MIT, Harvard, Stanford..."
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            </CardContent>
-          </Card>
-
-          {/* Word Limit */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Hash className="h-5 w-5 text-primary" />
-                Word Limit
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {WORD_LIMIT_OPTIONS.map((limit) => (
+            {/* Word Limit */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Hash className="h-5 w-5 text-primary" />
+                  Word Limit
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {WORD_LIMIT_OPTIONS.map((limit) => (
+                    <button
+                      key={limit}
+                      type="button"
+                      onClick={() => { setWordLimit(limit); setCustomWordLimit(""); }}
+                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                        wordLimit === limit
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                      }`}
+                    >
+                      {limit} words
+                    </button>
+                  ))}
                   <button
-                    key={limit}
                     type="button"
-                    onClick={() => { setWordLimit(limit); setCustomWordLimit(""); }}
+                    onClick={() => setWordLimit(null)}
                     className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                      wordLimit === limit
+                      wordLimit === null && !customWordLimit
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
                     }`}
                   >
-                    {limit} words
+                    No limit
                   </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setWordLimit(null)}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                    wordLimit === null && !customWordLimit
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
-                  }`}
-                >
-                  No limit
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Or custom:</span>
-                <Input
-                  type="number"
-                  placeholder="e.g. 800"
-                  value={customWordLimit}
-                  onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
-                  className="w-32"
-                  min="1"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Essay Content */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <AlignLeft className="h-5 w-5 text-primary" />
-                  Essay Content <span className="text-destructive">*</span>
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
-                  >
-                    {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
-                  </Badge>
-                  {isOverLimit && (
-                    <Badge variant="destructive">Over limit</Badge>
-                  )}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
 
-              {/* AI Generate banner */}
-              {/* <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">Generate with AI</p>
-                  <p className="text-xs text-muted-foreground">
-                    {prompt.trim()
-                      ? "AI will draft an essay based on your prompt. Edit it to make it your own."
-                      : "Add a prompt above first, then generate a draft."}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Or custom:</span>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 800"
+                    value={customWordLimit}
+                    onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
+                    className="w-32"
+                    min="1"
+                  />
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleGenerateEssay}
-                  disabled={isGenerating || !prompt.trim()}
-                  className="shrink-0"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : content.trim() ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                      Regenerate
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                      Generate Draft
-                    </>
-                  )}
-                </Button>
-              </div> */}
+              </CardContent>
+            </Card>
 
-              {/* Loading state */}
-              {isGenerating && (
-                <div className="flex items-center justify-center py-8 border border-dashed border-primary/30 rounded-lg bg-primary/5">
-                  <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Writing your essay...</p>
-                    <p className="text-xs text-muted-foreground mt-1">This takes about 10-15 seconds</p>
+            {/* Essay Content */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <AlignLeft className="h-5 w-5 text-primary" />
+                    Essay Content <span className="text-destructive">*</span>
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
+                    >
+                      {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
+                    </Badge>
+                    {isOverLimit && <Badge variant="destructive">Over limit</Badge>}
+                    {wordCount >= 50 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAnalyseEssay}
+                        disabled={isAnalysing}
+                        className="gap-1.5"
+                      >
+                        {isAnalysing ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Analysing…
+                          </>
+                        ) : (
+                          <>
+                            <ScanText className="h-3.5 w-3.5" />
+                            Analyse Essay
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
-              )}
+              </CardHeader>
+              <CardContent className="space-y-3">
 
-              {/* Textarea */}
-              {!isGenerating && (
+                <p className="text-xs text-muted-foreground">
+                  Tip: highlight any passage to get AI coaching on that section.
+                </p>
+
                 <Textarea
+                  ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Paste or type your essay here, or use the AI generator above..."
+                  onMouseUp={handleSelectionChange}
+                  onKeyUp={handleSelectionChange}
+                  placeholder="Write or paste your essay here..."
                   className={`resize-none min-h-[400px] text-sm leading-relaxed ${
                     isOverLimit ? "border-destructive focus-visible:ring-destructive" : ""
                   }`}
                   required
                 />
+
+                {/* Selection coaching bar */}
+                {selectedText && (
+                  <div className="border border-primary/20 rounded-lg bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm font-medium text-foreground">
+                          "{selectedText.length > 60 ? selectedText.slice(0, 60) + "…" : selectedText}"
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleGetCoaching}
+                          disabled={isCoaching}
+                          className="gap-1.5 h-7 text-xs"
+                        >
+                          {isCoaching ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Bear with us…
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3 w-3" />
+                              Get Feedback
+                            </>
+                          )}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedText(""); setSelectionFeedback(null); }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectionFeedback && (
+                      <div className="pt-1 border-t border-primary/10">
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                          {selectionFeedback}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </CardContent>
+            </Card>
+
+            {/* Submit */}
+            <div className="flex gap-3 pb-6">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => navigate(-1)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={isSubmitting || isOverLimit}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Submit Essay
+                  </>
+                )}
+              </Button>
+            </div>
+
+          </form>
+
+          {/* ── Right column: analysis panel ── */}
+          {showAnalysisPanel && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between sticky top-6">
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <ScanText className="h-4 w-4 text-primary" />
+                  Essay Analysis
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setAnalysisResult(null)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {isAnalysing && (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Bear with us, analysing your essay…
+                    </p>
+                  </CardContent>
+                </Card>
               )}
 
-              {content.trim() && !isGenerating && (
-                <p className="text-xs text-muted-foreground">
-                  💡 Remember to personalize the AI draft with your own experiences and voice before submitting.
-                </p>
-              )}
-
-            </CardContent>
-          </Card>
-
-          {/* Submit */}
-          <div className="flex gap-3 pb-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => navigate(-1)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={isSubmitting || isOverLimit || isGenerating}
-            >
-              {isSubmitting ? (
+              {analysisResult && (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Submit Essay
+                  {/* Overall score */}
+                  <Card>
+                    <CardContent className="pt-5 pb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-foreground">Overall Score</span>
+                        <span className="text-2xl font-bold text-primary">
+                          {analysisResult.overallScore}
+                          <span className="text-sm font-normal text-muted-foreground">/100</span>
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {analysisResult.criteria.map((c) => (
+                          <div key={c.id}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-muted-foreground">{c.name}</span>
+                              <span className="font-medium">{c.score}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${c.score}%`, backgroundColor: c.color }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Issues */}
+                  <div className="space-y-2">
+                    {analysisResult.issues.map((issue) => (
+                      <Card key={issue.id} className="overflow-hidden">
+                        <div className="h-1 w-full" style={{ backgroundColor: issue.color }} />
+                        <CardContent className="pt-3 pb-3 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold" style={{ color: issue.color }}>
+                              {issue.criterionName}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                issue.severity === "high"
+                                  ? "border-destructive text-destructive"
+                                  : issue.severity === "medium"
+                                  ? "border-amber-500 text-amber-600"
+                                  : "border-muted-foreground text-muted-foreground"
+                              }`}
+                            >
+                              {issue.severity}
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-medium text-foreground">{issue.problemType}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {issue.problemDescription}
+                          </p>
+                          <div className="pt-1 border-t border-border">
+                            <p className="text-xs text-foreground leading-relaxed">
+                              <span className="font-medium">Suggestion: </span>
+                              {issue.recommendation}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </>
               )}
-            </Button>
-          </div>
+            </div>
+          )}
 
-        </form>
+        </div>
       </div>
     </div>
   );
