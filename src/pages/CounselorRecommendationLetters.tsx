@@ -178,6 +178,28 @@ const CounselorRecommendationLetters = () => {
         letter: letterToSend,
       });
 
+      // Notify student by email (fire-and-forget — don't block on failure)
+      try {
+        const { data: { user: counselor } } = await supabase.auth.getUser();
+        const { data: counselorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", counselor?.id)
+          .maybeSingle();
+
+        await supabase.functions.invoke("send-rec-letter-notification", {
+          body: {
+            studentEmail: selectedRequest.profiles?.email ?? "",
+            studentName: selectedRequest.profiles?.full_name ?? "Student",
+            counselorName: counselorProfile?.full_name ?? "Your counselor",
+            refereeName: selectedRequest.referee_name,
+            appUrl: window.location.origin,
+          },
+        });
+      } catch (notifyErr) {
+        console.error("Failed to send rec letter notification:", notifyErr);
+      }
+
       celebrate('rec_letter_sent');
       setSelectedRequest(null);
       setGeneratedLetter("");

@@ -37,6 +37,11 @@ import AddApplication from "./pages/AddApplication";
 import EditEssay from "./pages/EditEssay";
 import StudentMessages from "./pages/StudentMessages";
 import ParentMessages from "./pages/ParentMessages";
+import PrincipalDashboard from "./pages/PrincipalDashboard";
+import PrincipalStudents from "./pages/PrincipalStudents";
+import PrincipalCounselors from "./pages/PrincipalCounselors";
+import PrincipalActivities from "./pages/PrincipalActivities";
+import PrincipalSettings from "./pages/PrincipalSettings";
 
 const queryClient = new QueryClient();
 
@@ -275,6 +280,47 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['parent']}>
                 <ParentMessages />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          {/* ── Principal-only routes ── */}
+          <Route path="/principal-dashboard" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalDashboard />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/principal-students" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalStudents />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/principal-counselors" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalCounselors />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/principal-activities" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalActivities />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/principal-settings" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalSettings />
               </ProtectedRoute>
             </AppLayout>
           } />

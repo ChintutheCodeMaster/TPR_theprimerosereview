@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper, Settings, Building2 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 
-type UserRole = 'counselor' | 'student' | 'parent';
+type UserRole = 'counselor' | 'student' | 'parent' | 'principal';
 
 const mainItems = [{
   title: "Dashboard",
@@ -74,10 +74,33 @@ const parentItems = [{
   icon: MessageSquare
 }];
 
+const principalItems = [{
+  title: "Overview",
+  url: "/principal-dashboard",
+  icon: BarChart3
+}, {
+  title: "Students",
+  url: "/principal-students",
+  icon: Users
+}, {
+  title: "Counselors",
+  url: "/principal-counselors",
+  icon: Building2
+}, {
+  title: "School Activities",
+  url: "/principal-activities",
+  icon: PartyPopper
+}, {
+  title: "School Settings",
+  url: "/principal-settings",
+  icon: Settings
+}];
+
 // Routes that belong to each role
 const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
 const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
+const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-settings'];
 
 export function AppSidebar() {
   const { open } = useSidebar();
@@ -88,6 +111,7 @@ export function AppSidebar() {
   const currentRole: UserRole = useMemo(() => {
     if (studentRoutes.some(route => currentPath.startsWith(route))) return 'student';
     if (parentRoutes.some(route => currentPath.startsWith(route))) return 'parent';
+    if (principalRoutes.some(route => currentPath.startsWith(route))) return 'principal';
     return 'counselor';
   }, [currentPath]);
 
@@ -161,6 +185,17 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {parentItems.map(item => renderMenuItem(item))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {currentRole === 'principal' && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Principal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {principalItems.map(item => renderMenuItem(item))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

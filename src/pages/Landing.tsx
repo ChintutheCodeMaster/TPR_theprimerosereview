@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, Users, UserCircle, Eye } from "lucide-react";
+import { GraduationCap, Users, UserCircle, Eye, Building2 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 
 const Landing = () => {
@@ -46,7 +46,7 @@ const Landing = () => {
         <Card className="p-8 space-y-6">
           <h2 className="text-xl font-semibold text-foreground">Sign in as:</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Button 
               variant="outline" 
               className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
@@ -72,6 +72,15 @@ const Landing = () => {
             >
               <UserCircle className="h-8 w-8" />
               <span className="font-medium">Parent</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => navigate('/auth?role=principal')}
+            >
+              <Building2 className="h-8 w-8" />
+              <span className="font-medium">Principal</span>
             </Button>
           </div>
 

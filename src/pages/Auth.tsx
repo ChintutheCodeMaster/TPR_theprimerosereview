@@ -6,23 +6,24 @@ import { Label } from "@/components/ui/label";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, GraduationCap, Users, UserCircle } from "lucide-react";
+import { ArrowLeft, GraduationCap, Users, UserCircle, Building2 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const roleParam = searchParams.get('role') as 'counselor' | 'student' | 'parent' | null;
+  const roleParam = searchParams.get('role') as 'counselor' | 'student' | 'parent' | 'principal' | null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | null>(roleParam);
+  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | 'principal' | null>(roleParam);
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'counselor': return <GraduationCap className="h-8 w-8" />;
       case 'student': return <Users className="h-8 w-8" />;
       case 'parent': return <UserCircle className="h-8 w-8" />;
+      case 'principal': return <Building2 className="h-8 w-8" />;
       default: return null;
     }
   };
@@ -32,6 +33,7 @@ const Auth = () => {
       case 'counselor': return 'Counselor';
       case 'student': return 'Student';
       case 'parent': return 'Parent';
+      case 'principal': return 'Principal';
       default: return '';
     }
   };
@@ -41,6 +43,7 @@ const Auth = () => {
       case 'counselor': navigate('/dashboard'); break;
       case 'student': navigate('/student-dashboard'); break;
       case 'parent': navigate('/parent-portal'); break;
+      case 'principal': navigate('/principal-dashboard'); break;
       default: navigate('/');
     }
   };
@@ -115,8 +118,8 @@ const Auth = () => {
 
           {/* Role Selection */}
           {!selectedRole && (
-            <div className="grid grid-cols-3 gap-3">
-              {(['counselor', 'student', 'parent'] as const).map((role) => (
+            <div className="grid grid-cols-2 gap-3">
+              {(['counselor', 'student', 'parent', 'principal'] as const).map((role) => (
                 <button
                   key={role}
                   onClick={() => setSelectedRole(role)}

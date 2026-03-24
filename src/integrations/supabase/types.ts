@@ -578,20 +578,68 @@ export type Database = {
           }
         ]
       }
+      school_activities: {
+        Row: {
+          id: string
+          school_id: string
+          created_by: string
+          title: string
+          date: string
+          time: string | null
+          location: string | null
+          category: string
+          status: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          school_id: string
+          created_by: string
+          title: string
+          date: string
+          time?: string | null
+          location?: string | null
+          category?: string
+          status?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          school_id?: string
+          created_by?: string
+          title?: string
+          date?: string
+          time?: string | null
+          location?: string | null
+          category?: string
+          status?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           created_at: string
           id: string
+          logo_url: string | null
           name: string
         }
         Insert: {
           created_at?: string
           id?: string
+          logo_url?: string | null
           name: string
         }
         Update: {
           created_at?: string
           id?: string
+          logo_url?: string | null
           name?: string
         }
         Relationships: []
@@ -785,6 +833,17 @@ export type Database = {
         Args: { _counselor_invite_code: string; _parent_email: string }
         Returns: string
       }
+      get_my_school_id: {
+        Args: Record<string, never>
+        Returns: string | null
+      }
+
+      is_same_school: {
+        Args: {
+          _student_id: string
+        }
+        Returns: boolean
+      }
       get_student_stats: {
         Args: never
         Returns: Json
@@ -817,7 +876,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "student" | "counselor" | "admin" | "parent"
+      app_role: "student" | "counselor" | "admin" | "parent" | "principal"
       recommendation_status: "draft" | "pending" | "in_progress" | "sent"
     }
     CompositeTypes: {
@@ -946,7 +1005,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["student", "counselor", "admin", "parent"],
+      app_role: ["student", "counselor", "admin", "parent", "principal"],
       recommendation_status: ["draft", "pending", "in_progress", "sent"],
     },
   },

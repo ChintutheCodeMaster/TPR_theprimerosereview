@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, GraduationCap, Users, UserCircle } from "lucide-react";
+import { ArrowLeft, GraduationCap, Users, UserCircle, Building2 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 
 const Signup = () => {
@@ -15,7 +15,7 @@ const Signup = () => {
   const inviteCodeParam = searchParams.get('invite');
   const roleParam = searchParams.get('role');
 
-  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | 'principal' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Common fields
@@ -30,6 +30,9 @@ const Signup = () => {
   const [parentName, setParentName] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+
+  // Principal fields
+  const [principalSchoolName, setPrincipalSchoolName] = useState("");
 
   // Counselor fields
   const [counselorPhone, setCounselorPhone] = useState("");
@@ -57,6 +60,7 @@ useEffect(() => {
       case 'counselor': return <GraduationCap className={size} />;
       case 'student': return <Users className={size} />;
       case 'parent': return <UserCircle className={size} />;
+      case 'principal': return <Building2 className={size} />;
       default: return null;
     }
   };
@@ -66,6 +70,7 @@ useEffect(() => {
       case 'counselor': return 'Counselor';
       case 'student': return 'Student';
       case 'parent': return 'Parent';
+      case 'principal': return 'Principal';
       default: return '';
     }
   };
@@ -75,6 +80,7 @@ useEffect(() => {
       case 'counselor': navigate('/dashboard'); break;
       case 'student': navigate('/student-dashboard'); break;
       case 'parent': navigate('/parent-portal'); break;
+      case 'principal': navigate('/principal-dashboard'); break;
       default: navigate('/');
     }
   };
@@ -113,6 +119,26 @@ useEffect(() => {
             const { data: newSchool, error: schoolError } = await supabase
               .from('schools')
               .insert({ name: schoolName.trim() })
+              .select('id')
+              .single();
+            if (schoolError) throw schoolError;
+            schoolId = newSchool.id;
+          }
+        }
+
+        if (selectedRole === 'principal' && principalSchoolName.trim()) {
+          const { data: existingSchool } = await supabase
+            .from('schools')
+            .select('id')
+            .ilike('name', principalSchoolName.trim())
+            .maybeSingle();
+
+          if (existingSchool) {
+            schoolId = existingSchool.id;
+          } else {
+            const { data: newSchool, error: schoolError } = await supabase
+              .from('schools')
+              .insert({ name: principalSchoolName.trim() })
               .select('id')
               .single();
             if (schoolError) throw schoolError;
@@ -274,10 +300,10 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Step 1: Role selection — counselor or student only */}
+          {/* Step 1: Role selection */}
           {!selectedRole && (
-            <div className="grid grid-cols-2 gap-3">
-              {(['counselor', 'student'] as const).map((role) => (
+            <div className="grid grid-cols-3 gap-3">
+              {(['counselor', 'student', 'principal'] as const).map((role) => (
                 <button
                   key={role}
                   onClick={() => setSelectedRole(role)}
@@ -486,6 +512,27 @@ useEffect(() => {
                       rows={3}
                       className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Principal-specific fields */}
+              {selectedRole === 'principal' && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <p className="text-sm font-medium text-muted-foreground">School Information</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="principalSchoolName">School Name</Label>
+                    <Input
+                      id="principalSchoolName"
+                      type="text"
+                      value={principalSchoolName}
+                      onChange={(e) => setPrincipalSchoolName(e.target.value)}
+                      placeholder="Lincoln High School"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      If the school already exists, you'll be linked to it automatically.
+                    </p>
                   </div>
                 </div>
               )}
