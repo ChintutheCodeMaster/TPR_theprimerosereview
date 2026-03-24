@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Eye, GraduationCap, Users, UserCircle, Loader2 } from "lucide-react";
+import { Eye, GraduationCap, Users, UserCircle, Building2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
@@ -20,7 +20,12 @@ const demoRoutes = [
   '/add-student',
   '/review-essays',
   '/check-deadlines',
-  '/view-reports'
+  '/view-reports',
+  '/principal-dashboard',
+  '/principal-students',
+  '/principal-counselors',
+  '/principal-activities',
+  '/principal-settings',
 ];
 
 export const DemoNavigation = () => {
@@ -28,13 +33,14 @@ export const DemoNavigation = () => {
   const location = useLocation();
   const [isSwitching, setIsSwitching] = useState(false);
 
-  if (!demoRoutes.includes(location.pathname)) {
-    return null;
-  }
-
+  const isPrincipalView = location.pathname.startsWith('/principal');
   const isParentView = location.pathname === '/parent-portal';
   const isStudentView = location.pathname.startsWith('/student');
-  const isCounselorView = !isParentView && !isStudentView;
+  const isCounselorView = !isParentView && !isStudentView && !isPrincipalView;
+
+  if (!demoRoutes.some(r => location.pathname.startsWith(r))) {
+    return null;
+  }
 
   const handleSwitch = async (path: string) => {
     if (isSwitching) return;
@@ -89,6 +95,17 @@ export const DemoNavigation = () => {
         >
           <UserCircle className="h-3 w-3" />
           <span className="hidden sm:inline">Parent</span>
+        </Button>
+
+        <Button
+          size="sm"
+          variant={isPrincipalView ? "default" : "ghost"}
+          className="gap-1 h-8"
+          disabled={isSwitching}
+          onClick={() => handleSwitch('/')}
+        >
+          <Building2 className="h-3 w-3" />
+          <span className="hidden sm:inline">Principal</span>
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />

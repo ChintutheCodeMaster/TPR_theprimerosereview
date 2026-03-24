@@ -35,6 +35,7 @@ const Signup = () => {
   const [principalSchoolName, setPrincipalSchoolName] = useState("");
 
   // Counselor fields
+  const [counselorSchoolName, setCounselorSchoolName] = useState("");
   const [counselorPhone, setCounselorPhone] = useState("");
   const [counselorTitle, setCounselorTitle] = useState("");
   const [counselorBio, setCounselorBio] = useState("");
@@ -119,6 +120,26 @@ useEffect(() => {
             const { data: newSchool, error: schoolError } = await supabase
               .from('schools')
               .insert({ name: schoolName.trim() })
+              .select('id')
+              .single();
+            if (schoolError) throw schoolError;
+            schoolId = newSchool.id;
+          }
+        }
+
+        if (selectedRole === 'counselor' && counselorSchoolName.trim()) {
+          const { data: existingSchool } = await supabase
+            .from('schools')
+            .select('id')
+            .ilike('name', counselorSchoolName.trim())
+            .maybeSingle();
+
+          if (existingSchool) {
+            schoolId = existingSchool.id;
+          } else {
+            const { data: newSchool, error: schoolError } = await supabase
+              .from('schools')
+              .insert({ name: counselorSchoolName.trim() })
               .select('id')
               .single();
             if (schoolError) throw schoolError;
@@ -450,6 +471,19 @@ useEffect(() => {
               {/* Counselor-specific fields */}
               {selectedRole === 'counselor' && (
                 <div className="space-y-4 pt-2 border-t border-border">
+                  <p className="text-sm font-medium text-muted-foreground">School Information</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="counselorSchoolName">School Name</Label>
+                    <Input
+                      id="counselorSchoolName"
+                      type="text"
+                      value={counselorSchoolName}
+                      onChange={(e) => setCounselorSchoolName(e.target.value)}
+                      placeholder="Lincoln High School"
+                    />
+                  </div>
+
                   <p className="text-sm font-medium text-muted-foreground">Professional Information</p>
 
                   <div className="grid grid-cols-2 gap-3">
