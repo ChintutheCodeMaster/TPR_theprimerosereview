@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useCelebration } from "@/hooks/useCelebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +182,7 @@ function buildParagraphSegments(
 
 // ── Component ──────────────────────────────────────────────────
 export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModalProps) => {
+  const { celebrate, activeEvent } = useCelebration();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -464,6 +467,7 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
       });
 
       if (status === 'sent') {
+        celebrate('feedback_sent');
         try {
           const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
             supabase.from('profiles').select('email').eq('user_id', essay.studentId ?? '').maybeSingle(),
@@ -598,6 +602,8 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
     : "max-w-[95vw] w-[1400px] h-[90vh] p-0 flex flex-col";
 
   return (
+    <>
+    <CelebrationOverlay event={activeEvent} />
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={dialogSizeClass}>
 
@@ -1148,5 +1154,6 @@ export const EssayFeedbackModal = ({ isOpen, onClose, essay }: EssayFeedbackModa
 
       </DialogContent>
     </Dialog>
+    </>
   );
 };

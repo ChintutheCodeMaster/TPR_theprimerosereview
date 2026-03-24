@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useCelebration } from "@/hooks/useCelebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ import {
 
 const CounselorRecommendationLetters = () => {
   const { toast } = useToast();
+  const { celebrate, activeEvent } = useCelebration();
   const { requests = [], isLoading, sendLetter, updateRequest } =
     useCounselorRecommendations();
 
@@ -175,6 +178,7 @@ const CounselorRecommendationLetters = () => {
         letter: letterToSend,
       });
 
+      celebrate('rec_letter_sent');
       setSelectedRequest(null);
       setGeneratedLetter("");
       setCounselorNotes("");
@@ -446,6 +450,7 @@ const CounselorRecommendationLetters = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <CelebrationOverlay event={activeEvent} />
       <h1 className="text-3xl font-bold">Recommendation Letters</h1>
 
       {/* Stats */}

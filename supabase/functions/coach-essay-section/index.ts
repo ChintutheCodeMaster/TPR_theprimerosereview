@@ -10,6 +10,7 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  
   try {
     const { selectedText, essayPrompt } = await req.json();
 

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useCelebration } from "@/hooks/useCelebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +57,7 @@ const SubmitEssay = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { celebrate, activeEvent } = useCelebration();
 
   const slotId        = searchParams.get("slotId");
   const applicationId = searchParams.get("applicationId");
@@ -216,6 +219,7 @@ const SubmitEssay = () => {
 
       setIsSuccess(true);
       toast.success("Essay submitted successfully!");
+      celebrate('essay_submitted');
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -253,6 +257,7 @@ const SubmitEssay = () => {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex items-center justify-center p-6">
+        <CelebrationOverlay event={activeEvent} />
         <Card className="max-w-md w-full p-8 text-center space-y-6">
           <div className="flex justify-center">
             <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">

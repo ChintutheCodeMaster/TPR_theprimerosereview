@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useCelebration } from "@/hooks/useCelebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +86,7 @@ const getStatusBadge = (status: string) => {
 
 const StudentRecommendationLetters = () => {
   const { requests, isLoading, error, createRequest } = useStudentRecommendations();
+  const { celebrate, activeEvent } = useCelebration();
   const [currentStep, setCurrentStep] = useState<"list" | "form" | "view">("list");
   const [selectedRequest, setSelectedRequest] = useState<RecommendationRequest | null>(null);
   const [formData, setFormData] = useState(INITIAL_FORM);
@@ -393,6 +396,7 @@ const StudentRecommendationLetters = () => {
   // ── Main List View ────────────────────────────────────────
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <CelebrationOverlay event={activeEvent} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Recommendation Letters</h1>
@@ -477,6 +481,7 @@ const StudentRecommendationLetters = () => {
                   onClick={() => {
                     setSelectedRequest(request);
                     setCurrentStep("view");
+                    if (request.status === 'sent') celebrate('rec_letter_received');
                   }}
                 >
                   <div className="flex items-center gap-4">

@@ -68,12 +68,16 @@ const parentItems = [{
   title: "School Activities",
   url: "/school-activities",
   icon: PartyPopper
+}, {
+  title: "Messages",
+  url: "/parent-messages",
+  icon: MessageSquare
 }];
 
 // Routes that belong to each role
 const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
 const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages'];
-const parentRoutes = ['/parent-portal', '/school-activities'];
+const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 
 export function AppSidebar() {
   const { open } = useSidebar();

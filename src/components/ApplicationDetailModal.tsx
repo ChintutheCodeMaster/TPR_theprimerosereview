@@ -453,6 +453,7 @@ export const ApplicationDetailModal = ({
     recommendations,
     isLoading: isLoadingRecs,
     addRecommendation,
+    updateRecStatus,
     sentCount,
     totalCount,
   } = useApplicationRecommendations(application?.id ?? null);

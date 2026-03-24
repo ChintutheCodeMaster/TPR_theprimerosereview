@@ -36,6 +36,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AddApplication from "./pages/AddApplication";
 import EditEssay from "./pages/EditEssay";
 import StudentMessages from "./pages/StudentMessages";
+import ParentMessages from "./pages/ParentMessages";
 
 const queryClient = new QueryClient();
 
@@ -266,6 +267,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['parent']}>
                 <SchoolActivities />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/parent-messages" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['parent']}>
+                <ParentMessages />
               </ProtectedRoute>
             </AppLayout>
           } />

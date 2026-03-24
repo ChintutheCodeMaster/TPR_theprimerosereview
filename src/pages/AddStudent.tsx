@@ -112,15 +112,14 @@ const AddStudent = () => {
         });
       if (studentProfileError) throw studentProfileError;
 
-      // ── Step 7: Link student to counselor (kept for future use) ──
-      // TODO: Uncomment when assignment-based flow is implemented
-      // const { error: assignError } = await supabase
-      //   .from("student_counselor_assignments")
-      //   .insert({
-      //     student_id: studentUserId,
-      //     counselor_id: counselor.id,
-      //   });
-      // if (assignError) throw assignError;
+      // ── Step 7: Link student to counselor ────────────────────
+      const { error: assignError } = await supabase
+        .from("student_counselor_assignments")
+        .insert({
+          student_id: studentUserId,
+          counselor_id: counselor.id,
+        });
+      if (assignError) throw assignError;
 
       toast({
         title: "Student Added Successfully",
@@ -156,16 +155,26 @@ const AddStudent = () => {
       const { data: { user: counselor } } = await supabase.auth.getUser();
       if (!counselor) throw new Error("You must be logged in");
 
-      // TODO: When assignment flow is built, store invite code in DB
-      // and link student to counselor when they register using it:
-      // const { error } = await supabase
-      //   .from("student_counselor_assignments")
-      //   .insert({ counselor_id: counselor.id, invite_code: inviteCode, student_id: null })
+      // Check if counselor already has an active invite
+      const { data: existing } = await supabase
+        .from("counselor_invites")
+        .select("invite_code")
+        .eq("counselor_id", counselor.id)
+        .maybeSingle();
 
-      // For now — just generate the link with counselor ID embedded
-      // Student registers normally, counselor links them manually later
-      const inviteCode = Math.random().toString(36).substring(2, 15);
-      const link = `${window.location.origin}/signup?role=student&counselorId=${counselor.id}&inviteCode=${inviteCode}`;
+      let inviteCode: string;
+
+      if (existing) {
+        inviteCode = existing.invite_code;
+      } else {
+        inviteCode = Math.random().toString(36).substring(2, 15);
+        const { error: insertError } = await supabase
+          .from("counselor_invites")
+          .insert({ counselor_id: counselor.id, invite_code: inviteCode });
+        if (insertError) throw insertError;
+      }
+
+      const link = `${window.location.origin}/signup?invite=${inviteCode}`;
       setInviteLink(link);
 
       toast({

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useCelebration } from "@/hooks/useCelebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,7 @@ const GRAD_YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2];
 const AddApplication = () => {
   const navigate = useNavigate();
   const { createApplication } = useApplications();
+  const { celebrate, activeEvent } = useCelebration();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -118,6 +121,7 @@ const AddApplication = () => {
         notes: form.notes || null,
       });
       setSubmitted(true);
+      celebrate('new_application');
     } catch (error) {
       // Error handled by hook
     } finally {
@@ -129,6 +133,7 @@ const AddApplication = () => {
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
+        <CelebrationOverlay event={activeEvent} />
         <div className="text-center space-y-6 max-w-md">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="h-10 w-10 text-green-600" />
