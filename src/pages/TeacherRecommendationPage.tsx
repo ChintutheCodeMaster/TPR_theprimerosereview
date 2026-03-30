@@ -23,7 +23,15 @@ import {
   Heart,
   Zap,
   Star,
+  MessageSquare,
 } from "lucide-react";
+
+interface RecMessage {
+  id: string;
+  sender_role: 'counselor' | 'teacher';
+  content: string;
+  created_at: string;
+}
 
 interface RecData {
   id: string;
@@ -39,6 +47,7 @@ interface RecData {
   personal_notes: string | null;
   teacher_draft: string | null;
   status: string;
+  messages?: RecMessage[];
 }
 
 const TeacherRecommendationPage = () => {
@@ -56,6 +65,8 @@ const TeacherRecommendationPage = () => {
   const [teacherQ1, setTeacherQ1] = useState("");
   const [teacherQ2, setTeacherQ2] = useState("");
   const [teacherQ3, setTeacherQ3] = useState("");
+  const [replyContent, setReplyContent] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
 
   useEffect(() => {
     if (token) fetchRec();
@@ -149,6 +160,26 @@ const TeacherRecommendationPage = () => {
     }
   };
 
+  const handleReply = async () => {
+    if (!replyContent.trim()) return;
+    setIsReplying(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).rpc("add_teacher_message_by_token", {
+        p_token: token,
+        p_content: replyContent,
+      });
+      if (error) throw error;
+      setReplyContent("");
+      await fetchRec();
+      toast({ title: "Reply sent to your counselor" });
+    } catch (err: any) {
+      toast({ title: "Failed to send reply", description: err.message, variant: "destructive" });
+    } finally {
+      setIsReplying(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 flex items-center justify-center">
@@ -176,7 +207,9 @@ const TeacherRecommendationPage = () => {
     );
   }
 
-  if (submitted) {
+  const hasCounselorNotes = (rec?.messages ?? []).some(m => m.sender_role === 'counselor');
+
+  if (submitted && !hasCounselorNotes) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 flex items-center justify-center px-4">
         <div className="text-center space-y-5 max-w-md">
@@ -187,6 +220,9 @@ const TeacherRecommendationPage = () => {
           <p className="text-gray-500 leading-relaxed">
             Your draft for <strong className="text-gray-700">{rec?.student_name ?? "the student"}</strong> has been submitted.
             The counselor will review, refine if needed, and send the final letter on your behalf.
+          </p>
+          <p className="text-gray-400 text-sm">
+            If your counselor has revisions, they'll send you a note and this page will update on your next visit.
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 text-violet-700 text-sm font-medium">
             <GraduationCap className="h-4 w-4" />
@@ -266,6 +302,60 @@ const TeacherRecommendationPage = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
+
+        {/* Counselor Notes — shown only when messages exist */}
+        {(rec?.messages ?? []).length > 0 && (
+          <Card className="border-amber-200 shadow-sm bg-amber-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base text-amber-800">
+                <MessageSquare className="h-4 w-4" />
+                Notes from your Counselor
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Thread */}
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {(rec?.messages ?? []).map((m) => (
+                  <div key={m.id} className={`flex ${m.sender_role === 'teacher' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[85%] rounded-lg px-3 py-2 text-sm break-words ${
+                        m.sender_role === 'counselor'
+                          ? 'bg-amber-100 border border-amber-300 text-amber-900'
+                          : 'bg-slate-100 border border-slate-200 text-slate-800'
+                      }`}
+                    >
+                      <p>{m.content}</p>
+                      <p className="text-xs mt-1 text-amber-600">
+                        {m.sender_role === 'counselor' ? 'Counselor' : 'You'} · {new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reply area */}
+              <Textarea
+                placeholder="Type a reply to your counselor…"
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                rows={3}
+                className="resize-none text-sm bg-white border-amber-200 focus:border-amber-400"
+              />
+              <Button
+                size="sm"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={!replyContent.trim() || isReplying}
+                onClick={handleReply}
+              >
+                {isReplying ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Send className="h-3 w-3 mr-2" />}
+                Send Reply
+              </Button>
+              <p className="text-xs text-amber-700 text-center">
+                You can also revise and resubmit your full draft using the editor below.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* About TPR — collapsible */}
         <Card className="border-violet-100 shadow-sm overflow-hidden">

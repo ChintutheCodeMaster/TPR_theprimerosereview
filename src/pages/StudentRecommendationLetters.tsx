@@ -173,9 +173,14 @@ const StudentRecommendationLetters = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {selectedRequest.generated_letter ? (
-              <div className="bg-muted/30 rounded-lg p-6 whitespace-pre-wrap font-serif text-foreground leading-relaxed">
-                {selectedRequest.generated_letter}
+            {selectedRequest.status === 'sent' ? (
+              <div className="text-center py-12 space-y-4">
+                <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
+                <h2 className="text-xl font-semibold text-foreground">Recommendation Submitted</h2>
+                <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
+                  Your recommendation letter from <strong>{selectedRequest.referee_name}</strong> has been
+                  finalized by your counselor and submitted on your behalf.
+                </p>
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">

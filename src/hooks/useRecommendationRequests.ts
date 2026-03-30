@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, RecLetterMessage } from "@/integrations/supabase/types";
 
 type RecommendationRequest =
   Database["public"]["Tables"]["recommendation_requests"]["Row"];
@@ -273,4 +273,60 @@ export const useCounselorRecommendations = () => {
     updateRequest,
     sendLetter,
   };
+};
+
+/* ============================================================
+   REC LETTER MESSAGE HOOKS
+============================================================ */
+
+export const useRecLetterMessages = (requestId: string | null) => {
+  return useQuery({
+    queryKey: ["rec-letter-messages", requestId],
+    enabled: !!requestId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rec_letter_messages" as any)
+        .select("*")
+        .eq("request_id", requestId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as RecLetterMessage[];
+    },
+  });
+};
+
+export const useSendCounselorNote = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      requestId,
+      content,
+    }: {
+      requestId: string;
+      content: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("rec_letter_messages" as any)
+        .insert({ request_id: requestId, sender_role: "counselor", content })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as RecLetterMessage;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["rec-letter-messages", variables.requestId],
+      });
+      toast({ title: "Note sent to teacher" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Failed to send note",
+        description: err.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
 };

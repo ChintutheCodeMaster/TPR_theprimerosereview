@@ -414,6 +414,38 @@ export type Database = {
           }
         ]
       }
+      rec_letter_messages: {
+        Row: {
+          id: string
+          request_id: string
+          sender_role: 'counselor' | 'teacher'
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          sender_role: 'counselor' | 'teacher'
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          sender_role?: 'counselor' | 'teacher'
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rec_letter_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "recommendation_requests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1001,6 +1033,14 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export type RecLetterMessage = {
+  id: string;
+  request_id: string;
+  sender_role: 'counselor' | 'teacher';
+  content: string;
+  created_at: string;
+};
 
 export const Constants = {
   public: {

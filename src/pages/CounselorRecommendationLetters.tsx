@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { useCounselorRecommendations, type RecommendationWithProfile } from "@/hooks/useRecommendationRequests";
+import { useCounselorRecommendations, useRecLetterMessages, useSendCounselorNote, type RecommendationWithProfile } from "@/hooks/useRecommendationRequests";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import {
   Loader2,
   Link,
   Copy,
+  MessageSquare,
 } from "lucide-react";
 
 const CounselorRecommendationLetters = () => {
@@ -46,6 +47,10 @@ const CounselorRecommendationLetters = () => {
   const [counselorNotes, setCounselorNotes] = useState("");
   const [generatedLetter, setGeneratedLetter] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState("");
+
+  const { data: messages = [] } = useRecLetterMessages(selectedRequest?.id ?? null);
+  const sendCounselorNote = useSendCounselorNote();
 
   /* ───────────────────────────── */
   /* Derived Values                */
@@ -247,6 +252,7 @@ const CounselorRecommendationLetters = () => {
               setSelectedRequest(null);
               setGeneratedLetter("");
               setCounselorNotes("");
+              setNewNoteContent("");
             }}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
@@ -380,6 +386,94 @@ const CounselorRecommendationLetters = () => {
                   <p className="text-sm text-muted-foreground">
                     No teacher token found for this request.
                   </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Revision Thread */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MessageSquare className="h-4 w-4 text-violet-500" />
+                  Revision Thread
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Message thread */}
+                <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                  {messages.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4 italic">
+                      No messages yet. Send the teacher a revision note below.
+                    </p>
+                  ) : (
+                    messages.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`flex ${m.sender_role === 'counselor' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm break-words ${
+                            m.sender_role === 'counselor'
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-muted text-foreground border border-border'
+                          }`}
+                        >
+                          <p>{m.content}</p>
+                          <p className={`text-xs mt-1 ${m.sender_role === 'counselor' ? 'text-violet-200' : 'text-muted-foreground'}`}>
+                            {m.sender_role === 'counselor' ? 'You' : selectedRequest.referee_name} · {new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Compose — hidden once letter is sent */}
+                {selectedRequest.status !== 'sent' && (
+                  <>
+                    <Textarea
+                      placeholder="Write a revision note for the teacher…"
+                      value={newNoteContent}
+                      onChange={(e) => setNewNoteContent(e.target.value)}
+                      rows={3}
+                      className="resize-none text-sm"
+                    />
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      disabled={!newNoteContent.trim() || sendCounselorNote.isPending}
+                      onClick={async () => {
+                        const content = newNoteContent.trim();
+                        await sendCounselorNote.mutateAsync({ requestId: selectedRequest.id, content });
+                        setNewNoteContent("");
+                        // Fire-and-forget email to teacher
+                        try {
+                          const { data: { user: counselor } } = await supabase.auth.getUser();
+                          const { data: counselorProfile } = await supabase
+                            .from("profiles").select("full_name").eq("user_id", counselor?.id ?? "").maybeSingle();
+                          await supabase.functions.invoke("notify-teacher-revision", {
+                            body: {
+                              teacherEmail: selectedRequest.teacher_email ?? "",
+                              teacherName: selectedRequest.referee_name,
+                              studentName: selectedRequest.profiles?.full_name ?? "Student",
+                              counselorName: counselorProfile?.full_name ?? "Your counselor",
+                              revisionNote: content.slice(0, 200),
+                              teacherUrl: `${window.location.origin}/teacher-rec/${selectedRequest.teacher_token}`,
+                            },
+                          });
+                        } catch (e) {
+                          console.error("Failed to notify teacher:", e);
+                        }
+                      }}
+                    >
+                      {sendCounselorNote.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      ) : (
+                        <Send className="h-3 w-3 mr-2" />
+                      )}
+                      Send Note to Teacher
+                    </Button>
+                  </>
                 )}
               </CardContent>
             </Card>
