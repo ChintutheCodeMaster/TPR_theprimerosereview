@@ -3,9 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DemoNavigation } from "@/components/DemoNavigation";
+import { Button } from "@/components/ui/button";
+import { Rocket } from "lucide-react";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -42,13 +44,19 @@ import PrincipalStudents from "./pages/PrincipalStudents";
 import PrincipalCounselors from "./pages/PrincipalCounselors";
 import PrincipalActivities from "./pages/PrincipalActivities";
 import PrincipalSettings from "./pages/PrincipalSettings";
+import OnboardingPage from "./pages/Onboarding";
+import LoadingNew from "./pages/Loading-new";
+import StatementPreview from "./pages/StatementPreview";
+import OnboardingSuccess from "./pages/OnboardingSuccess";
 
 const queryClient = new QueryClient();
 
 // Layout component that conditionally shows sidebar
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const noSidebarRoutes = ['/', '/auth', '/demo'];
+  const isStudentRoute = location.pathname.startsWith('/student') || location.pathname === '/submit-essay' || location.pathname === '/add-application' || location.pathname === '/student-recommendation-letters' || location.pathname === '/student-messages';
   const showSidebar = !noSidebarRoutes.includes(location.pathname);
 
   if (!showSidebar) {
@@ -72,11 +80,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 className="h-12 w-auto"
               />
             </div>
-            <img
-              src={clientLogo}
-              alt="Client Logo"
-              className="h-16 w-auto rounded"
-            />
+            <div className="flex items-center gap-4">
+              {isStudentRoute && (
+                <Button
+                  onClick={() => navigate('/onboarding')}
+                  className="gap-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border font-medium transition-colors"
+                  size="sm"
+                >
+                  <Rocket className="h-4 w-4" />
+                  Complete full onboarding here
+                </Button>
+              )}
+              <img
+                src={clientLogo}
+                alt="Client Logo"
+                className="h-16 w-auto rounded"
+              />
+            </div>
           </header>
 
           {/* Page Content */}
@@ -324,6 +344,12 @@ const App = () => {
               </ProtectedRoute>
             </AppLayout>
           } />
+
+          {/* ── Onboarding ── */}
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/loading-new" element={<LoadingNew />} />
+          <Route path="/statement-preview" element={<StatementPreview />} />
+          <Route path="/onboarding-success" element={<OnboardingSuccess />} />
 
           {/* ── Catch-all ── */}
           <Route path="*" element={<NotFound />} />

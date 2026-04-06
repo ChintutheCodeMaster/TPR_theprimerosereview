@@ -19,7 +19,7 @@ import {
   TrendingUp,
   Star,
   Award,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 interface DashboardData {

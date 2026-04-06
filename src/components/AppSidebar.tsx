@@ -192,7 +192,7 @@ export function AppSidebar() {
 
           {currentRole === 'principal' && (
             <SidebarGroup>
-              <SidebarGroupLabel>Principal</SidebarGroupLabel>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {principalItems.map(item => renderMenuItem(item))}

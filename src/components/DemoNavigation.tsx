@@ -105,7 +105,7 @@ export const DemoNavigation = () => {
           onClick={() => handleSwitch('/')}
         >
           <Building2 className="h-3 w-3" />
-          <span className="hidden sm:inline">Principal</span>
+          <span className="hidden sm:inline">Admin</span>
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />

@@ -12,6 +12,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      onboarding_answers: {
+        Row: {
+          age_range: string | null
+          anonymous_id: string | null
+          answers: Json
+          background: string | null
+          career_goals: string | null
+          completed: boolean | null
+          created_at: string | null
+          degree_interest: string | null
+          degree_type: string | null
+          gender: string | null
+          id: string
+          inspiration: string | null
+          personal_story: string | null
+          personal_strengths: string | null
+          program: string | null
+          university_name: string | null
+          updated_at: string | null
+          user_id: string | null
+          years_experience: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          anonymous_id?: string | null
+          answers?: Json
+          background?: string | null
+          career_goals?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          degree_interest?: string | null
+          degree_type?: string | null
+          gender?: string | null
+          id?: string
+          inspiration?: string | null
+          personal_story?: string | null
+          personal_strengths?: string | null
+          program?: string | null
+          university_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          years_experience?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          anonymous_id?: string | null
+          answers?: Json
+          background?: string | null
+          career_goals?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          degree_interest?: string | null
+          degree_type?: string | null
+          gender?: string | null
+          id?: string
+          inspiration?: string | null
+          personal_story?: string | null
+          personal_strengths?: string | null
+          program?: string | null
+          university_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          years_experience?: string | null
+        }
+        Relationships: []
+      }
+      personal_statements: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage_log: {
+        Row: {
+          id: string
+          user_id: string
+          function_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          function_name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          function_name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       application_essays: {
         Row: {
           id: string

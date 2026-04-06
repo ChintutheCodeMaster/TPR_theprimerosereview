@@ -71,7 +71,7 @@ useEffect(() => {
       case 'counselor': return 'Counselor';
       case 'student': return 'Student';
       case 'parent': return 'Parent';
-      case 'principal': return 'Principal';
+      case 'principal': return 'Admin';
       default: return '';
     }
   };
