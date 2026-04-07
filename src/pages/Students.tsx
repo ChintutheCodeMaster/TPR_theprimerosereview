@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useAtRiskCriteria, AtRiskCriteria } from "@/hooks/useAtRiskCriteria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,16 +62,16 @@ interface Student {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
-const computeStatus = (completion: number): Student['status'] => {
-  if (completion >= 70) return 'on-track'
-  if (completion >= 40) return 'needs-attention'
+const computeStatus = (completion: number, criteria: AtRiskCriteria): Student['status'] => {
+  if (completion >= criteria.needsAttentionThreshold) return 'on-track'
+  if (completion >= criteria.atRiskThreshold) return 'needs-attention'
   return 'at-risk'
 }
 
-const computeCompletion = (essaysSubmitted: number, totalEssays: number, recsSubmitted: number, recsRequested: number) => {
+const computeCompletion = (essaysSubmitted: number, totalEssays: number, recsSubmitted: number, recsRequested: number, criteria: AtRiskCriteria) => {
   if (totalEssays === 0 && recsRequested === 0) return 0
-  const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0
-  const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0
+  const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * criteria.essayWeight : 0
+  const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * criteria.recWeight : 0
   return Math.round(essayScore + recScore)
 }
 
@@ -92,24 +93,24 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-const getRiskReasons = (student: Student): string[] => {
+const getRiskReasons = (student: Student, criteria: AtRiskCriteria): string[] => {
   const reasons: string[] = []
-  if (student.essaysSubmitted === 0 && student.totalEssays > 0)
+  if (criteria.triggerNoEssays && student.essaysSubmitted === 0 && student.totalEssays > 0)
     reasons.push(`No essays submitted (0/${student.totalEssays})`)
-  if (student.completionPercentage < 40)
+  if (criteria.triggerLowCompletion && student.completionPercentage < criteria.atRiskThreshold)
     reasons.push(`Completion critically low (${student.completionPercentage}%)`)
-  if (student.upcomingDeadlines >= 3)
+  if (criteria.triggerManyDeadlines && student.upcomingDeadlines >= criteria.deadlineCountThreshold)
     reasons.push(`${student.upcomingDeadlines} upcoming deadlines`)
-  if (student.recommendationsSubmitted === 0 && student.recommendationsRequested > 0)
+  if (criteria.triggerNoRecs && student.recommendationsSubmitted === 0 && student.recommendationsRequested > 0)
     reasons.push('No recommendation letters received')
   if (reasons.length === 0)
     reasons.push('Overall progress requires attention')
   return reasons
 }
 
-const AtRiskBadge = ({ student }: { student: Student }) => {
+const AtRiskBadge = ({ student, criteria }: { student: Student; criteria: AtRiskCriteria }) => {
   const StatusIcon = getStatusIcon(student.status)
-  const reasons = student.status === 'at-risk' ? getRiskReasons(student) : []
+  const reasons = student.status === 'at-risk' ? getRiskReasons(student, criteria) : []
 
   return (
     <div className="relative inline-block group/risk">
@@ -147,10 +148,24 @@ const Students = () => {
   const [gpaFilter, setGpaFilter] = useState("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const { toast } = useToast()
+  const { criteria } = useAtRiskCriteria()
 
   useEffect(() => {
     fetchStudents()
   }, [])
+
+  // Recompute completion + status live whenever criteria changes
+  const displayStudents = useMemo(() =>
+    students.map(s => {
+      const completionPercentage = computeCompletion(
+        s.essaysSubmitted, s.totalEssays,
+        s.recommendationsSubmitted, s.recommendationsRequested,
+        criteria
+      )
+      return { ...s, completionPercentage, status: computeStatus(completionPercentage, criteria) }
+    }),
+    [students, criteria]
+  )
 
   const fetchStudents = async () => {
     setLoading(true)
@@ -262,7 +277,7 @@ const Students = () => {
         const recommendationsRequested = studentRecs.length
         const recommendationsSubmitted = studentRecs.filter(r => r.status === 'sent').length
 
-        const completion = computeCompletion(essaysSubmitted, totalEssays, recommendationsSubmitted, recommendationsRequested)
+        const completion = computeCompletion(essaysSubmitted, totalEssays, recommendationsSubmitted, recommendationsRequested, criteria)
 
         // upcoming deadlines = incomplete tasks with a due date in the future
         const studentTasks = tasks.filter(t => t.student_id === studentId)
@@ -281,7 +296,7 @@ const Students = () => {
           act_score: sp?.act_score || null,
           graduation_year: sp?.graduation_year || null,
           completionPercentage: completion,
-          status: computeStatus(completion),
+          status: computeStatus(completion, criteria),
           lastActivity: 'recently',
           essaysSubmitted,
           totalEssays,
@@ -306,7 +321,7 @@ const Students = () => {
   }
 
 
-  const filteredStudents = students.filter(student => {
+  const filteredStudents = displayStudents.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || student.status === statusFilter
     const matchesGPA = gpaFilter === 'all' ||
@@ -753,7 +768,7 @@ const Students = () => {
                         <TableCell>{student.essaysSubmitted}/{student.totalEssays}</TableCell>
                         <TableCell>{student.upcomingDeadlines}</TableCell>
                         <TableCell>
-                          <AtRiskBadge student={student} />
+                          <AtRiskBadge student={student} criteria={criteria} />
                         </TableCell>
                       </TableRow>
                     </DialogTrigger>

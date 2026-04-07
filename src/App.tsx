@@ -44,6 +44,7 @@ import PrincipalStudents from "./pages/PrincipalStudents";
 import PrincipalCounselors from "./pages/PrincipalCounselors";
 import PrincipalActivities from "./pages/PrincipalActivities";
 import PrincipalSettings from "./pages/PrincipalSettings";
+import PrincipalAtRiskCriteria from "./pages/PrincipalAtRiskCriteria";
 import OnboardingPage from "./pages/Onboarding";
 import LoadingNew from "./pages/Loading-new";
 import StatementPreview from "./pages/StatementPreview";
@@ -333,6 +334,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['principal']}>
                 <PrincipalActivities />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/principal-at-risk-criteria" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['principal']}>
+                <PrincipalAtRiskCriteria />
               </ProtectedRoute>
             </AppLayout>
           } />

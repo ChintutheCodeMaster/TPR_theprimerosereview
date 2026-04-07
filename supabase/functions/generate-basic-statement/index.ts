@@ -9,14 +9,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { answers } = await req.json();
-    
+
     if (!anthropicKey) {
       throw new Error('Anthropic API key not configured');
     }
@@ -29,7 +29,8 @@ serve(async (req) => {
     
     // Build dynamic field list only for fields with actual values
     const dynamicFields = [];
-    
+
+
     if (answers.background) dynamicFields.push(`- Background: ${answers.background}`);
     if (answers.gender) dynamicFields.push(`- Gender: ${answers.gender}`);
     if (answers.age_range) dynamicFields.push(`- Age Range: ${answers.age_range}`);
@@ -41,6 +42,7 @@ serve(async (req) => {
     if (answers.personal_strengths) dynamicFields.push(`- Personal Strengths: ${answers.personal_strengths}`);
     if (answers.years_experience) dynamicFields.push(`- Years Experience: ${answers.years_experience}`);
     
+
     // Parse answers JSON field if it exists and add non-empty values
     if (answers.answers && typeof answers.answers === 'object') {
       Object.entries(answers.answers).forEach(([key, value]) => {
@@ -50,12 +52,17 @@ serve(async (req) => {
       });
     }
 
+    
+
     // Create a focused system prompt for preview mode (limited information)
     const systemPrompt = `As an admissions expert, create a concise personal statement preview for ${name}, 
     who is applying to ${universities} for ${programInfo} in ${fieldOfStudy}. 
     This is a preview based on initial information - focus on their core motivations and background. 
     Keep it authentic, engaging, and well-structured even with limited details.`;
 
+
+
+    
     const userPrompt = `Background Information:
     - Name: ${name}
     - University: ${universities}

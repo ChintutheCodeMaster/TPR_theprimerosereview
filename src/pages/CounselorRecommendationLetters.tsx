@@ -23,7 +23,7 @@ import {
   Send,
   User,
   Search,
-  Sparkles,
+  // Sparkles, // AI generation disabled
   Edit3,
   ChevronLeft,
   Calendar,
@@ -46,7 +46,7 @@ const CounselorRecommendationLetters = () => {
     useState<RecommendationWithProfile | null>(null);
   const [counselorNotes, setCounselorNotes] = useState("");
   const [generatedLetter, setGeneratedLetter] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  // const [isGenerating, setIsGenerating] = useState(false); // AI generation disabled
   const [newNoteContent, setNewNoteContent] = useState("");
 
   const { data: messages = [] } = useRecLetterMessages(selectedRequest?.id ?? null);
@@ -108,6 +108,7 @@ const CounselorRecommendationLetters = () => {
   /* Actions                       */
   /* ───────────────────────────── */
 
+  /* AI generation disabled — teacher handles generation on their end
   const handleGenerateAI = async () => {
     if (!selectedRequest) return;
 
@@ -161,6 +162,7 @@ const CounselorRecommendationLetters = () => {
       setIsGenerating(false);
     }
   };
+  */
 
   const handleSend = async () => {
     if (!selectedRequest) return;
@@ -478,8 +480,8 @@ const CounselorRecommendationLetters = () => {
               </CardContent>
             </Card>
 
-            {/* Counselor Notes + Generate */}
-            <Card>
+            {/* AI Generation disabled — teacher handles generation on their end */}
+            {/* <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -517,7 +519,7 @@ const CounselorRecommendationLetters = () => {
                   </p>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Right: Letter */}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Trophy, Star, Loader2, Lock, SkipForward } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trophy, Star, Loader2, SkipForward } from "lucide-react"; // Lock removed — premium gating disabled
 import { useNavigate, useLocation } from "react-router-dom";
 import { QuestionInput } from "@/components/QuestionInput";
 import { steps } from "@/data/onboardingSteps";
@@ -30,13 +30,15 @@ const Onboarding = () => {
   const [showAchievementLoading, setShowAchievementLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [anonymousId, setAnonymousId] = useState<string>("");
-  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
+  // const [hasPremiumAccess, setHasPremiumAccess] = useState(false); // premium gating disabled
+  const hasPremiumAccess = true;
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuthState();
   const { toast: uiToast } = useToast();
   const isMobile = useIsMobile();
 
+  /* Premium gating disabled — all questions are accessible
   useEffect(() => {
     const premiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
     const fromMemberArea = location.state?.fromMemberArea && location.state?.premiumUnlocked;
@@ -50,6 +52,7 @@ const Onboarding = () => {
       localStorage.setItem('premiumUnlocked', 'true');
     }
   }, [location.state]);
+  */
 
   useEffect(() => {
     const storedAnonymousId = localStorage.getItem('anonymousId');
@@ -91,7 +94,7 @@ const Onboarding = () => {
   const tocSteps = steps.map((step, index) => ({
     title: step.title,
     description: step.description,
-    locked: index >= 4 && !hasPremiumAccess
+    locked: false // index >= 4 && !hasPremiumAccess — premium gating disabled
   }));
 
   const totalQuestions = steps.reduce((acc, step) => acc + step.questions.length, 0);
@@ -148,6 +151,7 @@ const Onboarding = () => {
     }
     await saveAnswersToSupabase();
     const nextStepIndex = currentQuestion < step.questions.length - 1 ? currentStep : currentStep + 1;
+    /* Premium gating disabled — no longer redirecting at step 4
     if (nextStepIndex >= 4 && !hasPremiumAccess) {
       try {
         sessionStorage.setItem('onboardingAnswers', JSON.stringify(answers));
@@ -162,6 +166,7 @@ const Onboarding = () => {
       }
       return;
     }
+    */
     if (question.type === "combined_cards") {
       if (question.id === "basic_info") {
         if (!currentAnswer?.age_range || !currentAnswer?.gender) {
@@ -271,8 +276,9 @@ const Onboarding = () => {
     );
   }
 
-  const isPremiumStep = currentStep >= 4;
-  const needsPremiumAccess = isPremiumStep && !hasPremiumAccess;
+  // Premium gating disabled — all questions unlocked
+  // const isPremiumStep = currentStep >= 4;
+  // const needsPremiumAccess = isPremiumStep && !hasPremiumAccess;
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -282,8 +288,10 @@ const Onboarding = () => {
           <div className="flex justify-between items-center mt-2 sm:mt-3">
             <p className="text-xs sm:text-sm text-neutral-500">
               Step {currentStep + 1} of {totalSteps}
+              {/* Premium badges removed — gating disabled
               {!hasPremiumAccess && currentStep < 4 && <span className="ml-1 sm:ml-2 inline-flex items-center text-xs text-yellow-600">🔓 Free Questions</span>}
               {hasPremiumAccess && <span className="ml-1 sm:ml-2 inline-flex items-center text-xs text-green-600">✓ Premium Unlocked</span>}
+              */}
             </p>
             <p className="text-xs sm:text-sm text-neutral-500">{currentQuestionOverall}/{totalQuestions}</p>
           </div>
@@ -298,6 +306,7 @@ const Onboarding = () => {
         )}
 
         <div className={`${isMobile ? 'w-full' : 'md:w-3/4'} space-y-4 sm:space-y-6 animate-fade-in mt-2 sm:mt-4`}>
+          {/* Premium lock screen disabled
           {needsPremiumAccess ? (
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-neutral-100 text-center">
               <Lock className="w-12 sm:w-16 h-12 sm:h-16 text-neutral-400 mx-auto mb-3 sm:mb-4" />
@@ -314,12 +323,13 @@ const Onboarding = () => {
               </Button>
             </div>
           ) : (
+          */}
             <>
               <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-neutral-100">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-neutral-900 flex items-center gap-2">
                   {step.title}
                   {getStepIcon(currentStep)}
-                  {isPremiumStep && <span className="text-xs sm:text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded-full">Premium</span>}
+                  {/* isPremiumStep badge removed — gating disabled */}
                 </h2>
                 <p className="mt-2 text-sm sm:text-base md:text-lg text-neutral-600">{step.description}</p>
                 <div className="mt-4 sm:mt-6 bg-blue-50 p-3 sm:p-5 rounded-lg border border-blue-100">
@@ -334,13 +344,12 @@ const Onboarding = () => {
                 <QuestionInput question={question} value={answers[question.id]} onChange={handleInputChange} />
               </div>
             </>
-          )}
 
           <div className="flex justify-between pt-3 sm:pt-4 sticky bottom-0 bg-white py-3 sm:py-4 border-t mt-6 sm:mt-8">
             <Button variant="outline" onClick={handleBack} disabled={currentStep === 0 && currentQuestion === 0} className="flex items-center gap-2 transition-all duration-300 hover:translate-x-[-4px] active:translate-y-[2px] text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2">
               <ArrowLeft className="w-3 sm:w-4 h-3 sm:h-4" /> Back
             </Button>
-            {!needsPremiumAccess && (
+            {/* {!needsPremiumAccess && ( — always true, gating disabled */}
               <div className="flex gap-2">
                 {(question.id === "challenge" || question.id === "degree_interest") && (
                   <TooltipProvider>
@@ -368,7 +377,7 @@ const Onboarding = () => {
                   )}
                 </Button>
               </div>
-            )}
+            {/* )} — closing of !needsPremiumAccess guard, removed */}
           </div>
         </div>
       </div>
