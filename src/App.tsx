@@ -49,6 +49,9 @@ import OnboardingPage from "./pages/Onboarding";
 import LoadingNew from "./pages/Loading-new";
 import StatementPreview from "./pages/StatementPreview";
 import OnboardingSuccess from "./pages/OnboardingSuccess";
+import DemoMaker from "./pages/DemoMaker";
+import ProductDemo from "./pages/ProductDemo";
+import EssayToolkit from "./pages/EssayToolkit";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +59,7 @@ const queryClient = new QueryClient();
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const noSidebarRoutes = ['/', '/auth', '/demo'];
+  const noSidebarRoutes = ['/', '/auth', '/demo', '/product-demo', '/demo-maker'];
   const isStudentRoute = location.pathname.startsWith('/student') || location.pathname === '/submit-essay' || location.pathname === '/add-application' || location.pathname === '/student-recommendation-letters' || location.pathname === '/student-messages';
   const showSidebar = !noSidebarRoutes.includes(location.pathname);
 
@@ -359,6 +362,17 @@ const App = () => {
           <Route path="/loading-new" element={<LoadingNew />} />
           <Route path="/statement-preview" element={<StatementPreview />} />
           <Route path="/onboarding-success" element={<OnboardingSuccess />} />
+
+          {/* ── Demo & Toolkit ── */}
+          <Route path="/product-demo" element={<ProductDemo />} />
+          <Route path="/demo-maker" element={<DemoMaker />} />
+          <Route path="/essay-toolkit" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['counselor', 'admin']}>
+                <EssayToolkit />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
 
           {/* ── Catch-all ── */}
           <Route path="*" element={<NotFound />} />

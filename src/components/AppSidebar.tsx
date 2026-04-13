@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper, Settings, Building2, ShieldAlert } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Sparkles } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,10 @@ const mainItems = [{
   title: "Essays",
   url: "/essays",
   icon: FileText
+}, {
+  title: "Essay Toolkit",
+  url: "/essay-toolkit",
+  icon: Sparkles
 }, {
   title: "Applications",
   url: "/applications",
@@ -101,7 +105,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const counselorRoutes = ['/dashboard', '/students', '/essays', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
+const counselorRoutes = ['/dashboard', '/students', '/essays', '/essay-toolkit', '/applications', '/recommendation-letters', '/messages', '/notifications', '/add-student', '/review-essays', '/check-deadlines', '/view-reports'];
 const studentRoutes = ['/student-dashboard', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
