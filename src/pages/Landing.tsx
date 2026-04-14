@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, Users, UserCircle, Eye, Building2, Wand2 } from "lucide-react";
+import { GraduationCap, Users, UserCircle, Eye, Building2 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 
 const Landing = () => {
@@ -19,14 +19,6 @@ const Landing = () => {
         >
           <Eye className="h-4 w-4" />
           View Demo
-        </Button>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => navigate('/demo-maker')}
-        >
-          <Wand2 className="h-4 w-4" />
-          Demo Maker
         </Button>
       </div>
 
