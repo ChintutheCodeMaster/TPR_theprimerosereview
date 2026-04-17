@@ -48,17 +48,16 @@ serve(async (req) => {
     }
 
     const ANTHROPIC_API_KEY2 = Deno.env.get("ANTHROPIC_API_KEY2");
-    if (!ANTHROPIC_API_KEY2) {
-      console.error("ANTHROPIC_API_KEY2 is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!ANTHROPIC_API_KEY2 && !LOVABLE_API_KEY) {
+      console.error("No AI API keys configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-
-
-    console.log("Analyzing essay with Anthropic Claude...");
     console.log("Essay length:", essayContent.length);
 
     const systemPrompt = `You are an expert college admissions essay reviewer. Analyze the following personal statement for undergraduate applications.
@@ -115,53 +114,83 @@ IMPORTANT:
 ${essayContent}
 ---`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY2,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [
-          { role: "user", content: userPrompt }
-        ],
-      }),
-    });
+    let content: string | null = null;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
+    // Try Anthropic first
+    if (ANTHROPIC_API_KEY2) {
+      console.log("Analyzing essay with Anthropic Claude...");
+      try {
+        const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": ANTHROPIC_API_KEY2,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          }),
+        });
 
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (anthropicResponse.ok) {
+          const data = await anthropicResponse.json();
+          content = data.content?.[0]?.text ?? null;
+          if (content) console.log("Anthropic response received");
+          else console.warn("Empty content from Anthropic, falling back to Gemini");
+        } else {
+          const errorText = await anthropicResponse.text();
+          console.warn(`Anthropic API error ${anthropicResponse.status}: ${errorText} — falling back to Gemini`);
+        }
+      } catch (err) {
+        console.warn("Anthropic request failed:", err, "— falling back to Gemini");
       }
+    }
 
+    // Fallback to Gemini 2.5 Flash via Lovable gateway
+    if (!content && LOVABLE_API_KEY) {
+      console.log("Analyzing essay with Gemini 2.5 Flash (fallback)...");
+      try {
+        const geminiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (geminiResponse.ok) {
+          const data = await geminiResponse.json();
+          content = data.choices?.[0]?.message?.content ?? null;
+          if (content) console.log("Gemini fallback response received");
+          else console.error("Empty content from Gemini fallback");
+        } else {
+          const errorText = await geminiResponse.text();
+          console.error(`Gemini fallback error ${geminiResponse.status}: ${errorText}`);
+        }
+      } catch (err) {
+        console.error("Gemini fallback request failed:", err);
+      }
+    }
+
+    if (!content) {
       return new Response(
         JSON.stringify({ error: "AI analysis failed" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
-    console.log("Anthropic response received");
-
-    const content = data.content?.[0]?.text;
-    if (!content) {
-      console.error("No content in Anthropic response");
-      return new Response(
-        JSON.stringify({ error: "Empty AI response" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse the JSON from the response
+    
     let analysisResult: AnalysisResult;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
