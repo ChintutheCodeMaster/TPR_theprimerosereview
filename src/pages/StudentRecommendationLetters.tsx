@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useStudentRecommendations } from "@/hooks/useRecommendationRequests";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   FileText,
@@ -21,6 +22,7 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -39,8 +41,11 @@ const STRENGTH_OPTIONS = [
   "Communication",
 ];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const INITIAL_FORM = {
   refereeName: "",
+  refereeEmail: "",
   refereeRole: "",
   relationshipDuration: "",
   relationshipCapacity: "",
@@ -105,21 +110,48 @@ const StudentRecommendationLetters = () => {
       toast.error("Please fill in all required fields marked with *");
       return;
     }
+    if (!formData.refereeEmail || !EMAIL_RE.test(formData.refereeEmail)) {
+      toast.error("Please enter a valid teacher email address");
+      return;
+    }
 
     try {
-      await createRequest.mutateAsync({
-  referee_name: formData.refereeName,
-  referee_role: formData.refereeRole,
-  relationship_duration: formData.relationshipDuration,
-  relationship_capacity: formData.relationshipCapacity,
-  meaningful_project: formData.meaningfulProject,
-  best_moment: formData.bestMoment,
-  difficulties_overcome: formData.difficultiesOvercome,
-  strengths: formData.strengths,
-  personal_notes: formData.personalNotes,
-  status: "pending",
-  student_id: "", // TS placeholder — overwritten by hook with real user.id
-});
+      const result = await createRequest.mutateAsync({
+        referee_name: formData.refereeName,
+        referee_role: formData.refereeRole,
+        relationship_duration: formData.relationshipDuration,
+        relationship_capacity: formData.relationshipCapacity,
+        meaningful_project: formData.meaningfulProject,
+        best_moment: formData.bestMoment,
+        difficulties_overcome: formData.difficultiesOvercome,
+        strengths: formData.strengths,
+        personal_notes: formData.personalNotes,
+        status: "pending",
+        student_id: "",
+        teacher_email: formData.refereeEmail,
+      } as any);
+
+      // Notify the teacher via email with their private portal link
+      const token = (result as any)?.teacher_token;
+      if (token) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", user!.id)
+          .single();
+        const studentName = profile?.full_name || user?.email || "A student";
+        const teacherUrl = `${window.location.origin}/teacher-rec/${token}`;
+
+        await supabase.functions.invoke("notify-teacher-request", {
+          body: {
+            teacherEmail: formData.refereeEmail,
+            teacherName: formData.refereeName,
+            studentName,
+            teacherUrl,
+          },
+        });
+      }
 
       setFormData(INITIAL_FORM);
       setCurrentStep("list");
@@ -234,6 +266,23 @@ const StudentRecommendationLetters = () => {
                 value={formData.refereeName}
                 onChange={(e) => setFormData({ ...formData, refereeName: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="refereeEmail" className="flex items-center gap-1.5">
+                <Mail className="h-4 w-4 text-primary" />
+                Teacher's email address *
+              </Label>
+              <Input
+                id="refereeEmail"
+                type="email"
+                placeholder="e.g. j.smith@school.edu"
+                value={formData.refereeEmail}
+                onChange={(e) => setFormData({ ...formData, refereeEmail: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                We'll send them a notification with a private link to write your letter.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -378,6 +427,8 @@ const StudentRecommendationLetters = () => {
               disabled={
                 createRequest.isPending ||
                 !formData.refereeName ||
+                !formData.refereeEmail ||
+                !EMAIL_RE.test(formData.refereeEmail) ||
                 !formData.refereeRole ||
                 !formData.relationshipDuration
               }
