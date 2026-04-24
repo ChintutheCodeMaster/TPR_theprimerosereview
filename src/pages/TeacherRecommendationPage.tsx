@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -153,6 +152,17 @@ const TeacherRecommendationPage = () => {
       if (error) throw error;
       setSubmitted(true);
       toast({ title: "Draft submitted!", description: "Your counselor will review and finalise the letter." });
+
+      // Notify the counselor that a draft (or revised draft) is ready
+      await supabase.functions.invoke("notify-counselor-teacher-draft", {
+        body: {
+          token,
+          teacherName: rec?.referee_name ?? "The teacher",
+          studentName: rec?.student_name ?? "A student",
+          isRevision: !!rec?.teacher_draft,
+          appUrl: window.location.origin,
+        },
+      });
     } catch (err: any) {
       toast({ title: "Failed to submit", description: err.message, variant: "destructive" });
     } finally {
