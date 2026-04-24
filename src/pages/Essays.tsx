@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,6 @@ import { EssayFeedbackModal } from "@/components/EssayFeedbackModal";
 import { CounselorFeedbackHistory } from "@/components/CounselorFeedbackHistory";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import SubmitEssay from "./SubmitEssay";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAssignedStudents } from "@/hooks/useAssignedStudents";
 
@@ -55,6 +54,247 @@ interface Essay {
   createdAt: string
   updatedAt: string
   sentAt: string | null
+}
+
+// Defined outside Essays so React never sees a new component type on re-render.
+// Defining a component inside another function means a new type every render,
+// which causes Radix UI to unmount/remount DialogContent and replay its open animation.
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'sent': return 'default'
+    case 'in_progress': return 'secondary'
+    case 'pending': return 'destructive'
+    case 'draft': return 'outline'
+    default: return 'outline'
+  }
+}
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'sent': return CheckCircle
+    case 'in_progress': return Clock
+    case 'pending': return AlertCircle
+    case 'draft': return FileText
+    default: return FileText
+  }
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'sent': return 'Sent'
+    case 'in_progress': return 'In Review'
+    case 'pending': return 'Needs Attention'
+    case 'draft': return 'Draft'
+    default: return status
+  }
+}
+
+interface EssayDialogProps {
+  essay: Essay;
+  onOpenFeedback: (essay: Essay) => void;
+  onUpdateStatus: (essayId: string, status: string) => void;
+}
+
+const EssayDialog = ({ essay, onOpenFeedback, onUpdateStatus }: EssayDialogProps) => {
+  const StatusIcon = getStatusIcon(essay.status)
+  return (
+    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback>
+                {essay.studentName.split(' ').map((n: string) => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-xl font-bold">{essay.title}</h2>
+              <p className="text-sm text-muted-foreground">{essay.studentName}</p>
+            </div>
+          </div>
+          <Badge variant={getStatusColor(essay.status) as any}>
+            <StatusIcon className="h-3 w-3 mr-1" />
+            {getStatusLabel(essay.status)}
+          </Badge>
+        </DialogTitle>
+      </DialogHeader>
+
+      <Tabs defaultValue="review" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="review">Review</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="analysis">AI Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="review" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Essay Content
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {essay.prompt && (
+                    <div className="mb-4 p-3 bg-muted rounded-lg">
+                      <p className="text-sm font-medium mb-1">Prompt:</p>
+                      <p className="text-sm text-muted-foreground">{essay.prompt}</p>
+                    </div>
+                  )}
+                  <p className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
+                    {essay.content}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Word Count</span>
+                    <span className="font-medium">{essay.wordCount}</span>
+                  </div>
+                  {essay.aiScore && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">AI Score</span>
+                      <span className="font-medium">{essay.aiScore}/100</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Updated</span>
+                    <span className="font-medium">
+                      {new Date(essay.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {essay.sentAt && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Sent</span>
+                      <span className="font-medium">
+                        {new Date(essay.sentAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Update Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {['draft', 'in_progress', 'pending', 'sent'].map(s => (
+                    <Button
+                      key={s}
+                      variant={essay.status === s ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => onUpdateStatus(essay.id, s)}
+                    >
+                      {getStatusLabel(s)}
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="feedback" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Counselor Feedback</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {essay.manualNotes && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-1">Your Notes:</p>
+                  <p className="text-sm text-muted-foreground">{essay.manualNotes}</p>
+                </div>
+              )}
+              {essay.personalMessage && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-1">Personal Message to Student:</p>
+                  <p className="text-sm text-muted-foreground">{essay.personalMessage}</p>
+                </div>
+              )}
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => onOpenFeedback(essay)}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Open Feedback Editor
+              </Button>
+            </CardContent>
+          </Card>
+          <CounselorFeedbackHistory essayId={essay.id} />
+        </TabsContent>
+
+        <TabsContent value="analysis" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-ai-accent" />
+                AI Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {essay.aiAnalysis ? (
+                <div className="space-y-4">
+                  {essay.aiScore && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Overall Score</span>
+                      <div className="flex items-center gap-2">
+                        <Progress value={essay.aiScore} className="w-24 h-2" />
+                        <span className="text-sm font-bold">{essay.aiScore}/100</span>
+                      </div>
+                    </div>
+                  )}
+                  <pre className="text-xs text-muted-foreground bg-muted p-3 rounded-lg overflow-auto whitespace-pre-wrap">
+                    {JSON.stringify(essay.aiAnalysis, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Sparkles className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-4">No AI analysis yet</p>
+                  <Button variant="outline" size="sm">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Run AI Analysis
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex gap-2 pt-4 border-t border-border">
+        <Button className="flex-1" onClick={() => onOpenFeedback(essay)}>
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Send Feedback
+        </Button>
+        <Button variant="outline" className="flex-1">
+          <User className="h-4 w-4 mr-2" />
+          Assign Task
+        </Button>
+        <Button variant="outline">
+          <Share className="h-4 w-4 mr-2" />
+          Share
+        </Button>
+      </div>
+    </DialogContent>
+  )
 }
 
 const Essays = () => {
@@ -171,36 +411,6 @@ const fetchEssays = async () => {
       : 0
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'sent': return 'default'
-      case 'in_progress': return 'secondary'
-      case 'pending': return 'destructive'
-      case 'draft': return 'outline'
-      default: return 'outline'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'sent': return CheckCircle
-      case 'in_progress': return Clock
-      case 'pending': return AlertCircle
-      case 'draft': return FileText
-      default: return FileText
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'sent': return 'Sent'
-      case 'in_progress': return 'In Review'
-      case 'pending': return 'Needs Attention'
-      case 'draft': return 'Draft'
-      default: return status
-    }
-  }
-
   const filteredEssays = essays.filter(essay => {
     const matchesSearch =
       essay.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -211,213 +421,6 @@ const fetchEssays = async () => {
     if (sortBy === 'aiScore') return (b.aiScore || 0) - (a.aiScore || 0)
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   })
-
-  // ─── Essay Detail Dialog ──────────────────────────────────────
-  const EssayDialog = ({ essay }: { essay: Essay }) => {
-   
-    const StatusIcon = getStatusIcon(essay.status)
-    return (
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>
-                  {essay.studentName.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-bold">{essay.title}</h2>
-                <p className="text-sm text-muted-foreground">{essay.studentName}</p>
-              </div>
-            </div>
-            <Badge variant={getStatusColor(essay.status) as any}>
-              <StatusIcon className="h-3 w-3 mr-1" />
-              {getStatusLabel(essay.status)}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <Tabs defaultValue="review" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="review">Review</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
-            <TabsTrigger value="analysis">AI Analysis</TabsTrigger>
-          </TabsList>
-
-          {/* Review Tab */}
-          <TabsContent value="review" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Essay Content
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {essay.prompt && (
-                      <div className="mb-4 p-3 bg-muted rounded-lg">
-                        <p className="text-sm font-medium mb-1">Prompt:</p>
-                        <p className="text-sm text-muted-foreground">{essay.prompt}</p>
-                      </div>
-                    )}
-                    <p className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
-                      {essay.content}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Stats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Word Count</span>
-                      <span className="font-medium">{essay.wordCount}</span>
-                    </div>
-                    {essay.aiScore && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">AI Score</span>
-                        <span className="font-medium">{essay.aiScore}/100</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Last Updated</span>
-                      <span className="font-medium">
-                        {new Date(essay.updatedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {essay.sentAt && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Sent</span>
-                        <span className="font-medium">
-                          {new Date(essay.sentAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Status Actions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Update Status</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {['draft', 'in_progress', 'pending', 'sent'].map(s => (
-                      <Button
-                        key={s}
-                        variant={essay.status === s ? 'default' : 'outline'}
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => updateEssayStatus(essay.id, s)}
-                      >
-                        {getStatusLabel(s)}
-                      </Button>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Feedback Tab */}
-          <TabsContent value="feedback" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Counselor Feedback</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {essay.manualNotes && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-1">Your Notes:</p>
-                    <p className="text-sm text-muted-foreground">{essay.manualNotes}</p>
-                  </div>
-                )}
-                {essay.personalMessage && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-1">Personal Message to Student:</p>
-                    <p className="text-sm text-muted-foreground">{essay.personalMessage}</p>
-                  </div>
-                )}
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={() => setFeedbackModalEssay(essay)}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Open Feedback Editor
-                </Button>
-              </CardContent>
-            </Card>
-            <CounselorFeedbackHistory essayId={essay.id} />
-          </TabsContent>
-
-          {/* AI Analysis Tab */}
-          <TabsContent value="analysis" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-ai-accent" />
-                  AI Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {essay.aiAnalysis ? (
-                  <div className="space-y-4">
-                    {essay.aiScore && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Overall Score</span>
-                        <div className="flex items-center gap-2">
-                          <Progress value={essay.aiScore} className="w-24 h-2" />
-                          <span className="text-sm font-bold">{essay.aiScore}/100</span>
-                        </div>
-                      </div>
-                    )}
-                    <pre className="text-xs text-muted-foreground bg-muted p-3 rounded-lg overflow-auto whitespace-pre-wrap">
-                      {JSON.stringify(essay.aiAnalysis, null, 2)}
-                    </pre>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Sparkles className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground mb-4">No AI analysis yet</p>
-                    <Button variant="outline" size="sm">
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Run AI Analysis
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex gap-2 pt-4 border-t border-border">
-          <Button className="flex-1" onClick={() => setFeedbackModalEssay(essay)}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Send Feedback
-          </Button>
-          <Button variant="outline" className="flex-1">
-            <User className="h-4 w-4 mr-2" />
-            Assign Task
-          </Button>
-          <Button variant="outline">
-            <Share className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-        </div>
-      </DialogContent>
-    )
-  }
 
   if (loading || loadingAssignments) {
   return (
@@ -583,7 +586,7 @@ const fetchEssays = async () => {
                     </CardContent>
                   </Card>
                 </DialogTrigger>
-                <EssayDialog essay={essay} />
+                <EssayDialog essay={essay} onOpenFeedback={setFeedbackModalEssay} onUpdateStatus={updateEssayStatus} />
               </Dialog>
             )
           })}
@@ -631,7 +634,7 @@ const fetchEssays = async () => {
                         </div>
                       </div>
                     </DialogTrigger>
-                    <EssayDialog essay={essay} />
+                    <EssayDialog essay={essay} onOpenFeedback={setFeedbackModalEssay} onUpdateStatus={updateEssayStatus} />
                   </Dialog>
                 )
               })}
