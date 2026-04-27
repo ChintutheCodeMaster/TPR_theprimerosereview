@@ -51,7 +51,7 @@ export const useIndexDashboard = () => {
       if (studentIds.length === 0) return [];
 
       // Fetch all data in parallel
-      const [profilesRes, studentProfilesRes, essaysRes, recsRes] =
+      const [profilesRes, studentProfilesRes, essaysRes, recsRes, tasksRes] =
         await Promise.all([
           supabase
             .from("profiles")
@@ -72,6 +72,11 @@ export const useIndexDashboard = () => {
             .from("recommendation_requests")
             .select("student_id, status")
             .in("student_id", studentIds),
+
+          supabase
+            .from("tasks")
+            .select("student_id, due_date, completed")
+            .in("student_id", studentIds),
         ]);
 
       const profileMap = new Map(
@@ -81,11 +86,15 @@ export const useIndexDashboard = () => {
         (studentProfilesRes.data ?? []).map((p) => [p.user_id, p])
       );
 
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
       return studentIds.map((id): DashboardStudent => {
         const profile = profileMap.get(id);
         const sp = studentProfileMap.get(id);
         const essays = (essaysRes.data ?? []).filter((e) => e.student_id === id);
         const recs = (recsRes.data ?? []).filter((r) => r.student_id === id);
+        const studentTasks = (tasksRes.data ?? []).filter((t) => t.student_id === id);
 
         // Essay completion (60% weight)
         const totalEssays = essays.length;
@@ -102,13 +111,22 @@ export const useIndexDashboard = () => {
         // Overall completion
         const completionPercentage = Math.round(essayScore + recScore);
 
-        // Status — same thresholds as useDashboardStats
+        // Near deadline = any incomplete task due within 30 days
+        const hasNearDeadline = studentTasks.some(
+          (t) =>
+            !t.completed &&
+            t.due_date &&
+            new Date(t.due_date) >= now &&
+            new Date(t.due_date) <= thirtyDaysFromNow
+        );
+
+        // at-risk only when deadline is within 30 days AND completion is low
         const status: DashboardStudent["status"] =
           completionPercentage >= 60
             ? "on-track"
-            : completionPercentage >= 40
-            ? "needs-attention"
-            : "at-risk";
+            : hasNearDeadline && completionPercentage < 40
+            ? "at-risk"
+            : "needs-attention";
 
         // Last activity = most recent essay updated_at
         const lastEssayUpdate = essays

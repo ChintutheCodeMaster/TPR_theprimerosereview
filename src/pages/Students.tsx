@@ -55,6 +55,7 @@ interface Student {
   recommendationsSubmitted: number
   recommendationsRequested: number
   upcomingDeadlines: number
+  hasNearDeadline: boolean
   targetSchools: string[]
   extracurriculars: string[]
   tasks: { id: string; task: string; due_date: string | null; completed: boolean }[]
@@ -62,10 +63,10 @@ interface Student {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
-const computeStatus = (completion: number, criteria: AtRiskCriteria): Student['status'] => {
+const computeStatus = (completion: number, criteria: AtRiskCriteria, hasNearDeadline: boolean): Student['status'] => {
   if (completion >= criteria.needsAttentionThreshold) return 'on-track'
-  if (completion >= criteria.atRiskThreshold) return 'needs-attention'
-  return 'at-risk'
+  if (hasNearDeadline && completion < criteria.atRiskThreshold) return 'at-risk'
+  return 'needs-attention'
 }
 
 const computeCompletion = (essaysSubmitted: number, totalEssays: number, recsSubmitted: number, recsRequested: number, criteria: AtRiskCriteria) => {
@@ -95,12 +96,12 @@ const getStatusIcon = (status: string) => {
 
 const getRiskReasons = (student: Student, criteria: AtRiskCriteria): string[] => {
   const reasons: string[] = []
+  if (student.hasNearDeadline)
+    reasons.push('Deadline within the next 30 days')
   if (criteria.triggerNoEssays && student.essaysSubmitted === 0 && student.totalEssays > 0)
     reasons.push(`No essays submitted (0/${student.totalEssays})`)
   if (criteria.triggerLowCompletion && student.completionPercentage < criteria.atRiskThreshold)
     reasons.push(`Completion critically low (${student.completionPercentage}%)`)
-  if (criteria.triggerManyDeadlines && student.upcomingDeadlines >= criteria.deadlineCountThreshold)
-    reasons.push(`${student.upcomingDeadlines} upcoming deadlines`)
   if (criteria.triggerNoRecs && student.recommendationsSubmitted === 0 && student.recommendationsRequested > 0)
     reasons.push('No recommendation letters received')
   if (reasons.length === 0)
@@ -162,7 +163,7 @@ const Students = () => {
         s.recommendationsSubmitted, s.recommendationsRequested,
         criteria
       )
-      return { ...s, completionPercentage, status: computeStatus(completionPercentage, criteria) }
+      return { ...s, completionPercentage, status: computeStatus(completionPercentage, criteria, s.hasNearDeadline) }
     }),
     [students, criteria]
   )
@@ -281,9 +282,15 @@ const Students = () => {
 
         // upcoming deadlines = incomplete tasks with a due date in the future
         const studentTasks = tasks.filter(t => t.student_id === studentId)
+        const now = new Date()
+        const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         const upcomingDeadlines = studentTasks.filter(t =>
-          !t.completed && t.due_date && new Date(t.due_date) > new Date()
+          !t.completed && t.due_date && new Date(t.due_date) > now
         ).length
+        const hasNearDeadline = studentTasks.some(t =>
+          !t.completed && t.due_date &&
+          new Date(t.due_date) >= now && new Date(t.due_date) <= thirtyDaysFromNow
+        )
 
         return {
           id: studentId,
@@ -296,13 +303,14 @@ const Students = () => {
           act_score: sp?.act_score || null,
           graduation_year: sp?.graduation_year || null,
           completionPercentage: completion,
-          status: computeStatus(completion, criteria),
+          status: computeStatus(completion, criteria, hasNearDeadline),
           lastActivity: 'recently',
           essaysSubmitted,
           totalEssays,
           recommendationsSubmitted,
           recommendationsRequested,
           upcomingDeadlines,
+          hasNearDeadline,
           targetSchools: targetSchools.filter(ts => ts.student_id === studentId).map(ts => ts.school_name),
           extracurriculars: extracurriculars.filter(ec => ec.student_id === studentId).map(ec => ec.activity),
           tasks: studentTasks.map(t => ({ id: t.id, task: t.task, due_date: t.due_date, completed: t.completed })),
@@ -809,7 +817,7 @@ const Students = () => {
                             </div>
                           </div>
                         </div>
-                        <AtRiskBadge student={student} />
+                        <AtRiskBadge student={student} criteria={criteria} />
                       </div>
 
                       <div className="mb-4">

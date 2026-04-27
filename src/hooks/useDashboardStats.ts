@@ -88,7 +88,7 @@ const studentIds = assignments?.map((a) => a.student_id) ?? [];
       //   upcomingDeadlines: deadlinesRes.count ?? 0,
       //   atRiskStudents: atRiskStudentIds.size,
       // };
-      const [essaysRes, deadlinesRes, essayStatsRes, recsRes] = await Promise.all([
+      const [essaysRes, deadlinesRes, essayStatsRes, recsRes, tasksRes] = await Promise.all([
   // Essays currently in review
   supabase
     .from("essay_feedback")
@@ -121,6 +121,12 @@ const studentIds = assignments?.map((a) => a.student_id) ?? [];
     .from("recommendation_requests")
     .select("student_id, status")
     .in("student_id", studentIds),
+
+  // For at-risk: tasks to detect near deadlines (within 30 days)
+  supabase
+    .from("tasks")
+    .select("student_id, due_date, completed")
+    .in("student_id", studentIds),
 ]);
 
 // Compute at-risk using same logic as Students.tsx
@@ -142,6 +148,9 @@ const studentIds = assignments?.map((a) => a.student_id) ?? [];
 //   })
 // );
 
+const now = new Date();
+const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
 const atRiskCount = studentIds.filter(studentId => {
   const studentEssays = (essayStatsRes.data ?? []).filter(e => e.student_id === studentId);
   const totalEssays = studentEssays.length;
@@ -157,7 +166,13 @@ const atRiskCount = studentIds.filter(studentId => {
   const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
   const completion = Math.round(essayScore + recScore);
 
-  return completion < 40;
+  const hasNearDeadline = (tasksRes.data ?? []).some(t =>
+    t.student_id === studentId &&
+    !t.completed && t.due_date &&
+    new Date(t.due_date) >= now && new Date(t.due_date) <= thirtyDaysFromNow
+  );
+
+  return hasNearDeadline && completion < 40;
 }).length;
 
 const atRiskStudents = atRiskCount;
