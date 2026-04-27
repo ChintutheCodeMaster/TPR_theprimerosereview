@@ -114,15 +114,13 @@ export const InspirationalFiguresGrid: React.FC<InspirationalFiguresGridProps> =
                 }`}
               >
                 <div className="p-4 flex flex-col items-center justify-center h-full">
-                  <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center mb-3">
-                    {figure.image ? (
-                      <img
-                        src={figure.image}
-                        alt={figure.name}
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center mb-3 shrink-0">
+                    {figure.name === "Other" ? (
+                      <span className="text-2xl sm:text-3xl font-bold text-primary">+</span>
                     ) : (
-                      <span className="text-4xl">+</span>
+                      <span className="text-xl sm:text-2xl font-bold text-primary select-none">
+                        {figure.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                      </span>
                     )}
                   </div>
                   <div className="text-center">
