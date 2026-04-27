@@ -34,13 +34,13 @@ serve(async (req) => {
     if (action === 'ai-detect') {
       systemPrompt = `You are an expert AI content detector. Analyze the given text and determine how likely it is to have been written by AI vs a human.
 
-Return a JSON object with this exact structure:
-{
-  "aiScore": <number 0-100, where 100 means definitely AI-written>,
-  "humanScore": <number 0-100, where 100 means definitely human-written>,
-  "confidence": "<low|medium|high>",
-  "summary": "<2-3 sentence summary of your assessment>",
-  "indicators": [
+      Return a JSON object with this exact structure:
+    {
+      "aiScore": <number 0-100, where 100 means definitely AI-written>,
+      "humanScore": <number 0-100, where 100 means definitely human-written>,
+      "confidence": "<low|medium|high>",
+      "summary": "<2-3 sentence summary of your assessment>",
+    "indicators": [
     {
       "type": "<ai|human>",
       "description": "<specific indicator found in the text>",
