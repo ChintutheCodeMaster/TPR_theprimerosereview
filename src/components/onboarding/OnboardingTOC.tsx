@@ -58,7 +58,7 @@ const OnboardingTOC: React.FC<OnboardingTOCProps> = ({ steps, currentStep, onNav
               <div className="flex flex-col">
                 <div className="flex items-center">
                   <div className={cn(
-                    "w-5 sm:w-6 h-5 sm:h-6 rounded-full flex items-center justify-center mr-2 sm:mr-3",
+                    "w-5 sm:w-6 h-5 sm:h-6 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0",
                     isActive ? "bg-blue-600 text-white"
                       : isCompleted ? "bg-green-500 text-white"
                       : isLocked ? "bg-gray-200 text-gray-400"

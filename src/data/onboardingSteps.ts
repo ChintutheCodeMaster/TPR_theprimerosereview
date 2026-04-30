@@ -1,7 +1,7 @@
 
 import { Step } from "../types/onboarding";
 import { basicInformationStep } from "./steps/basicInformation";
-import { quickStartStep } from "./steps/quickStart";
+// import { quickStartStep } from "./steps/quickStart"; // "Why are you interested in this degree?" — temporarily removed
 import { backgroundStep } from "./steps/background";
 import { goalsStep } from "./steps/goals";
 import { strengthsStep } from "./steps/strengths";
@@ -12,7 +12,7 @@ export const steps: Step[] = [
   basicInformationStep,
   inspirationalFiguresStep,
   personalStoryStep,
-  quickStartStep,
+  // quickStartStep, // "Why are you interested in this degree?" — temporarily removed
   backgroundStep,
   goalsStep,
   strengthsStep

@@ -38,8 +38,8 @@ export const basicInformationStep: Step = {
       question: "What type of degree are you pursuing or planning to pursue?",
       type: "select",
       options: [
-        "Bachelor's (BA/BS/BSc)",
-        "Master's (MA/MS/MSc)",
+        "Undergraduate",
+        "Postgraduate",
         "MBA",
         "PhD/Doctorate",
         "JD (Law)",
