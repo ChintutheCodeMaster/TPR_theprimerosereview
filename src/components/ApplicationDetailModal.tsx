@@ -568,49 +568,65 @@ export const ApplicationDetailModal = ({
             )}
 
             {/* Essay slots header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Required Essays</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {totalSlots === 0 ? "No slots yet — add the essays this school requires" : `${totalSlots} essay${totalSlots > 1 ? "s" : ""} required`}
-                </p>
-              </div>
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowAddSlot(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1" />Add Essay
-              </Button>
-            </div>
+            {(() => {
+              const requiredEssays = application.required_essays ?? 0;
+              const atEssayLimit = totalSlots >= requiredEssays && requiredEssays > 0;
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-sm">Required Essays</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {totalSlots === 0
+                          ? `Add up to ${requiredEssays} essay${requiredEssays !== 1 ? "s" : ""} for this application`
+                          : `${totalSlots} / ${requiredEssays} essay${requiredEssays !== 1 ? "s" : ""} added`}
+                      </p>
+                    </div>
+                    {!atEssayLimit && (
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowAddSlot(true)}>
+                        <Plus className="h-3.5 w-3.5 mr-1" />Add Essay
+                      </Button>
+                    )}
+                  </div>
 
-            {showAddSlot && (
-              <AddSlotForm applicationId={application.id} onDone={() => setShowAddSlot(false)} createSlot={createSlot} />
-            )}
+                  {showAddSlot && !atEssayLimit && (
+                    <AddSlotForm applicationId={application.id} onDone={() => setShowAddSlot(false)} createSlot={createSlot} />
+                  )}
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : slots.length === 0 && !showAddSlot ? (
-              <div className="border border-dashed border-border rounded-xl p-8 text-center">
-                <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm font-medium mb-1">No essays defined yet</p>
-                <p className="text-xs text-muted-foreground mb-4">Add the essays this school requires to start tracking progress.</p>
-                <Button size="sm" variant="outline" onClick={() => setShowAddSlot(true)}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />Add First Essay
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {slots.map((slot) => (
-                  <SlotCard
-                    key={slot.id}
-                    slot={slot}
-                    onStartWriting={handleStartWriting}
-                    onEditDraft={handleEditDraft}
-                    onDelete={(id) => deleteSlot.mutate(id)}
-                    isDeleting={deleteSlot.isPending}
-                  />
-                ))}
-              </div>
-            )}
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : slots.length === 0 && !showAddSlot ? (
+                    <div className="border border-dashed border-border rounded-xl p-8 text-center">
+                      <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                      <p className="text-sm font-medium mb-1">No essays defined yet</p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Add the {requiredEssays} essay{requiredEssays !== 1 ? "s" : ""} this school requires to start tracking progress.
+                      </p>
+                      {!atEssayLimit && (
+                        <Button size="sm" variant="outline" onClick={() => setShowAddSlot(true)}>
+                          <Plus className="h-3.5 w-3.5 mr-1.5" />Add First Essay
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {slots.map((slot) => (
+                        <SlotCard
+                          key={slot.id}
+                          slot={slot}
+                          onStartWriting={handleStartWriting}
+                          onEditDraft={handleEditDraft}
+                          onDelete={(id) => deleteSlot.mutate(id)}
+                          isDeleting={deleteSlot.isPending}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Inline submit confirmation */}
             {showSubmitConfirm && (

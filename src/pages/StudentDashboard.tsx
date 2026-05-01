@@ -40,10 +40,6 @@ const StudentDashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const handleClick = ()=>{
-    navigate("/submit-essay")
-  }
-
   useEffect(() => {
     fetchDashboardData()
   }, [])
@@ -61,12 +57,22 @@ const StudentDashboard = () => {
         .eq('user_id', user.id)
         .single()
 
-      // Fetch applications — essays and rec counts live here
-      const { data: apps } = await supabase
-        .from('applications')
-        .select('school_name, application_type, deadline_date, status, required_essays, completed_essays, recommendations_requested, recommendations_submitted')
-        .eq('student_id', user.id)
-        .order('deadline_date', { ascending: true })
+      // Fetch applications, essay statuses, and rec statuses in parallel
+      const [{ data: apps }, { data: essayFeedbacks }, { data: recRequests }] = await Promise.all([
+        supabase
+          .from('applications')
+          .select('school_name, application_type, deadline_date, status, required_essays, recommendations_requested')
+          .eq('student_id', user.id)
+          .order('deadline_date', { ascending: true }),
+        supabase
+          .from('essay_feedback')
+          .select('id, status')
+          .eq('student_id', user.id),
+        supabase
+          .from('recommendation_requests')
+          .select('id, status')
+          .eq('student_id', user.id),
+      ])
 
       // Fetch pending tasks
       const { data: tasks } = await (supabase
@@ -104,11 +110,11 @@ const StudentDashboard = () => {
           total: (apps || []).length,
         },
         essays: {
-          completed: (apps || []).reduce((sum, a) => sum + (a.completed_essays ?? 0), 0),
+          completed: (essayFeedbacks || []).filter(e => ['sent', 'read', 'approved'].includes(e.status)).length,
           total: (apps || []).reduce((sum, a) => sum + (a.required_essays ?? 0), 0),
         },
         recommendations: {
-          completed: (apps || []).reduce((sum, a) => sum + (a.recommendations_submitted ?? 0), 0),
+          completed: (recRequests || []).filter(r => r.status === 'sent').length,
           total: (apps || []).reduce((sum, a) => sum + (a.recommendations_requested ?? 0), 0),
         },
         upcomingDeadlines,
