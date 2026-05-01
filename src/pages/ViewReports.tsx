@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAtRiskCriteria } from "@/hooks/useAtRiskCriteria";
+import { computeCompletion, classifyRisk } from "@/lib/atRiskUtils";
 import {
   BarChart,
   Bar,
@@ -70,6 +72,7 @@ const ViewReports = () => {
   const [selectedStudent, setSelectedStudent] = useState("all");
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
+  const { criteria } = useAtRiskCriteria();
 
   const [loading, setLoading] = useState(true);
   const [rawStudents, setRawStudents] = useState<any[]>([]);
@@ -120,16 +123,12 @@ const ViewReports = () => {
       const recs   = rawRecs.filter((r) => r.student_id === student.user_id);
       const apps   = rawApplications.filter((a) => a.student_id === student.user_id);
 
-      // Completion score — same weights as useIndexDashboard
       const totalEssays     = essays.length;
       const essaysCompleted = essays.filter((e) => ["sent", "read", "approved"].includes(e.status)).length;
-      const essayScore = totalEssays > 0 ? (essaysCompleted / totalEssays) * 60 : 0;
-
       const totalRecs     = recs.length;
       const recsCompleted = recs.filter((r) => ["sent", "completed"].includes(r.status)).length;
-      const recScore = totalRecs > 0 ? (recsCompleted / totalRecs) * 40 : 0;
 
-      const overallProgress = Math.round(essayScore + recScore);
+      const overallProgress = computeCompletion(essaysCompleted, totalEssays, recsCompleted, totalRecs, criteria);
 
       // Near-deadline flag — any unsubmitted app due within 30 days
       const hasNearDeadline = apps.some((a) => {
@@ -137,13 +136,9 @@ const ViewReports = () => {
         return a.status !== "submitted" && d >= now && d <= in30Days;
       });
 
-      // Same logic as useIndexDashboard: at-risk requires BOTH low score AND near deadline
+      const risk = classifyRisk(overallProgress, hasNearDeadline, criteria);
       const riskLevel: "low" | "medium" | "high" =
-        overallProgress >= 60
-          ? "low"
-          : hasNearDeadline && overallProgress < 40
-          ? "high"
-          : "medium";
+        risk === "on-track" ? "low" : risk === "at-risk" ? "high" : "medium";
 
       // For display cards still use applications table counts
       const applicationsSubmitted = apps.filter((a) => a.status === "submitted").length;
@@ -165,7 +160,7 @@ const ViewReports = () => {
         riskLevel,
       };
     });
-  }, [rawStudents, rawEssays, rawRecs, rawApplications]);
+  }, [rawStudents, rawEssays, rawRecs, rawApplications, criteria]);
 
   // ── Overview metrics ─────────────────────────────────────────────────────
   const metrics = useMemo(() => {

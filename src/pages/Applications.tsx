@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +18,6 @@ import {
   Download,
   Eye,
   FileText,
-  Clock,
   CheckCircle,
   AlertCircle,
   School,
@@ -80,16 +81,43 @@ const getApplicationTypeLabel = (type: string) => {
 const getInitials = (name: string | null | undefined) =>
   name ? name.split(" ").map((n) => n[0]).join("") : "?";
 
+const buildRecipients = (appsToSend: ApplicationWithProfile[]) => {
+  const byStudent = new Map<string, { name: string; list: ApplicationWithProfile[] }>();
+  for (const app of appsToSend) {
+    const name = app.profiles?.full_name ?? "Student";
+    if (!byStudent.has(app.student_id)) byStudent.set(app.student_id, { name, list: [] });
+    byStudent.get(app.student_id)!.list.push(app);
+  }
+  return Array.from(byStudent.entries()).map(([studentId, { name, list }]) => ({
+    studentId,
+    studentName: name,
+    applications: list.map((a) => ({
+      schoolName: a.school_name,
+      applicationType: a.application_type,
+      deadlineDate: a.deadline_date,
+      daysLeft: Math.ceil((new Date(a.deadline_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+      completionPct: a.completion_percentage,
+      completedEssays: a.completed_essays,
+      requiredEssays: a.required_essays,
+      recsSubmitted: a.recommendations_submitted,
+      recsRequested: a.recommendations_requested,
+    })),
+  }));
+};
+
 // ── Component ─────────────────────────────────────────────────
 
 const Applications = () => {
   const { applications, isLoading, error } = useApplications();
+  const { toast } = useToast();
 
   const [searchTerm, setSearchTerm]           = useState("");
   const [statusFilter, setStatusFilter]       = useState("all");
   const [sortBy, setSortBy]                   = useState("deadline");
   const [selectedIds, setSelectedIds]         = useState<string[]>([]);
   const [viewMode, setViewMode]               = useState<"student" | "school">("student");
+  const [sendingReminders, setSendingReminders]     = useState(false);
+  const [sendingReminderFor, setSendingReminderFor] = useState<string | null>(null);
 
   // ── Loading / Error states ────────────────────────────────
   if (isLoading) {
@@ -162,6 +190,47 @@ const Applications = () => {
       selectedIds.length === filtered.length ? [] : filtered.map((a) => a.id)
     );
 
+  // ── Reminder helpers ──────────────────────────────────────
+  const invokeReminders = async (appsToSend: ApplicationWithProfile[]) => {
+    const recipients = buildRecipients(appsToSend);
+    if (recipients.length === 0) {
+      toast({ title: "Nothing to send", description: "No students match the reminder criteria." });
+      return;
+    }
+    const { error: fnError } = await supabase.functions.invoke("send-application-reminder", {
+      body: { recipients },
+    });
+    if (fnError) {
+      toast({ title: "Failed to send reminders", description: fnError.message, variant: "destructive" });
+    } else {
+      toast({ title: "Reminders sent!", description: `Emails sent to ${recipients.length} student${recipients.length !== 1 ? "s" : ""}.` });
+    }
+  };
+
+  const sendBulkReminders = async () => {
+    setSendingReminders(true);
+    // Smart filter: not yet submitted, and has an upcoming deadline (≤30 days) or is behind (<60%)
+    const urgentApps = applications.filter((app) => {
+      if (app.status === "submitted") return false;
+      const status = getDeadlineStatus(app.deadline_date);
+      return app.urgent || status === "urgent" || status === "upcoming" || app.completion_percentage < 60;
+    });
+    await invokeReminders(urgentApps);
+    setSendingReminders(false);
+  };
+
+  const sendSelectedReminders = async () => {
+    setSendingReminders(true);
+    await invokeReminders(filtered.filter((app) => selectedIds.includes(app.id)));
+    setSendingReminders(false);
+  };
+
+  const sendSingleReminder = async (app: ApplicationWithProfile) => {
+    setSendingReminderFor(app.id);
+    await invokeReminders([app]);
+    setSendingReminderFor(null);
+  };
+
   // ── Render ────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-6">
@@ -176,8 +245,10 @@ const Applications = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm">
-            <Send className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={sendBulkReminders} disabled={sendingReminders}>
+            {sendingReminders
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              : <Send className="h-4 w-4 mr-2" />}
             Send Reminders
           </Button>
         </div>
@@ -264,8 +335,10 @@ const Applications = () => {
               <CardContent className="p-4 flex items-center justify-between">
                 <span className="text-sm font-medium">{selectedIds.length} selected</span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Send className="h-4 w-4 mr-2" />
+                  <Button variant="outline" size="sm" onClick={sendSelectedReminders} disabled={sendingReminders}>
+                    {sendingReminders
+                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      : <Send className="h-4 w-4 mr-2" />}
                     Send Reminders
                   </Button>
                   <Button variant="outline" size="sm">
@@ -623,8 +696,14 @@ const Applications = () => {
                                     <FileText className="h-4 w-4 mr-2" />
                                     View Essays
                                   </Button>
-                                  <Button variant="outline">
-                                    <Send className="h-4 w-4 mr-2" />
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => sendSingleReminder(app)}
+                                    disabled={sendingReminderFor === app.id}
+                                  >
+                                    {sendingReminderFor === app.id
+                                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      : <Send className="h-4 w-4 mr-2" />}
                                     Send Reminder
                                   </Button>
                                 </div>

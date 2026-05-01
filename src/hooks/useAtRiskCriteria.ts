@@ -1,23 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { usePrincipalSchool } from "./usePrincipalSchool";
 
 export interface AtRiskCriteria {
-  /** Completion % below which a student is "at-risk" (default 40) */
   atRiskThreshold: number;
-  /** Completion % below which a student "needs attention" (default 70) */
   needsAttentionThreshold: number;
-  /** Weight of essay completion in the overall completion score (default 60) */
   essayWeight: number;
-  /** Weight of recommendation completion in the overall completion score (default 40) */
   recWeight: number;
-  /** Flag: trigger "at-risk" when student has no essays submitted */
   triggerNoEssays: boolean;
-  /** Flag: trigger "at-risk" when completion is below atRiskThreshold */
   triggerLowCompletion: boolean;
-  /** Flag: trigger "at-risk" when upcoming deadlines >= deadlineCountThreshold */
   triggerManyDeadlines: boolean;
-  /** Number of upcoming deadlines that triggers the many-deadlines flag */
   deadlineCountThreshold: number;
-  /** Flag: trigger "at-risk" when no recommendation letters received */
   triggerNoRecs: boolean;
 }
 
@@ -33,34 +26,62 @@ export const DEFAULT_CRITERIA: AtRiskCriteria = {
   triggerNoRecs: true,
 };
 
-const STORAGE_KEY = "at-risk-criteria";
-
-function load(): AtRiskCriteria {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_CRITERIA;
-    return { ...DEFAULT_CRITERIA, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_CRITERIA;
-  }
-}
-
 export function useAtRiskCriteria() {
-  const [criteria, setCriteriaState] = useState<AtRiskCriteria>(load);
+  const { data: school } = usePrincipalSchool();
+  const queryClient = useQueryClient();
 
-  // Keep in sync if another tab updates the same key
-  useEffect(() => {
-    const handler = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setCriteriaState(load());
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
+  const { data: criteria = DEFAULT_CRITERIA, isLoading } = useQuery({
+    queryKey: ["at-risk-criteria", school?.schoolId],
+    enabled: !!school?.schoolId,
+    queryFn: async (): Promise<AtRiskCriteria> => {
+      const { data } = await supabase
+        .from("school_at_risk_criteria")
+        .select("*")
+        .eq("school_id", school!.schoolId)
+        .maybeSingle();
 
-  const setCriteria = useCallback((next: AtRiskCriteria) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setCriteriaState(next);
-  }, []);
+      if (!data) return DEFAULT_CRITERIA;
 
-  return { criteria, setCriteria };
+      return {
+        atRiskThreshold:         data.at_risk_threshold,
+        needsAttentionThreshold: data.needs_attention_threshold,
+        essayWeight:             data.essay_weight,
+        recWeight:               data.rec_weight,
+        triggerNoEssays:         data.trigger_no_essays,
+        triggerLowCompletion:    data.trigger_low_completion,
+        triggerManyDeadlines:    data.trigger_many_deadlines,
+        deadlineCountThreshold:  data.deadline_count_threshold,
+        triggerNoRecs:           data.trigger_no_recs,
+      };
+    },
+  });
+
+  const { mutateAsync: setCriteria, isPending: isSaving } = useMutation({
+    mutationFn: async (next: AtRiskCriteria) => {
+      if (!school?.schoolId) throw new Error("No school linked to this account");
+
+      const { error } = await supabase
+        .from("school_at_risk_criteria")
+        .upsert({
+          school_id:                school.schoolId,
+          at_risk_threshold:        next.atRiskThreshold,
+          needs_attention_threshold: next.needsAttentionThreshold,
+          essay_weight:             next.essayWeight,
+          rec_weight:               next.recWeight,
+          trigger_no_essays:        next.triggerNoEssays,
+          trigger_low_completion:   next.triggerLowCompletion,
+          trigger_many_deadlines:   next.triggerManyDeadlines,
+          deadline_count_threshold: next.deadlineCountThreshold,
+          trigger_no_recs:          next.triggerNoRecs,
+          updated_at:               new Date().toISOString(),
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["at-risk-criteria", school?.schoolId] });
+    },
+  });
+
+  return { criteria, setCriteria, isLoading, isSaving };
 }

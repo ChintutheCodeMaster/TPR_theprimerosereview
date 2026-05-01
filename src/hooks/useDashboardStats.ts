@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAtRiskCriteria } from "./useAtRiskCriteria";
+import { computeCompletion, classifyRisk } from "@/lib/atRiskUtils";
 
 export interface DashboardStatsData {
   totalStudents: number;
@@ -9,8 +11,11 @@ export interface DashboardStatsData {
 }
 
 export const useDashboardStats = () => {
+  const { criteria, isLoading: loadingCriteria } = useAtRiskCriteria();
+
   return useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", criteria.atRiskThreshold, criteria.essayWeight, criteria.recWeight],
+    enabled: !loadingCriteria,
     queryFn: async (): Promise<DashboardStatsData> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -162,9 +167,7 @@ const atRiskCount = studentIds.filter(studentId => {
   const recsRequested = studentRecs.length;
   const recsSubmitted = studentRecs.filter(r => r.status === "sent").length;
 
-  const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
-  const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
-  const completion = Math.round(essayScore + recScore);
+  const completion = computeCompletion(essaysSubmitted, totalEssays, recsSubmitted, recsRequested, criteria);
 
   const hasNearDeadline = (tasksRes.data ?? []).some(t =>
     t.student_id === studentId &&
@@ -172,7 +175,7 @@ const atRiskCount = studentIds.filter(studentId => {
     new Date(t.due_date) >= now && new Date(t.due_date) <= thirtyDaysFromNow
   );
 
-  return hasNearDeadline && completion < 40;
+  return classifyRisk(completion, hasNearDeadline, criteria) === "at-risk";
 }).length;
 
 const atRiskStudents = atRiskCount;

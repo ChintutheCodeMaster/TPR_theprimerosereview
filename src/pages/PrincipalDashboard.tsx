@@ -13,6 +13,9 @@ import {
   Settings,
   Building2,
   Loader2,
+  ShieldAlert,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 
 const StatCard = ({
@@ -72,7 +75,7 @@ const PrincipalDashboard = () => {
         </p>
       </div>
 
-      {/* Stats */}
+      {/* Totals row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Students"
@@ -109,6 +112,63 @@ const PrincipalDashboard = () => {
           iconBg="bg-purple-500/10"
           iconColor="text-purple-600"
         />
+      </div>
+
+      {/* Alerts row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-destructive/10 rounded-xl">
+                <ShieldAlert className="h-6 w-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">At-Risk Students</p>
+                {loadingStats ? (
+                  <Skeleton className="h-8 w-12 mt-1" />
+                ) : (
+                  <p className="text-3xl font-bold text-destructive">{stats?.atRiskCount ?? 0}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-xl">
+                <Clock className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Essays Pending Review</p>
+                {loadingStats ? (
+                  <Skeleton className="h-8 w-12 mt-1" />
+                ) : (
+                  <p className="text-3xl font-bold text-amber-600">{stats?.essaysPending ?? 0}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-500/30 bg-orange-500/5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-xl">
+                <AlertTriangle className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Urgent Applications</p>
+                {loadingStats ? (
+                  <Skeleton className="h-8 w-12 mt-1" />
+                ) : (
+                  <p className="text-3xl font-bold text-orange-600">{stats?.urgentApplications ?? 0}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions */}

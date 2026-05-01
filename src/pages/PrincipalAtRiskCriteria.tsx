@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, RotateCcw, Save } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertTriangle, RotateCcw, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAtRiskCriteria, DEFAULT_CRITERIA, AtRiskCriteria } from "@/hooks/useAtRiskCriteria";
 
 const PrincipalAtRiskCriteria = () => {
-  const { criteria, setCriteria } = useAtRiskCriteria();
-  const [draft, setDraft] = useState<AtRiskCriteria>({ ...criteria });
+  const { criteria, setCriteria, isLoading, isSaving } = useAtRiskCriteria();
+  const [draft, setDraft] = useState<AtRiskCriteria>({ ...DEFAULT_CRITERIA });
+
+  // Sync draft when DB criteria loads
+  useEffect(() => {
+    setDraft({ ...criteria });
+  }, [criteria]);
 
   const update = <K extends keyof AtRiskCriteria>(key: K, value: AtRiskCriteria[K]) =>
     setDraft(prev => ({ ...prev, [key]: value }));
@@ -20,13 +26,17 @@ const PrincipalAtRiskCriteria = () => {
     setDraft(prev => ({ ...prev, essayWeight: clamped, recWeight: 100 - clamped }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (draft.atRiskThreshold >= draft.needsAttentionThreshold) {
       toast.error("At-risk threshold must be lower than needs-attention threshold.");
       return;
     }
-    setCriteria(draft);
-    toast.success("At-risk criteria saved successfully.");
+    try {
+      await setCriteria(draft);
+      toast.success("At-risk criteria saved successfully.");
+    } catch {
+      toast.error("Failed to save criteria. Please try again.");
+    }
   };
 
   const handleReset = () => {
@@ -36,6 +46,20 @@ const PrincipalAtRiskCriteria = () => {
 
   const isDirty = JSON.stringify(draft) !== JSON.stringify(criteria);
   const hasError = draft.atRiskThreshold >= draft.needsAttentionThreshold;
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 max-w-2xl">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-2xl">
@@ -230,16 +254,20 @@ const PrincipalAtRiskCriteria = () => {
       <div className="flex items-center gap-3">
         <Button
           onClick={handleSave}
-          disabled={!isDirty || hasError}
+          disabled={!isDirty || hasError || isSaving}
         >
-          <Save className="h-4 w-4 mr-2" />
-          Save Criteria
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {isSaving ? "Saving…" : "Save Criteria"}
         </Button>
-        <Button variant="outline" onClick={handleReset}>
+        <Button variant="outline" onClick={handleReset} disabled={isSaving}>
           <RotateCcw className="h-4 w-4 mr-2" />
           Reset to Defaults
         </Button>
-        {isDirty && !hasError && (
+        {isDirty && !hasError && !isSaving && (
           <span className="text-xs text-muted-foreground">You have unsaved changes.</span>
         )}
       </div>

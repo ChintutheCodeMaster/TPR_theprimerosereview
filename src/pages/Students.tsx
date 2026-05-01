@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAtRiskCriteria, AtRiskCriteria } from "@/hooks/useAtRiskCriteria";
+import { computeCompletion, classifyRisk } from "@/lib/atRiskUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,18 +64,8 @@ interface Student {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
-const computeStatus = (completion: number, criteria: AtRiskCriteria, hasNearDeadline: boolean): Student['status'] => {
-  if (completion >= criteria.needsAttentionThreshold) return 'on-track'
-  if (hasNearDeadline && completion < criteria.atRiskThreshold) return 'at-risk'
-  return 'needs-attention'
-}
-
-const computeCompletion = (essaysSubmitted: number, totalEssays: number, recsSubmitted: number, recsRequested: number, criteria: AtRiskCriteria) => {
-  if (totalEssays === 0 && recsRequested === 0) return 0
-  const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * criteria.essayWeight : 0
-  const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * criteria.recWeight : 0
-  return Math.round(essayScore + recScore)
-}
+const computeStatus = (completion: number, criteria: AtRiskCriteria, hasNearDeadline: boolean): Student['status'] =>
+  classifyRisk(completion, hasNearDeadline, criteria);
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -360,7 +351,7 @@ const Students = () => {
         if (student.essaysSubmitted === 0 && student.totalEssays > 0) {
           reasons.push(`No essays submitted yet (0 of ${student.totalEssays})`)
         }
-        if (student.completionPercentage < 40) {
+        if (student.completionPercentage < criteria.atRiskThreshold) {
           reasons.push(`Application completion is critically low (${student.completionPercentage}%)`)
         }
         if (student.upcomingDeadlines >= 3) {

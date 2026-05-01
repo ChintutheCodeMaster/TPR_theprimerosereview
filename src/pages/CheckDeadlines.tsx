@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssignedStudents } from "@/hooks/useAssignedStudents";
+import { useAtRiskCriteria } from "@/hooks/useAtRiskCriteria";
+import { computeCompletion } from "@/lib/atRiskUtils";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -88,6 +90,7 @@ const CheckDeadlines = () => {
   const [urgencyFilter, setUrgencyFilter]       = useState("all");
   const [typeFilter, setTypeFilter]             = useState("all");
   const { toast } = useToast();
+  const { criteria } = useAtRiskCriteria();
 
   const { data: studentIds = [], isLoading: loadingAssignments } =
   useAssignedStudents();
@@ -96,7 +99,7 @@ useEffect(() => {
   if (!loadingAssignments) {
     fetchDeadlines();
   }
-}, [loadingAssignments, studentIds]);
+}, [loadingAssignments, studentIds, criteria]);
 
   const fetchDeadlines = async () => {
   if (loadingAssignments) return;
@@ -191,9 +194,7 @@ useEffect(() => {
         (r) => r.status === "sent"
       ).length;
 
-      const total = studentEssays.length + studentRecs.length;
-      const done = essaysDone + recsDone;
-      const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+      const progress = computeCompletion(essaysDone, studentEssays.length, recsDone, studentRecs.length, criteria);
 
       const studentEntry: StudentDeadline = {
         studentId: app.student_id,
@@ -239,7 +240,7 @@ useEffect(() => {
 
   const atRiskStudents = deadlines
     .filter((d) => d.urgency === "critical" || d.urgency === "overdue")
-    .flatMap((d) => d.students.filter((s) => s.progress < 70))
+    .flatMap((d) => d.students.filter((s) => s.progress < criteria.needsAttentionThreshold))
     .filter((s, i, arr) => arr.findIndex((x) => x.studentId === s.studentId) === i);
 
   // ─── Calendar helpers ──────────────────────────────────────

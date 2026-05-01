@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAtRiskCriteria } from "./useAtRiskCriteria";
+import { computeCompletion, classifyRisk } from "@/lib/atRiskUtils";
 
 export interface DashboardStudent {
   id: string;
@@ -25,12 +27,15 @@ export interface DashboardEssay {
 }
 
 export const useIndexDashboard = () => {
+  const { criteria, isLoading: loadingCriteria } = useAtRiskCriteria();
+
   // ── Students needing attention ─────────────────────────────
   const {
     data: students = [],
     isLoading: isLoadingStudents,
   } = useQuery({
-    queryKey: ["dashboard-students"],
+    queryKey: ["dashboard-students", criteria.atRiskThreshold, criteria.needsAttentionThreshold, criteria.essayWeight, criteria.recWeight],
+    enabled: !loadingCriteria,
     queryFn: async (): Promise<DashboardStudent[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -96,20 +101,14 @@ export const useIndexDashboard = () => {
         const recs = (recsRes.data ?? []).filter((r) => r.student_id === id);
         const studentTasks = (tasksRes.data ?? []).filter((t) => t.student_id === id);
 
-        // Essay completion (60% weight)
         const totalEssays = essays.length;
         const essaysSubmitted = essays.filter((e) =>
           ["sent", "read", "approved"].includes(e.status)
         ).length;
-        const essayScore = totalEssays > 0 ? (essaysSubmitted / totalEssays) * 60 : 0;
-
-        // Rec completion (40% weight)
         const recsRequested = recs.length;
         const recsSubmitted = recs.filter((r) => r.status === "sent").length;
-        const recScore = recsRequested > 0 ? (recsSubmitted / recsRequested) * 40 : 0;
 
-        // Overall completion
-        const completionPercentage = Math.round(essayScore + recScore);
+        const completionPercentage = computeCompletion(essaysSubmitted, totalEssays, recsSubmitted, recsRequested, criteria);
 
         // Near deadline = any incomplete task due within 30 days
         const hasNearDeadline = studentTasks.some(
@@ -120,13 +119,7 @@ export const useIndexDashboard = () => {
             new Date(t.due_date) <= thirtyDaysFromNow
         );
 
-        // at-risk only when deadline is within 30 days AND completion is low
-        const status: DashboardStudent["status"] =
-          completionPercentage >= 60
-            ? "on-track"
-            : hasNearDeadline && completionPercentage < 40
-            ? "at-risk"
-            : "needs-attention";
+        const status = classifyRisk(completionPercentage, hasNearDeadline, criteria) as DashboardStudent["status"];
 
         // Last activity = most recent essay updated_at
         const lastEssayUpdate = essays
