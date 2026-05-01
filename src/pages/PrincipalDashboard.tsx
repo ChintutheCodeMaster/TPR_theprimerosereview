@@ -320,15 +320,12 @@ const PrincipalDashboard = () => {
               <p className="text-sm text-muted-foreground text-center py-20">No students enrolled yet.</p>
             ) : (
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={analytics!.completionBuckets} barSize={40}>
+                <BarChart data={analytics!.completionBuckets} barSize={44}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="range" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v: number) => [`${v} students`, "Count"]} />
-                  {analytics!.completionBuckets.map((b, i) => (
-                    <Bar key={i} dataKey="count" fill={b.fill} name={b.range} />
-                  ))}
-                  <Bar dataKey="count" name="Students">
+                  <Bar dataKey="count" name="Students" radius={[4,4,0,0]}>
                     {analytics!.completionBuckets.map((b, i) => (
                       <Cell key={i} fill={b.fill} />
                     ))}
