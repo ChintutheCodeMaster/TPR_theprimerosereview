@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import type { TrackedChange } from "@/components/EssayFeedbackModal";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, GraduationCap } from "lucide-react";
 import { useApplications } from "@/hooks/useApplications";
+import { supabase } from "@/integrations/supabase/client";
 import { ApplicationDetailModal } from "@/components/ApplicationDetailModal";
 import jsPDF from "jspdf";
 import type { ApplicationWithProfile } from "@/hooks/useApplications";
@@ -82,6 +83,28 @@ const StudentPersonalArea = () => {
 
   const { applications, isLoading: isLoadingApplications } = useApplications();
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithProfile | null>(null);
+
+  // Live slot counts per application — avoids relying on stale DB columns
+  // that a trigger overwrites whenever slots are added/removed.
+  const [slotCounts, setSlotCounts] = useState<Record<string, { completed: number; total: number }>>({});
+
+  useEffect(() => {
+    if (applications.length === 0) return;
+    const appIds = applications.map(a => a.id);
+    supabase
+      .from("application_essays")
+      .select("application_id, status")
+      .in("application_id", appIds)
+      .then(({ data }) => {
+        const counts: Record<string, { completed: number; total: number }> = {};
+        for (const row of data ?? []) {
+          if (!counts[row.application_id]) counts[row.application_id] = { completed: 0, total: 0 };
+          counts[row.application_id].total++;
+          if (["approved", "in_review"].includes(row.status)) counts[row.application_id].completed++;
+        }
+        setSlotCounts(counts);
+      });
+  }, [applications]);
 
   const essayFeedback = selectedEssay
     ? getFeedbackForEssay(selectedEssay.essay_title)
@@ -485,7 +508,7 @@ const StudentPersonalArea = () => {
                             Deadline: {new Date(app.deadline_date).toLocaleDateString()}
                           </span>
                           <span>
-                            Essays: {app.completed_essays}/{app.required_essays}
+                            Essays: {slotCounts[app.id]?.completed ?? 0}/{app.required_essays}
                           </span>
                           <span>
                             Recs: {app.recommendations_submitted}/{app.recommendations_requested}
@@ -498,7 +521,9 @@ const StudentPersonalArea = () => {
                           <span className="ml-1 capitalize">{getStatusLabel(app.status)}</span>
                         </Badge>
                         <span className="text-sm font-medium text-primary">
-                          {app.completion_percentage}% complete
+                          {app.required_essays > 0
+                            ? Math.round(((slotCounts[app.id]?.completed ?? 0) / app.required_essays) * 100)
+                            : 0}% complete
                         </span>
                         {app.urgent && (
                           <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
@@ -507,7 +532,12 @@ const StudentPersonalArea = () => {
                         )}
                       </div>
                     </div>
-                    <Progress value={app.completion_percentage} className="mt-3 h-2" />
+                    <Progress
+                      value={app.required_essays > 0
+                        ? Math.round(((slotCounts[app.id]?.completed ?? 0) / app.required_essays) * 100)
+                        : 0}
+                      className="mt-3 h-2"
+                    />
                   </CardContent>
                 </Card>
               ))}
@@ -517,7 +547,26 @@ const StudentPersonalArea = () => {
         <ApplicationDetailModal
   application={selectedApplication}
   open={!!selectedApplication}
-  onClose={() => setSelectedApplication(null)}
+  onClose={() => {
+    setSelectedApplication(null);
+    // Re-fetch slot counts so the list updates after adding/removing slots
+    if (applications.length > 0) {
+      const appIds = applications.map(a => a.id);
+      supabase
+        .from("application_essays")
+        .select("application_id, status")
+        .in("application_id", appIds)
+        .then(({ data }) => {
+          const counts: Record<string, { completed: number; total: number }> = {};
+          for (const row of data ?? []) {
+            if (!counts[row.application_id]) counts[row.application_id] = { completed: 0, total: 0 };
+            counts[row.application_id].total++;
+            if (["approved", "in_review"].includes(row.status)) counts[row.application_id].completed++;
+          }
+          setSlotCounts(counts);
+        });
+    }
+  }}
 />
       </Tabs>
 
