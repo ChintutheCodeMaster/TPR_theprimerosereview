@@ -37,24 +37,21 @@ const PrincipalStudents = () => {
     const fetchStudents = async () => {
       setLoading(true);
       try {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, email, avatar_url")
-          .eq("school_id", school.schoolId);
+        type SchoolMember = { user_id: string; role: string; full_name: string | null; email: string | null; avatar_url: string | null };
+        const { data: members } = await (supabase as any)
+          .rpc("get_school_members", { p_school_id: school.schoolId });
 
-        if (!profiles || profiles.length === 0) { setStudents([]); return; }
+        const allMembers = (members ?? []) as SchoolMember[];
+        const studentMembers = allMembers.filter(m => m.role === "student");
 
-        const allIds = profiles.map(p => p.user_id);
+        if (studentMembers.length === 0) { setStudents([]); return; }
 
-        const [rolesRes, spRes] = await Promise.all([
-          supabase.from("user_roles").select("user_id").eq("role", "student").in("user_id", allIds),
-          supabase.from("student_profiles").select("user_id, gpa, graduation_year").in("user_id", allIds),
-        ]);
+        const studentIdArr = studentMembers.map(m => m.user_id);
 
-        const studentIds = new Set(rolesRes.data?.map(r => r.user_id) ?? []);
-        if (studentIds.size === 0) { setStudents([]); return; }
-
-        const studentIdArr = [...studentIds];
+        const spRes = await supabase
+          .from("student_profiles")
+          .select("user_id, gpa, graduation_year")
+          .in("user_id", studentIdArr);
 
         const todayStr    = new Date().toISOString().split("T")[0];
         const in30DaysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -115,9 +112,7 @@ const PrincipalStudents = () => {
 
         const spMap = new Map(spRes.data?.map(sp => [sp.user_id, sp]) ?? []);
 
-        const rows: StudentRow[] = profiles
-          .filter(p => studentIds.has(p.user_id))
-          .map(p => {
+        const rows: StudentRow[] = studentMembers.map(p => {
             const essays = essayMap.get(p.user_id) ?? { total: 0, done: 0 };
             const recs   = recMap.get(p.user_id)   ?? { total: 0, done: 0 };
             const completionScore = computeCompletion(essays.done, essays.total, recs.done, recs.total, criteria);
