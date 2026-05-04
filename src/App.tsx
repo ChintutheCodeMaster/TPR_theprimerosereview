@@ -57,6 +57,7 @@ import ProductDemo from "./pages/ProductDemo";
 import EssayToolkit from "./pages/EssayToolkit";
 import PersonalEssay from "./pages/PersonalEssay";
 import StudentFeedback from "./pages/StudentFeedback";
+import SuperAdmin from "./pages/SuperAdmin";
 
 const queryClient = new QueryClient();
 
@@ -432,6 +433,13 @@ const App = () => {
                 <EssayToolkit />
               </ProtectedRoute>
             </AppLayout>
+          } />
+
+          {/* ── Super Admin (standalone, no sidebar) ── */}
+          <Route path="/superadmin" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <SuperAdmin />
+            </ProtectedRoute>
           } />
 
           {/* ── Catch-all ── */}

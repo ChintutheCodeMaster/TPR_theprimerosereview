@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+  const location = useLocation();
   const [status, setStatus] = useState<'loading' | 'authorized' | 'unauthorized' | 'unauthenticated'>('loading');
 
   useEffect(() => {
@@ -50,7 +51,8 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   }
 
   if (status === 'unauthenticated') {
-    return <Navigate to="/auth" replace />;
+    const isAdminRoute = location.pathname === '/superadmin';
+    return <Navigate to={isAdminRoute ? '/auth?admin=1' : '/auth'} replace />;
   }
 
   if (status === 'unauthorized') {

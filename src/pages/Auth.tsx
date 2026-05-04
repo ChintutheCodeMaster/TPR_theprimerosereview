@@ -13,6 +13,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roleParam = searchParams.get('role') as 'counselor' | 'student' | 'parent' | 'principal' | null;
+  const isAdminLogin = searchParams.get('admin') === '1';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -44,13 +45,14 @@ const Auth = () => {
       case 'student': navigate('/student-dashboard'); break;
       case 'parent': navigate('/parent-portal'); break;
       case 'principal': navigate('/principal-dashboard'); break;
+      case 'admin': navigate('/superadmin'); break;
       default: navigate('/');
     }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRole) {
+    if (!selectedRole && !isAdminLogin) {
       toast.error("Please select a role");
       return;
     }
@@ -71,9 +73,15 @@ const Auth = () => {
 
       if (roleError || !roleData) throw new Error('Could not fetch user role');
 
+      // Admin bypasses role selector — navigate directly
+      if (roleData.role === 'admin') {
+        toast.success('Welcome back!');
+        navigate('/superadmin');
+        return;
+      }
+
       // Validate that the selected role matches the actual role in the DB
       if (roleData.role !== selectedRole) {
-        // Sign them back out so they aren't left in a half-authenticated state
         await supabase.auth.signOut();
         toast.error(
           `This account is registered as a ${getRoleLabel(roleData.role)}, not a ${getRoleLabel(selectedRole)}. Please select the correct role.`
@@ -117,7 +125,7 @@ const Auth = () => {
           </div>
 
           {/* Role Selection */}
-          {!selectedRole && (
+          {!selectedRole && !isAdminLogin && (
             <div className="grid grid-cols-2 gap-3">
               {(['counselor', 'student', 'parent', 'principal'] as const).map((role) => (
                 <button
@@ -133,7 +141,7 @@ const Auth = () => {
           )}
 
           {/* Login Form */}
-          {selectedRole && (
+          {(selectedRole || isAdminLogin) && (
             <>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 {getRoleIcon(selectedRole)}
