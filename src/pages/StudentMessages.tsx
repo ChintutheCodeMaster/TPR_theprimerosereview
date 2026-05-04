@@ -2,11 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Send, MessageSquare, AlertCircle, Paperclip, CheckCheck, Check } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, Send, MessageSquare, AlertCircle, Paperclip, CheckCheck, Check, Plus } from "lucide-react";
 
 type DBConversation = {
   id: string;
@@ -37,6 +49,13 @@ const StudentMessages = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // New conversation
+  const [showNewConversation, setShowNewConversation] = useState(false);
+  const [assignedCounselors, setAssignedCounselors] = useState<any[]>([]);
+  const [selectedCounselorId, setSelectedCounselorId] = useState("");
+  const [firstMessage, setFirstMessage] = useState("");
+  const [creating, setCreating] = useState(false);
 
   // ── Load data ──────────────────────────────────────────────────
   useEffect(() => {
@@ -159,6 +178,90 @@ const StudentMessages = () => {
     }));
   };
 
+  // ── New conversation ───────────────────────────────────────────
+  const openNewConversationDialog = async () => {
+    if (!userId) return;
+
+    const { data: assignments } = await supabase
+      .from("student_counselor_assignments")
+      .select("counselor_id")
+      .eq("student_id", userId);
+
+    if (!assignments || assignments.length === 0) {
+      setAssignedCounselors([]);
+      setShowNewConversation(true);
+      return;
+    }
+
+    const counselorIds = assignments.map((a) => a.counselor_id);
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("user_id", counselorIds);
+
+    setAssignedCounselors(profs || []);
+    setSelectedCounselorId(profs?.[0]?.user_id ?? "");
+    setFirstMessage("");
+    setShowNewConversation(true);
+  };
+
+  const startConversation = async () => {
+    if (!selectedCounselorId || !firstMessage.trim() || !userId) return;
+    setCreating(true);
+
+    const existing = conversations.find(
+      (c) => c.counselor_id === selectedCounselorId && c.student_id === userId
+    );
+
+    if (existing) {
+      const { data: msg } = await supabase
+        .from("messages")
+        .insert({ conversation_id: existing.id, sender_id: userId, content: firstMessage.trim() })
+        .select()
+        .single();
+      if (msg) {
+        setMessages((prev) => ({
+          ...prev,
+          [existing.id]: [...(prev[existing.id] || []), msg],
+        }));
+      }
+      setSelected(existing);
+      setShowNewConversation(false);
+      setCreating(false);
+      return;
+    }
+
+    const { data: conv } = await supabase
+      .from("conversations")
+      .insert({ student_id: userId, counselor_id: selectedCounselorId, status: "active" })
+      .select()
+      .single();
+
+    if (!conv) { setCreating(false); return; }
+
+    const { data: msg } = await supabase
+      .from("messages")
+      .insert({ conversation_id: conv.id, sender_id: userId, content: firstMessage.trim() })
+      .select()
+      .single();
+
+    if (!profiles[selectedCounselorId]) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", selectedCounselorId)
+        .single();
+      if (prof) setProfiles((prev) => ({ ...prev, [prof.user_id]: prof }));
+    }
+
+    setConversations((prev) => [conv, ...prev]);
+    setMessages((prev) => ({ ...prev, [conv.id]: msg ? [msg] : [] }));
+    setSelected(conv);
+    setShowNewConversation(false);
+    setFirstMessage("");
+    setCreating(false);
+  };
+
   // ── Send message ───────────────────────────────────────────────
   const handleSend = async () => {
     if (!newMessage.trim() || !selected || !userId) return;
@@ -246,10 +349,15 @@ const StudentMessages = () => {
         {/* Conversation List */}
         <div className="lg:col-span-1 flex flex-col border-r border-border bg-card">
           <div className="p-4 border-b border-border">
-            <h2 className="font-semibold text-foreground flex items-center gap-2 mb-3">
-              <MessageSquare className="h-4 w-4" />
-              Conversations
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Conversations
+              </h2>
+              <Button size="sm" onClick={openNewConversationDialog} title="New conversation">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -462,6 +570,81 @@ const StudentMessages = () => {
           )}
         </div>
       </div>
+      {/* New Conversation Dialog */}
+      <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Message Your Counselor
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {assignedCounselors.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No assigned counselor found. Please contact your school to get assigned.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Counselor</label>
+                  <Select value={selectedCounselorId} onValueChange={setSelectedCounselorId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a counselor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignedCounselors.map((c) => (
+                        <SelectItem key={c.user_id} value={c.user_id}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={c.avatar_url} />
+                              <AvatarFallback className="text-[10px]">
+                                {(c.full_name || "C").split(" ").map((n: string) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            {c.full_name || c.email || "Counselor"}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Message</label>
+                  <Textarea
+                    placeholder="Type your message..."
+                    value={firstMessage}
+                    onChange={(e) => setFirstMessage(e.target.value)}
+                    className="min-h-[100px]"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        startConversation();
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    disabled={!selectedCounselorId || !firstMessage.trim() || creating}
+                    onClick={startConversation}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {creating ? "Sending..." : "Send Message"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowNewConversation(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

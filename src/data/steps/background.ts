@@ -136,7 +136,6 @@ export const backgroundStep: Step = {
   "University of Groningen",
   "Leiden University",
   "Utrecht University",
-
   "Other"
 ]
         },
