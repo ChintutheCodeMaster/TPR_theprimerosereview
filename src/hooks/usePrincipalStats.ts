@@ -25,26 +25,17 @@ export const usePrincipalStats = () => {
     queryFn: async (): Promise<PrincipalStatsData> => {
       const schoolId = school!.schoolId;
 
-      // All profiles at this school
-      const { data: allProfiles } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("school_id", schoolId);
+      const { data: members } = await supabase
+        .rpc("get_school_members", { p_school_id: schoolId });
 
-      const allProfileIds = allProfiles?.map(p => p.user_id) ?? [];
+      const allMembers = (members ?? []) as { user_id: string; role: string }[];
 
-      if (allProfileIds.length === 0) {
+      if (allMembers.length === 0) {
         return { totalStudents: 0, totalCounselors: 0, totalEssays: 0, totalApplications: 0, totalRecLetters: 0, atRiskCount: 0, essaysPending: 0, urgentApplications: 0 };
       }
 
-      // Roles
-      const [studentRolesRes, counselorRolesRes] = await Promise.all([
-        supabase.from("user_roles").select("user_id").eq("role", "student").in("user_id", allProfileIds),
-        supabase.from("user_roles").select("user_id").eq("role", "counselor").in("user_id", allProfileIds),
-      ]);
-
-      const studentIds  = studentRolesRes.data?.map(r => r.user_id) ?? [];
-      const counselorIds = counselorRolesRes.data?.map(r => r.user_id) ?? [];
+      const studentIds   = allMembers.filter(m => m.role === "student").map(m => m.user_id);
+      const counselorIds = allMembers.filter(m => m.role === "counselor").map(m => m.user_id);
 
       if (studentIds.length === 0) {
         return { totalStudents: 0, totalCounselors: counselorIds.length, totalEssays: 0, totalApplications: 0, totalRecLetters: 0, atRiskCount: 0, essaysPending: 0, urgentApplications: 0 };

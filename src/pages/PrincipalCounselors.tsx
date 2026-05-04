@@ -33,24 +33,23 @@ const PrincipalCounselors = () => {
     const fetchCounselors = async () => {
       setLoading(true);
       try {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, email, avatar_url")
-          .eq("school_id", school.schoolId);
+        type SchoolMember = { user_id: string; role: string; full_name: string | null; email: string | null; avatar_url: string | null };
+        const { data: members } = await (supabase as any)
+          .rpc("get_school_members", { p_school_id: school.schoolId });
 
-        if (!profiles || profiles.length === 0) { setCounselors([]); return; }
+        const allMembers = (members ?? []) as SchoolMember[];
+        const counselorMembers = allMembers.filter(m => m.role === "counselor");
 
-        const allIds = profiles.map(p => p.user_id);
+        if (counselorMembers.length === 0) { setCounselors([]); return; }
 
-        const [rolesRes, assignmentsRes] = await Promise.all([
-          supabase.from("user_roles").select("user_id").eq("role", "counselor").in("user_id", allIds),
-          supabase.from("student_counselor_assignments").select("counselor_id, student_id").in("counselor_id", allIds),
-        ]);
+        const counselorIds = counselorMembers.map(m => m.user_id);
 
-        const counselorIds = rolesRes.data?.map(r => r.user_id) ?? [];
-        if (counselorIds.length === 0) { setCounselors([]); return; }
+        const { data: assignmentsData } = await supabase
+          .from("student_counselor_assignments")
+          .select("counselor_id, student_id")
+          .in("counselor_id", counselorIds);
 
-        const assignments = assignmentsRes.data ?? [];
+        const assignments = assignmentsData ?? [];
 
         // Build counselor → [student_id] map
         const counselorStudentsMap = new Map<string, string[]>();
@@ -64,9 +63,10 @@ const PrincipalCounselors = () => {
         const allStudentIds = [...new Set(assignments.map(a => a.student_id))];
 
         if (allStudentIds.length === 0) {
-          const rows: CounselorRow[] = profiles
-            .filter(p => counselorIds.includes(p.user_id))
-            .map(p => ({ user_id: p.user_id, full_name: p.full_name, email: p.email, avatar_url: p.avatar_url, studentCount: 0, essaysPending: 0, atRiskCount: 0, avgCompletion: null }));
+          const rows: CounselorRow[] = counselorMembers.map(p => ({
+            user_id: p.user_id, full_name: p.full_name, email: p.email, avatar_url: p.avatar_url,
+            studentCount: 0, essaysPending: 0, atRiskCount: 0, avgCompletion: null,
+          }));
           setCounselors(rows);
           return;
         }
@@ -125,9 +125,7 @@ const PrincipalCounselors = () => {
           }
         }
 
-        const rows: CounselorRow[] = profiles
-          .filter(p => counselorIds.includes(p.user_id))
-          .map(p => {
+        const rows: CounselorRow[] = counselorMembers.map(p => {
             const studentIds = counselorStudentsMap.get(p.user_id) ?? [];
             const scores = studentIds.map(sid => studentScore(sid));
             const avgCompletion = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;

@@ -107,23 +107,46 @@ useEffect(() => {
       if (data.user) {
         let schoolId: string | null = null;
 
-        if (selectedRole === 'student' && schoolName.trim()) {
-          const { data: existingSchool } = await supabase
-            .from('schools')
-            .select('id')
-            .ilike('name', schoolName.trim())
-            .maybeSingle();
+        if (selectedRole === 'student') {
+          // If signing up via invite, inherit the counselor's school_id
+          if (inviteCodeParam) {
+            const { data: inviteData } = await supabase
+              .from('counselor_invites')
+              .select('counselor_id')
+              .eq('invite_code', inviteCodeParam)
+              .maybeSingle();
 
-          if (existingSchool) {
-            schoolId = existingSchool.id;
-          } else {
-            const { data: newSchool, error: schoolError } = await supabase
+            if (inviteData) {
+              const { data: counselorProfile } = await supabase
+                .from('profiles')
+                .select('school_id')
+                .eq('user_id', inviteData.counselor_id)
+                .maybeSingle();
+              if (counselorProfile?.school_id) {
+                schoolId = counselorProfile.school_id;
+              }
+            }
+          }
+
+          // Fall back to manual school name entry if no school resolved from invite
+          if (!schoolId && schoolName.trim()) {
+            const { data: existingSchool } = await supabase
               .from('schools')
-              .insert({ name: schoolName.trim() })
               .select('id')
-              .single();
-            if (schoolError) throw schoolError;
-            schoolId = newSchool.id;
+              .ilike('name', schoolName.trim())
+              .maybeSingle();
+
+            if (existingSchool) {
+              schoolId = existingSchool.id;
+            } else {
+              const { data: newSchool, error: schoolError } = await supabase
+                .from('schools')
+                .insert({ name: schoolName.trim() })
+                .select('id')
+                .single();
+              if (schoolError) throw schoolError;
+              schoolId = newSchool.id;
+            }
           }
         }
 
