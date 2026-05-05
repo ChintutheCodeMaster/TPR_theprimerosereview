@@ -58,6 +58,7 @@ import EssayToolkit from "./pages/EssayToolkit";
 import PersonalEssay from "./pages/PersonalEssay";
 import StudentFeedback from "./pages/StudentFeedback";
 import SuperAdmin from "./pages/SuperAdmin";
+import EvaluationEngine from "./pages/EvaluationEngine";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     '/student-stats',
     '/student-recommendation-letters',
     '/student-messages',
+    '/evaluation-engine',
   ].includes(location.pathname) ||
   location.pathname === '/submit-essay' ||
   location.pathname === '/personal-essay' ||
@@ -340,6 +342,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
                 <StudentFeedback />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/evaluation-engine" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <EvaluationEngine />
               </ProtectedRoute>
             </AppLayout>
           } />
