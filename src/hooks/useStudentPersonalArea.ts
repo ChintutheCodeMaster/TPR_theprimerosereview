@@ -17,6 +17,11 @@ export interface FeedbackItem {
   category?: string;
 }
 
+
+
+
+
+
 export interface CriterionScore {
   id: string;
   name: string;

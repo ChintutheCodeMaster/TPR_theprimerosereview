@@ -19,6 +19,8 @@ export const usePrincipalStats = () => {
   const { data: school, isLoading: loadingSchool } = usePrincipalSchool();
   const { criteria, isLoading: loadingCriteria } = useAtRiskCriteria();
 
+
+  
   return useQuery({
     queryKey: ["principal-stats", school?.schoolId, criteria.atRiskThreshold, criteria.essayWeight, criteria.recWeight],
     enabled: !!school?.schoolId && !loadingSchool && !loadingCriteria,
