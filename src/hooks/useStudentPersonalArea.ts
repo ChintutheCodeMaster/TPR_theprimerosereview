@@ -19,9 +19,6 @@ export interface FeedbackItem {
 
 
 
-
-
-
 export interface CriterionScore {
   id: string;
   name: string;
