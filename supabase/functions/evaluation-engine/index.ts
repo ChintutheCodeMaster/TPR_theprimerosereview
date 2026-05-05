@@ -13,6 +13,7 @@ interface StoryScore {
   overall: number;
 }
 
+
 interface UniversityFit {
   name: string;
   fitScore: number;
