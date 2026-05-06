@@ -6,14 +6,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   FlaskConical, Sparkles, Loader2, RefreshCw, Save,
-  AlertCircle, ArrowLeftRight, Zap, Eye, Heart, BookOpen,
+  AlertCircle, ArrowLeftRight, BookOpen, Fingerprint,
+  Target, Mic, TrendingUp, Star, Compass,
 } from "lucide-react";
-import { usePrimroseLab, type LabFeedback, type LabVersion } from "@/hooks/usePrimroseLab";
+import { usePrimroseLab, type LabFeedback, type LabVersion, type Direction, type ExploreState } from "@/hooks/usePrimroseLab";
 import { useStudentPersonalArea } from "@/hooks/useStudentPersonalArea";
 
 // ── Config ────────────────────────────────────────────────────
 
-type DimKey = 'clarity' | 'originality' | 'emotionalPull' | 'curiosity';
+type DimKey = 'authenticity' | 'specificity' | 'voice' | 'narrativeStrength' | 'memorability';
 
 const DIM_CONFIG: Record<DimKey, {
   label: string;
@@ -24,41 +25,50 @@ const DIM_CONFIG: Record<DimKey, {
   textColor: string;
   bar: string;
 }> = {
-  clarity: {
-    label: "Clarity",
-    Icon: Eye,
+  authenticity: {
+    label: "Authenticity",
+    Icon: Fingerprint,
     gradient: "from-sky-500 to-cyan-400",
     bg: "bg-sky-50",
     border: "border-sky-200",
     textColor: "text-sky-700",
     bar: "bg-sky-500",
   },
-  originality: {
-    label: "Originality",
-    Icon: Sparkles,
+  specificity: {
+    label: "Specificity",
+    Icon: Target,
     gradient: "from-violet-500 to-purple-400",
     bg: "bg-violet-50",
     border: "border-violet-200",
     textColor: "text-violet-700",
     bar: "bg-violet-500",
   },
-  emotionalPull: {
-    label: "Emotional Pull",
-    Icon: Heart,
+  voice: {
+    label: "Voice",
+    Icon: Mic,
     gradient: "from-rose-500 to-pink-400",
     bg: "bg-rose-50",
     border: "border-rose-200",
     textColor: "text-rose-700",
     bar: "bg-rose-500",
   },
-  curiosity: {
-    label: "Curiosity",
-    Icon: Zap,
+  narrativeStrength: {
+    label: "Narrative Strength",
+    Icon: TrendingUp,
     gradient: "from-amber-500 to-orange-400",
     bg: "bg-amber-50",
     border: "border-amber-200",
     textColor: "text-amber-700",
     bar: "bg-amber-500",
+  },
+  memorability: {
+    label: "Memorability",
+    Icon: Star,
+    gradient: "from-emerald-500 to-teal-400",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    textColor: "text-emerald-700",
+    bar: "bg-emerald-500",
   },
 };
 
@@ -93,7 +103,7 @@ const LABEL_CONFIG = {
   },
 } as const;
 
-const DIMS: DimKey[] = ["clarity", "originality", "emotionalPull", "curiosity"];
+const DIMS: DimKey[] = ["authenticity", "specificity", "voice", "narrativeStrength", "memorability"];
 
 // ── Sub-components ────────────────────────────────────────────
 
@@ -122,16 +132,35 @@ const DimensionCard = ({ dimKey, data }: { dimKey: DimKey; data: { score: number
   );
 };
 
-const OverallBadge = ({ label, overall }: { label: string; overall: number }) => {
+const OverallBadge = ({
+  label,
+  overall,
+  scoreDelta,
+}: {
+  label: string;
+  overall: number;
+  scoreDelta: number | null;
+}) => {
   const cfg = LABEL_CONFIG[label as keyof typeof LABEL_CONFIG] ?? LABEL_CONFIG["Needs Work"];
   return (
-    <div className={`inline-flex items-center gap-4 rounded-2xl px-5 py-3 ${cfg.container} shadow-sm`}>
-      <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot} shrink-0`} />
-      <div>
-        <p className={`text-base font-bold leading-none ${cfg.textColor}`}>{label}</p>
-        <p className={`text-xs mt-0.5 ${cfg.textColor} opacity-70`}>{cfg.tagline}</p>
+    <div className="flex items-center gap-3 flex-wrap">
+      <div className={`inline-flex items-center gap-4 rounded-2xl px-5 py-3 ${cfg.container} shadow-sm`}>
+        <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot} shrink-0`} />
+        <div>
+          <p className={`text-base font-bold leading-none ${cfg.textColor}`}>{label}</p>
+          <p className={`text-xs mt-0.5 ${cfg.textColor} opacity-70`}>{cfg.tagline}</p>
+        </div>
+        <div className={`ml-1 text-4xl font-black leading-none ${cfg.scoreColor}`}>{overall}</div>
       </div>
-      <div className={`ml-1 text-4xl font-black leading-none ${cfg.scoreColor}`}>{overall}</div>
+      {scoreDelta !== null && scoreDelta !== 0 && (
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${
+          scoreDelta > 0
+            ? "bg-emerald-100 text-emerald-700"
+            : "bg-red-100 text-red-600"
+        }`}>
+          {scoreDelta > 0 ? "+" : ""}{scoreDelta} from your rewrite
+        </div>
+      )}
     </div>
   );
 };
@@ -177,7 +206,7 @@ const VersionPill = ({
   isCompareSelected: boolean;
   onClick: () => void;
 }) => {
-  const overall = Math.round(DIMS.reduce((s, k) => s + version.feedback[k].score, 0) / 4);
+  const overall = Math.round(DIMS.reduce((s, k) => s + version.feedback[k].score, 0) / DIMS.length);
   const cfg = LABEL_CONFIG[version.feedback.overallLabel as keyof typeof LABEL_CONFIG] ?? LABEL_CONFIG["Needs Work"];
   return (
     <button
@@ -196,8 +225,8 @@ const VersionPill = ({
 };
 
 const CompareView = ({ vA, vB }: { vA: LabVersion; vB: LabVersion }) => {
-  const overallA = Math.round(DIMS.reduce((s, k) => s + vA.feedback[k].score, 0) / 4);
-  const overallB = Math.round(DIMS.reduce((s, k) => s + vB.feedback[k].score, 0) / 4);
+  const overallA = Math.round(DIMS.reduce((s, k) => s + vA.feedback[k].score, 0) / DIMS.length);
+  const overallB = Math.round(DIMS.reduce((s, k) => s + vB.feedback[k].score, 0) / DIMS.length);
   const delta = overallB - overallA;
 
   return (
@@ -226,7 +255,7 @@ const CompareView = ({ vA, vB }: { vA: LabVersion; vB: LabVersion }) => {
               const d = scoreB - scoreA;
               return (
                 <div key={k} className="flex items-center gap-2">
-                  <span className={`text-xs font-medium w-24 shrink-0 ${cfg.textColor}`}>{cfg.label}</span>
+                  <span className={`text-xs font-medium w-28 shrink-0 ${cfg.textColor}`}>{cfg.label}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
                     <div className={`h-full rounded-full ${cfg.bar} transition-all`} style={{ width: `${v.feedback[k].score}%` }} />
                   </div>
@@ -246,21 +275,140 @@ const CompareView = ({ vA, vB }: { vA: LabVersion; vB: LabVersion }) => {
   );
 };
 
+const DirectionCard = ({ direction }: { direction: Direction }) => (
+  <div className="rounded-2xl border-2 border-indigo-100 bg-white p-5 space-y-3">
+    <div>
+      <p className="font-bold text-indigo-800 text-base">{direction.title}</p>
+      <p className="text-xs text-indigo-500 mt-0.5">{direction.angle}</p>
+    </div>
+    <div className="bg-indigo-50/60 rounded-xl px-4 py-3 border border-indigo-100">
+      <p className="text-sm text-gray-700 leading-relaxed italic select-none">
+        "{direction.example}"
+      </p>
+    </div>
+    <div className="space-y-1.5 pt-1">
+      <p className="text-xs text-gray-600 leading-snug">
+        <span className="font-semibold text-emerald-700">Why it works: </span>
+        {direction.explanation.why}
+      </p>
+      <p className="text-xs text-gray-600 leading-snug">
+        <span className="font-semibold text-violet-700">What changed: </span>
+        {direction.explanation.what}
+      </p>
+    </div>
+  </div>
+);
+
+const ExplorePanel = ({
+  exploreState,
+  text,
+  onTextChange,
+  onReanalyze,
+}: {
+  exploreState: ExploreState;
+  text: string;
+  onTextChange: (t: string) => void;
+  onReanalyze: () => void;
+}) => {
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+
+  if (exploreState.status === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <div className="relative">
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-200">
+            <Compass className="h-6 w-6 text-white" />
+          </div>
+          <div className="absolute inset-0 rounded-full border-4 border-indigo-300 animate-ping opacity-60" />
+        </div>
+        <p className="text-base font-semibold text-gray-700">Exploring directions...</p>
+      </div>
+    );
+  }
+
+  if (exploreState.status === 'error') {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{exploreState.message}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (exploreState.status !== 'success') return null;
+
+  return (
+    <div className="space-y-4">
+      {/* Ethical guardrail */}
+      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-sm text-amber-800 leading-snug">
+          <span className="font-semibold">These are examples to spark your thinking — not to copy.</span>{" "}
+          Your voice matters. Read them, find what resonates, then write your own version below.
+        </p>
+      </div>
+
+      {/* 3 direction cards */}
+      <div className="grid grid-cols-1 gap-3">
+        {exploreState.directions.map((dir, i) => (
+          <DirectionCard key={i} direction={dir} />
+        ))}
+      </div>
+
+      {/* Write your version */}
+      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl border-2 border-indigo-100 p-5 space-y-3">
+        <div>
+          <p className="text-sm font-bold text-indigo-800">Now write your version based on what you liked</p>
+          <p className="text-xs text-indigo-500 mt-0.5">Don't copy — use what inspired you and make it yours.</p>
+        </div>
+        <Textarea
+          value={text}
+          onChange={e => onTextChange(e.target.value)}
+          placeholder="Write your version here..."
+          className="min-h-[120px] bg-white border-indigo-100 focus:border-indigo-300 text-sm resize-none"
+        />
+        <div className="flex items-center justify-between">
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+            wordCount === 0 ? "bg-gray-100 text-gray-400" :
+            wordCount <= 120 ? "bg-emerald-100 text-emerald-700" :
+            "bg-orange-100 text-orange-700"
+          }`}>
+            {wordCount} {wordCount === 1 ? "word" : "words"}
+          </span>
+          <Button
+            onClick={onReanalyze}
+            disabled={wordCount < 3}
+            size="sm"
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold"
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            Re-analyze my version
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function PrimroseLab() {
   const [text, setText] = useState('');
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersionIds, setCompareVersionIds] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
+  const [scoreBeforeExplore, setScoreBeforeExplore] = useState<number | null>(null);
+  const [showExplore, setShowExplore] = useState(false);
 
   const {
     analyzeState,
     suggestState,
+    exploreState,
     versions,
     activeVersionId,
     setActiveVersionId,
     analyze,
     getSuggestions,
+    exploreDirections,
     saveVersion,
     resetAnalysis,
   } = usePrimroseLab();
@@ -274,7 +422,11 @@ export default function PrimroseLab() {
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
   const canAnalyze = wordCount >= 3 && !isAnalyzing;
 
-  const overall = feedback ? Math.round(DIMS.reduce((s, k) => s + feedback[k].score, 0) / 4) : 0;
+  const overall = feedback ? Math.round(DIMS.reduce((s, k) => s + feedback[k].score, 0) / DIMS.length) : 0;
+
+  const scoreDelta = (scoreBeforeExplore !== null && hasResult)
+    ? overall - scoreBeforeExplore
+    : null;
 
   const activeSuggestion = suggestState.status === 'success' || suggestState.status === 'loading'
     ? (suggestState as { action: string }).action
@@ -291,7 +443,21 @@ export default function PrimroseLab() {
 
   const handleActionClick = (action: string) => {
     if (suggestState.status === 'success' && (suggestState as any).action === action) return;
+    setShowExplore(false);
     getSuggestions(text, action);
+  };
+
+  const handleExploreDirections = () => {
+    setScoreBeforeExplore(overall);
+    setShowExplore(true);
+    exploreDirections(text);
+  };
+
+  const handleReanalyzeFromExplore = () => {
+    if (canAnalyze) {
+      setShowExplore(false);
+      analyze(text);
+    }
   };
 
   const handleSave = () => {
@@ -304,6 +470,8 @@ export default function PrimroseLab() {
     resetAnalysis();
     setCompareMode(false);
     setCompareVersionIds([undefined, undefined]);
+    setScoreBeforeExplore(null);
+    setShowExplore(false);
   };
 
   const handleToggleCompare = (versionId: string) => {
@@ -438,7 +606,7 @@ export default function PrimroseLab() {
 
             {/* Overall badge + controls */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <OverallBadge label={feedback.overallLabel} overall={overall} />
+              <OverallBadge label={feedback.overallLabel} overall={overall} scoreDelta={scoreDelta} />
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -468,7 +636,7 @@ export default function PrimroseLab() {
               </p>
             </div>
 
-            {/* 4 dimension cards */}
+            {/* 5 dimension cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {DIMS.map(k => (
                 <DimensionCard key={k} dimKey={k} data={feedback[k]} />
@@ -521,10 +689,10 @@ export default function PrimroseLab() {
               </div>
 
               {/* Suggestion panel */}
-              {(suggestState.status === 'loading' || suggestState.status === 'success') && (
+              {(suggestState.status === 'loading' || suggestState.status === 'success') && !showExplore && (
                 <div className="bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border-2 border-violet-100 p-5 space-y-3">
-                  <div className={`flex items-center gap-2 font-semibold text-violet-700`}>
-                    <Zap className="h-4 w-4" />
+                  <div className="flex items-center gap-2 font-semibold text-violet-700">
+                    <Sparkles className="h-4 w-4" />
                     {suggestState.status === 'loading' ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -546,7 +714,33 @@ export default function PrimroseLab() {
                   )}
                 </div>
               )}
+
+              {/* Explore directions button */}
+              <div className="pt-1">
+                <button
+                  onClick={handleExploreDirections}
+                  disabled={exploreState.status === 'loading'}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold text-sm shadow-md shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exploreState.status === 'loading' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Compass className="h-4 w-4" />
+                  )}
+                  Explore directions
+                </button>
+              </div>
             </div>
+
+            {/* Explore panel */}
+            {showExplore && (
+              <ExplorePanel
+                exploreState={exploreState}
+                text={text}
+                onTextChange={setText}
+                onReanalyze={handleReanalyzeFromExplore}
+              />
+            )}
 
             {/* Version history */}
             {versions.length > 0 && (
