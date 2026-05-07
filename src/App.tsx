@@ -62,6 +62,7 @@ import StudentFeedback from "./pages/StudentFeedback";
 import SuperAdmin from "./pages/SuperAdmin";
 import EvaluationEngine from "./pages/EvaluationEngine";
 import PrimroseLab from "./pages/PrimroseLab";
+import ScholarshipFinder from "./pages/ScholarshipFinder";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   [
     '/student-dashboard',
     '/primrose-lab',
+    '/scholarship-finder',
     '/student-personal-area',
     '/student-stats',
     '/student-recommendation-letters',
@@ -370,6 +372,14 @@ const App = () => {
             </AppLayout>
           } />
 
+          <Route path="/scholarship-finder" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <ScholarshipFinder />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
           {/* ── Parent-only routes ── */}
           <Route path="/parent-portal" element={
             <AppLayout>
@@ -536,6 +546,13 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['counselor', 'principal', 'admin']}>
                 <PersonalEssay />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+          <Route path="/preview/scholarship-finder" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['counselor', 'principal', 'admin']}>
+                <ScholarshipFinder />
               </ProtectedRoute>
             </AppLayout>
           } />

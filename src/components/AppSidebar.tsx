@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, BookOpen, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft, Trophy } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +87,10 @@ const studentItems: NavItem[] = [{
   title: "Evaluation Engine",
   url: "/evaluation-engine",
   icon: Zap,
+}, {
+  title: "Scholarship Finder",
+  url: "/scholarship-finder",
+  icon: Trophy,
 }];
 
 const parentItems = [{
@@ -134,7 +138,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const studentRoutes = ['/student-dashboard', '/primrose-lab', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine'];
+const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
 
