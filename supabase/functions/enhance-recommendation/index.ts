@@ -68,7 +68,7 @@ Write a professional recommendation letter that captures the essence of this stu
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
-        system: systemPrompt,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [
           { role: "user", content: userPrompt },
         ],

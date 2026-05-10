@@ -162,7 +162,7 @@ Ensure the statement follows these criteria:
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1024,
-        system: 'You are an expert at writing compelling personal statements for university applications. You create highly personalized, authentic statements that showcase the applicant\'s unique story, motivations, and fit for their chosen program.',
+        system: [{ type: "text", text: 'You are an expert at writing compelling personal statements for university applications. You create highly personalized, authentic statements that showcase the applicant\'s unique story, motivations, and fit for their chosen program.', cache_control: { type: "ephemeral" } }],
         messages: [{ role: 'user', content: prompt }],
       }),
     });

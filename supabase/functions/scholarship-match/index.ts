@@ -108,7 +108,7 @@ Analyze the student's profile against each scholarship. Return the top 5–10 mo
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
             max_tokens: 2048,
-            system: systemPrompt,
+            system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
             messages: [{ role: "user", content: userPrompt }],
           }),
         });

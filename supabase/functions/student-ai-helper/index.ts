@@ -141,7 +141,7 @@ Nothing else — no intro, no outro, just the 4 suggestions.`;
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
             max_tokens: 1024,
-            system: systemPrompt,
+            system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
             messages: [{ role: "user", content: userPrompt }],
           }),
         });
