@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { callAI } from "../_shared/ai-client.ts";
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+import { authenticate, checkRateLimit } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,53 +13,11 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { userId, error: authError } = await authenticate(req);
+    if (authError) return authError;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-    const { data: recentRequests, error: rateLimitError } = await supabase
-      .from('api_usage_log')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('function_name', 'generate-personal-statement')
-      .gte('created_at', oneHourAgo.toISOString())
-      .limit(11);
-
-    if (rateLimitError) {
-      console.error('Error checking rate limit:', rateLimitError);
-    } else if (recentRequests && recentRequests.length >= 10) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Please try again in an hour.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { error: logError } = await supabase
-      .from('api_usage_log')
-      .insert({ user_id: user.id, function_name: 'generate-personal-statement', created_at: now.toISOString() });
-
-    if (logError) {
-      console.error('Error logging API usage:', logError);
-    }
+    const rateLimitError = await checkRateLimit(userId, 'generate-personal-statement', 10);
+    if (rateLimitError) return rateLimitError;
 
     const { answers } = await req.json();
 

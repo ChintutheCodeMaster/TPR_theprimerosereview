@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI } from "../_shared/ai-client.ts";
+import { authenticate, checkRateLimit } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,12 @@ serve(async (req) => {
   }
 
   try {
+    const { userId, error: authError } = await authenticate(req);
+    if (authError) return authError;
+
+    const rateLimitError = await checkRateLimit(userId, 'analyze-essay', 20);
+    if (rateLimitError) return rateLimitError;
+
     const { essayContent, prompt } = await req.json();
 
     if (!essayContent) {
