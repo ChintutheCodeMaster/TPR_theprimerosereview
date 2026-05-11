@@ -426,8 +426,7 @@ const ParentPortal = () => {
       </div>
 
       {/* ── Needs Attention ── */}
-      <div>
-        <Card className="p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <Card className="p-6 rounded-2xl border border-slate-100 shadow-sm">
           <h3 className="text-base font-semibold text-foreground mb-1 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Needs Attention
@@ -467,8 +466,7 @@ const ParentPortal = () => {
               {firstName}'s timeline is progressing well. Most applicants at this stage have fewer completed essays and applications. Keep the momentum going.
             </p>
           </div>
-        </Card>
-      </div>
+      </Card>
 
       {/* ── University Tracker ── */}
       <Card className="p-6 rounded-2xl border border-slate-100 shadow-sm">
