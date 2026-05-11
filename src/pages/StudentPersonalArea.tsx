@@ -211,6 +211,9 @@ const StudentPersonalArea = () => {
         <TabsContent value="essays" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">My Essays</h2>
+
+
+    
             {/* <Button onClick={() => navigate('/submit-essay')}>
               <Upload className="h-4 w-4 mr-2" />
               Upload New Essay
