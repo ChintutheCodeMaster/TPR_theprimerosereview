@@ -338,7 +338,7 @@ const SuperAdmin = () => {
 
   // ── Bulk invite handler ──────────────────────────────────────
   const handleBulkInvite = async () => {
-    const REFERRAL_LINK = "https://www.primrosecrm.com/signup?invite=9849f6d9-1780-4ba5-9f58-c0ce65cdd730";
+    const REFERRAL_LINK = "https://www.primrosecrm.com/signup?invite=00576bf3-2305-4a3c-b001-342e54e3d30a";
 
     const lines = bulkInviteEmails.split("\n").map(l => l.trim()).filter(Boolean);
     const recipients = lines.map(line => {
