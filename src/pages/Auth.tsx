@@ -189,17 +189,19 @@ const Auth = () => {
             </>
           )}
 
-          {/* Bottom: Sign up link */}
-          <div className="text-center pt-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Don't have an account? </span>
-            <button
-              type="button"
-              className="text-sm text-primary font-medium hover:underline"
-              onClick={() => navigate('/signup')}
-            >
-              Sign up here
-            </button>
-          </div>
+          {/* Bottom: Sign up link — hidden for students (they join via referral link) */}
+          {selectedRole !== 'student' && (
+            <div className="text-center pt-2 border-t border-border">
+              <span className="text-sm text-muted-foreground">Don't have an account? </span>
+              <button
+                type="button"
+                className="text-sm text-primary font-medium hover:underline"
+                onClick={() => navigate('/signup')}
+              >
+                Sign up here
+              </button>
+            </div>
+          )}
         </Card>
       </div>
     </div>

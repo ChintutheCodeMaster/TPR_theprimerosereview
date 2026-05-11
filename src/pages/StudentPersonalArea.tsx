@@ -220,10 +220,10 @@ const StudentPersonalArea = () => {
               Upload Personal Essay
             </Button> */}
             <div className="flex gap-2">
-              <Button onClick={() => navigate('/submit-essay')}>
+              {/* <Button onClick={() => navigate('/submit-essay')}>
                 <Upload className="h-4 w-4 mr-2" />
                 Upload New Essay
-              </Button>
+              </Button> */}
 
               <Button onClick={() => navigate('/personal-essay')}>
                 <Upload className="h-4 w-4 mr-2" />
