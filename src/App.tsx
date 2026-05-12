@@ -63,6 +63,7 @@ import SuperAdmin from "./pages/SuperAdmin";
 import EvaluationEngine from "./pages/EvaluationEngine";
 import PrimroseLab from "./pages/PrimroseLab";
 import ScholarshipFinder from "./pages/ScholarshipFinder";
+import TuitionCalculator from "./pages/TuitionCalculator";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     '/student-dashboard',
     '/primrose-lab',
     '/scholarship-finder',
+    '/tuition-calculator',
     '/student-personal-area',
     '/student-stats',
     '/student-recommendation-letters',
@@ -380,6 +382,14 @@ const App = () => {
             </AppLayout>
           } />
 
+          <Route path="/tuition-calculator" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <TuitionCalculator />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
           {/* ── Parent-only routes ── */}
           <Route path="/parent-portal" element={
             <AppLayout>
@@ -553,6 +563,13 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['counselor', 'principal', 'admin']}>
                 <ScholarshipFinder />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+          <Route path="/preview/tuition-calculator" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['counselor', 'principal', 'admin']}>
+                <TuitionCalculator />
               </ProtectedRoute>
             </AppLayout>
           } />
