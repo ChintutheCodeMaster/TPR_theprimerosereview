@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePrincipalSchool } from "@/hooks/usePrincipalSchool";
 import { useAtRiskCriteria } from "@/hooks/useAtRiskCriteria";
 import { computeCompletion, classifyRisk } from "@/lib/atRiskUtils";
-import { Search, Users, ShieldAlert } from "lucide-react";
+import { Search, Users, ShieldAlert, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface StudentRow {
   user_id: string;
@@ -29,6 +30,8 @@ const PrincipalStudents = () => {
   const { criteria } = useAtRiskCriteria();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -36,10 +39,16 @@ const PrincipalStudents = () => {
 
     const fetchStudents = async () => {
       setLoading(true);
+      setError(null);
       try {
         type SchoolMember = { user_id: string; role: string; full_name: string | null; email: string | null; avatar_url: string | null };
-        const { data: members } = await (supabase as any)
+        const { data: members, error: rpcError } = await (supabase as any)
           .rpc("get_school_members", { p_school_id: school.schoolId });
+
+        if (rpcError) {
+          setError("Failed to load student roster. Please try again.");
+          return;
+        }
 
         const allMembers = (members ?? []) as SchoolMember[];
         const studentMembers = allMembers.filter(m => m.role === "student");
@@ -147,7 +156,7 @@ const PrincipalStudents = () => {
     };
 
     fetchStudents();
-  }, [school?.schoolId, criteria]);
+  }, [school?.schoolId, criteria, retryKey]);
 
   const filtered = students.filter(s =>
     (s.full_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -172,6 +181,16 @@ const PrincipalStudents = () => {
           className="pl-10"
         />
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button size="sm" variant="outline" className="shrink-0" onClick={() => { setError(null); setRetryKey(k => k + 1); }}>
+            Retry
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
