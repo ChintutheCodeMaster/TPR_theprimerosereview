@@ -91,15 +91,19 @@ const PrincipalAtRiskCriteria = () => {
                 id="at-risk-threshold"
                 type="number"
                 min={1}
-                max={99}
+                max={draft.needsAttentionThreshold - 1}
                 value={draft.atRiskThreshold}
-                onChange={e => update("atRiskThreshold", Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
+                onChange={e => {
+                  const val = Math.min(draft.needsAttentionThreshold - 1, Math.max(1, parseInt(e.target.value) || 1));
+                  update("atRiskThreshold", val);
+                }}
                 className="w-24"
               />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Students whose completion score falls below this are marked <strong>at-risk</strong>. Default: 40%.
+              Must be lower than the needs-attention threshold.
             </p>
           </div>
 
@@ -111,16 +115,20 @@ const PrincipalAtRiskCriteria = () => {
               <Input
                 id="needs-attention-threshold"
                 type="number"
-                min={1}
+                min={draft.atRiskThreshold + 1}
                 max={100}
                 value={draft.needsAttentionThreshold}
-                onChange={e => update("needsAttentionThreshold", Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                onChange={e => {
+                  const val = Math.min(100, Math.max(draft.atRiskThreshold + 1, parseInt(e.target.value) || draft.atRiskThreshold + 1));
+                  update("needsAttentionThreshold", val);
+                }}
                 className="w-24"
               />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Students between the two thresholds are marked <strong>needs attention</strong>. Default: 70%.
+              Must be higher than the at-risk threshold.
             </p>
           </div>
 
