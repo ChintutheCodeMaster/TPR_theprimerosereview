@@ -167,7 +167,7 @@ serve(async (req) => {
         body: JSON.stringify({
           from: "The Primrose Review <team@primrosecrm.com>",
           to: email,
-          subject: "You're invited to The Primrose Review — Sign up now",
+          subject: "Your school has set up The Primrose Review — here's your access",
           html: inviteHtml(displayName, referralLink),
         }),
       });
