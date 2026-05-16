@@ -1,16 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Bell, 
-  Search, 
-  Settings, 
+import {
+  Bell,
+  Search,
+  Settings,
   LogOut
 } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
+import { useSchoolLogo } from "@/hooks/useSchoolLogo";
 
 export const Header = () => {
+  const { data: schoolLogoUrl } = useSchoolLogo();
+  const logoSrc = schoolLogoUrl ?? clientLogo;
+
   return (
     <header className="bg-card border-b border-border shadow-card px-6 py-4">
       <div className="flex items-center justify-between">
@@ -37,10 +41,10 @@ export const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          {/* Client Logo */}
-          <img 
-            src={clientLogo} 
-            alt="Client Logo" 
+          {/* School Logo */}
+          <img
+            src={logoSrc}
+            alt="School Logo"
             className="h-32 w-auto rounded"
           />
 

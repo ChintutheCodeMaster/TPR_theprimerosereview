@@ -25,9 +25,12 @@ import {
   Users, Building2, GraduationCap, UserCircle, Shield,
   Trash2, ArrowLeftRight, MessageSquare, Send,
   Activity, FileText, BookOpen, Award, TrendingUp, Clock, CheckCircle, Mail,
+  ImageIcon, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import primroseLogo from "@/assets/primrose-logo.png";
+
+type SchoolRecord = { id: string; name: string; logo_url: string | null };
 
 type PlatformUser = {
   user_id: string;
@@ -112,6 +115,12 @@ const SuperAdmin = () => {
   const [reassignCounselorId, setReassignCounselorId] = useState("");
   const [reassigning, setReassigning] = useState(false);
 
+  // ── School logo state ─────────────────────────────────────────
+  const [schools, setSchools] = useState<SchoolRecord[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
   // ── Bulk invite state ─────────────────────────────────────────
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [bulkInviteEmails, setBulkInviteEmails] = useState("");
@@ -175,6 +184,8 @@ const SuperAdmin = () => {
     fetchUsers();
     fetchActivity();
     supabase.auth.getUser().then(({ data }) => setAdminUserId(data.user?.id ?? null));
+    supabase.from("schools").select("id, name, logo_url").order("name")
+      .then(({ data }) => setSchools((data ?? []) as SchoolRecord[]));
   }, []);
 
   useEffect(() => {
@@ -369,6 +380,34 @@ const SuperAdmin = () => {
     }
   };
 
+  // ── School logo upload handler ───────────────────────────────
+  const handleAdminLogoUpload = async () => {
+    if (!logoFile || !selectedSchoolId) return;
+    setUploadingLogo(true);
+    try {
+      const ext = logoFile.name.split(".").pop();
+      const path = `${selectedSchoolId}/logo.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("school-logos")
+        .upload(path, logoFile, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("school-logos").getPublicUrl(path);
+      const { error: dbError } = await supabase.from("schools")
+        .update({ logo_url: urlData.publicUrl } as any)
+        .eq("id", selectedSchoolId);
+      if (dbError) throw dbError;
+      setSchools(prev =>
+        prev.map(s => s.id === selectedSchoolId ? { ...s, logo_url: urlData.publicUrl } : s)
+      );
+      setLogoFile(null);
+      toast.success("Logo updated successfully");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   // ── Render ───────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
@@ -519,6 +558,85 @@ const SuperAdmin = () => {
               </tbody>
             </table>
           )}
+        </div>
+
+        {/* ── School Logos ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-gray-500" />
+              School Logos
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">Upload or replace the logo for any school — updates the header for all users at that school</p>
+          </div>
+          <div className="p-6 space-y-5">
+            {/* School selector + current logo preview */}
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex-1 min-w-[240px]">
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">Select School</label>
+                <Select value={selectedSchoolId} onValueChange={id => { setSelectedSchoolId(id); setLogoFile(null); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a school…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schools.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current logo preview */}
+              <div className="shrink-0">
+                <p className="text-sm font-medium text-gray-700 mb-1.5">Current Logo</p>
+                {selectedSchoolId ? (
+                  (() => {
+                    const current = schools.find(s => s.id === selectedSchoolId);
+                    return current?.logo_url ? (
+                      <img
+                        src={current.logo_url}
+                        alt="Current school logo"
+                        className="h-16 w-auto rounded border border-gray-200 object-contain"
+                      />
+                    ) : (
+                      <div className="h-16 w-32 rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">
+                        No logo set
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="h-16 w-32 rounded border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-300">
+                    Select school
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Upload controls */}
+            <div className="flex items-end gap-3 flex-wrap">
+              <div className="flex-1 min-w-[240px]">
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">New Logo</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  disabled={!selectedSchoolId}
+                  onChange={e => setLogoFile(e.target.files?.[0] ?? null)}
+                  className="cursor-pointer"
+                />
+              </div>
+              <Button
+                onClick={handleAdminLogoUpload}
+                disabled={!selectedSchoolId || !logoFile || uploadingLogo}
+                className="shrink-0"
+              >
+                {uploadingLogo ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading…</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload Logo</>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* ── All users table ── */}
