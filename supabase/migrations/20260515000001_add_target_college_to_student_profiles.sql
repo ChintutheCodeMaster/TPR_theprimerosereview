@@ -3,5 +3,3 @@ alter table student_profiles
   add column if not exists target_college text;
 
 
-
-  

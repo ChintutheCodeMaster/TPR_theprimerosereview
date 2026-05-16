@@ -37,6 +37,7 @@ import NotFound from "./pages/NotFound";
 import TeacherRecommendationPage from "./pages/TeacherRecommendationPage";
 import primroseLogo from "@/assets/primrose-logo.png";
 import clientLogo from "@/assets/client-logo.jpg";
+import { useSchoolLogo } from "@/hooks/useSchoolLogo";
 import Signup from "./pages/SignUp";
 import SubmitEssay from "./pages/SubmitEssay";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -73,6 +74,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthState();
+  const { data: schoolLogoUrl } = useSchoolLogo();
+  const logoSrc = schoolLogoUrl ?? clientLogo;
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const noSidebarRoutes = ['/', '/auth', '/demo', '/product-demo', '/demo-maker', '/reset-password'];
   const isPreviewMode = location.pathname.startsWith('/preview/');
@@ -155,8 +158,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                   )
                 )}
                 <img
-                  src={clientLogo}
-                  alt="Client Logo"
+                  src={logoSrc}
+                  alt="School Logo"
                   className="h-16 w-auto rounded"
                 />
               </div>
