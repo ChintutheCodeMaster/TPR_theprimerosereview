@@ -108,6 +108,105 @@ const StudentDashboard = () => {
     setChallengePopup(null)
   }
 
+  const fetchResultsPopup = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Get current student's school
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const mySchoolId = profile?.school_id
+      if (!mySchoolId) return
+
+      // Find closed challenges from the last 30 days
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+      const { data: closed } = await supabase
+        .from('weekly_challenges')
+        .select('id, title, week_number, ends_at')
+        .eq('is_active', true)
+        .lt('ends_at', new Date().toISOString())
+        .gt('ends_at', thirtyDaysAgo)
+        .order('ends_at', { ascending: false })
+        .limit(3)
+
+      if (!closed?.length) return
+
+      for (const challenge of closed) {
+        const resultsKey = `seen_results_${challenge.id}`
+        if (localStorage.getItem(resultsKey)) continue
+
+        // Check if this student submitted and was scored
+        const { data: mySub } = await supabase
+          .from('challenge_submissions')
+          .select('id, ai_scores')
+          .eq('challenge_id', challenge.id)
+          .eq('student_id', user.id)
+          .maybeSingle()
+
+        if (!mySub?.ai_scores) continue
+
+        // Fetch all scored submissions for this challenge
+        const { data: allSubs } = await supabase
+          .from('challenge_submissions')
+          .select('id, student_id, ai_scores')
+          .eq('challenge_id', challenge.id)
+          .not('ai_scores', 'is', null)
+
+        if (!allSubs?.length) continue
+
+        // Filter to same school
+        const ids = [...new Set(allSubs.map(s => s.student_id))]
+        const { data: schoolProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, school_id')
+          .in('user_id', ids)
+          .eq('school_id', mySchoolId)
+
+        const schoolIds = new Set((schoolProfiles ?? []).map(p => p.user_id))
+        const schoolSubs = allSubs
+          .filter(s => schoolIds.has(s.student_id))
+          .sort((a, b) => b.ai_scores.overallScore - a.ai_scores.overallScore)
+
+        if (!schoolSubs.length) continue
+
+        const myRank = schoolSubs.findIndex(s => s.id === mySub.id) + 1
+        const winnerSub = schoolSubs[0]
+        const winnerProfile = (schoolProfiles ?? []).find(p => p.user_id === winnerSub.student_id)
+        const winnerFullName = winnerProfile?.full_name ?? 'a classmate'
+        const winnerParts = winnerFullName.trim().split(' ')
+        const winnerDisplay = winnerParts.length > 1
+          ? `${winnerParts[0]} ${winnerParts[winnerParts.length - 1][0]}.`
+          : winnerParts[0]
+
+        setResultsPopup({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          weekNumber: challenge.week_number,
+          myScore: mySub.ai_scores.overallScore,
+          myRank,
+          totalParticipants: schoolSubs.length,
+          winnerName: winnerDisplay,
+          winnerScore: winnerSub.ai_scores.overallScore,
+          isWinner: winnerSub.id === mySub.id,
+        })
+        return // show one at a time
+      }
+    } catch {
+      // non-critical — silently skip
+    }
+  }
+
+  const dismissResultsPopup = () => {
+    if (resultsPopup) {
+      localStorage.setItem(`seen_results_${resultsPopup.challengeId}`, '1')
+    }
+    setResultsPopup(null)
+  }
+
   const fetchDashboardData = async () => {
     setLoading(true)
     try {
@@ -258,6 +357,65 @@ const StudentDashboard = () => {
             </Button>
             <Button variant="ghost" onClick={dismissChallengePopup} className="flex-1">
               Maybe Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Challenge results popup — shown once after challenge closes */}
+      <Dialog open={!!resultsPopup} onOpenChange={open => { if (!open) dismissResultsPopup() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              {resultsPopup?.isWinner
+                ? <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shrink-0"><Crown className="h-5 w-5 text-white" /></div>
+                : <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-amber-400 flex items-center justify-center shrink-0"><Trophy className="h-5 w-5 text-white" /></div>
+              }
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
+                Week {resultsPopup?.weekNumber} Results
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl">
+              {resultsPopup?.isWinner ? '🏆 You won the challenge!' : 'Challenge Results Are In!'}
+            </DialogTitle>
+            <DialogDescription className="text-sm pt-1">{resultsPopup?.challengeTitle}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            {/* Winner callout */}
+            {!resultsPopup?.isWinner && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                <Crown className="h-4 w-4 text-yellow-600 shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  <span className="font-semibold">{resultsPopup?.winnerName}</span> took first place with a score of <span className="font-semibold">{resultsPopup?.winnerScore}/100</span>
+                </p>
+              </div>
+            )}
+
+            {/* Student's own result */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <div className="text-3xl font-bold text-primary">{resultsPopup?.myScore}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Your score / 100</div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <div className="text-3xl font-bold text-foreground">
+                  {resultsPopup?.myRank === 1 ? '🥇' : resultsPopup?.myRank === 2 ? '🥈' : resultsPopup?.myRank === 3 ? '🥉' : `#${resultsPopup?.myRank}`}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">of {resultsPopup?.totalParticipants} students</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => { dismissResultsPopup(); navigate('/weekly-challenge') }}
+            >
+              <Trophy className="h-4 w-4" /> See Full Leaderboard
+            </Button>
+            <Button variant="ghost" onClick={dismissResultsPopup} className="flex-1">
+              Close
             </Button>
           </div>
         </DialogContent>
