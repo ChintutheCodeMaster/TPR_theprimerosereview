@@ -72,7 +72,8 @@ const studentBottomItems: NavItem[] = [{
 }];
 
 const additionalToolItems: NavItem[] = [
-  { title: "Scholarship Finder", url: "/scholarship-finder", icon: Trophy },
+  { title: "Weekly Challenge", url: "/weekly-challenge", icon: Trophy },
+  { title: "Scholarship Finder", url: "/scholarship-finder", icon: Star },
   { title: "Tuition Calculator", url: "/tuition-calculator", icon: Calculator },
 ];
 
@@ -159,7 +160,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine'];
+const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine', '/weekly-challenge'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
 

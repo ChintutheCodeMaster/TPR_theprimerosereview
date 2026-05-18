@@ -66,6 +66,7 @@ import EvaluationEngine from "./pages/EvaluationEngine";
 import PrimroseLab from "./pages/PrimroseLab";
 import ScholarshipFinder from "./pages/ScholarshipFinder";
 import TuitionCalculator from "./pages/TuitionCalculator";
+import WeeklyChallenge from "./pages/WeeklyChallenge";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     '/student-recommendation-letters',
     '/student-messages',
     '/evaluation-engine',
+    '/weekly-challenge',
   ].includes(location.pathname) ||
   location.pathname === '/submit-essay' ||
   location.pathname === '/personal-essay' ||
@@ -391,6 +393,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
                 <TuitionCalculator />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/weekly-challenge" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <WeeklyChallenge />
               </ProtectedRoute>
             </AppLayout>
           } />

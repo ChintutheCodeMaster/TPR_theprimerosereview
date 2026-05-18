@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { StudentEssayFeedback } from "@/components/StudentEssayFeedback";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,8 +28,32 @@ import {
   Loader2,
   MapPin,
   Sparkles,
+  Trophy,
+  Flame,
+  Crown,
+  Medal,
 } from "lucide-react";
 import { StudentTour, startStudentTour } from "@/components/StudentTour";
+
+interface ActiveChallenge {
+  id: string;
+  title: string;
+  theme: string;
+  description: string;
+  ends_at: string;
+}
+
+interface ChallengeResult {
+  challengeId: string;
+  challengeTitle: string;
+  weekNumber: number;
+  myScore: number;
+  myRank: number;
+  totalParticipants: number;
+  winnerName: string;
+  winnerScore: number;
+  isWinner: boolean;
+}
 
 interface DashboardData {
   studentName: string
@@ -39,10 +70,43 @@ const StudentDashboard = () => {
   const { toast } = useToast()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [challengePopup, setChallengePopup] = useState<ActiveChallenge | null>(null)
+  const [resultsPopup, setResultsPopup] = useState<ChallengeResult | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
+    fetchResultsPopup()
+    fetchChallengePopup()
   }, [])
+
+  const fetchChallengePopup = async () => {
+    try {
+      const { data: challenges } = await supabase
+        .from('weekly_challenges')
+        .select('id, title, theme, description, ends_at')
+        .eq('is_active', true)
+        .gt('ends_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const challenge = challenges?.[0]
+      if (!challenge) return
+
+      const seenKey = `seen_challenge_${challenge.id}`
+      if (!localStorage.getItem(seenKey)) {
+        setChallengePopup(challenge)
+      }
+    } catch {
+      // silently ignore — popup is non-critical
+    }
+  }
+
+  const dismissChallengePopup = () => {
+    if (challengePopup) {
+      localStorage.setItem(`seen_challenge_${challengePopup.id}`, '1')
+    }
+    setChallengePopup(null)
+  }
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -165,6 +229,40 @@ const StudentDashboard = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Weekly Challenge popup — shown once per challenge per browser */}
+      <Dialog open={!!challengePopup} onOpenChange={open => { if (!open) dismissChallengePopup() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-amber-400 flex items-center justify-center shrink-0">
+                <Trophy className="h-5 w-5 text-white" />
+              </div>
+              <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
+                <Flame className="h-3 w-3" /> New Challenge Live
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl">{challengePopup?.title}</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed pt-1">
+              {challengePopup?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-3 rounded-lg bg-violet-50 border border-violet-100 text-sm text-violet-700">
+            Theme: <span className="font-semibold">{challengePopup?.theme}</span>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => { dismissChallengePopup(); navigate('/weekly-challenge') }}
+            >
+              <Trophy className="h-4 w-4" /> Enter the Challenge
+            </Button>
+            <Button variant="ghost" onClick={dismissChallengePopup} className="flex-1">
+              Maybe Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <StudentTour />
 
       {/* Welcome Header */}
