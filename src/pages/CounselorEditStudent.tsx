@@ -314,10 +314,16 @@ const CounselorEditStudent = () => {
       {/* Target Colleges */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            Target Colleges
-          </CardTitle>
+          <div className="flex items-start justify-between gap-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              Target Colleges
+            </CardTitle>
+            <p className="text-xs text-muted-foreground text-right leading-relaxed">
+              Add or update the colleges this student is targeting.<br />
+              Use <span className="font-medium text-foreground">Add another university</span> below to add more.
+            </p>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {colleges.map((slot, index) => {

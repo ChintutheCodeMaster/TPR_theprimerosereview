@@ -203,9 +203,16 @@ const StudentEditProfile = () => {
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
-        <p className="text-muted-foreground text-sm mt-1">Update your personal, academic, and college details.</p>
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4 flex items-start gap-3">
+        <div className="mt-0.5 rounded-full bg-primary/10 p-1.5 shrink-0">
+          <User className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Edit Your Profile</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Keep your details up to date — your counselor uses this information to support your application journey. Fill in your GPA, test scores, and the colleges you're targeting.
+          </p>
+        </div>
       </div>
 
       {/* Personal Info */}
