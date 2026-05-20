@@ -46,51 +46,55 @@ const Landing = () => {
         <Card className="p-8 space-y-6">
           <h2 className="text-xl font-semibold text-foreground">Sign in as:</h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
-              onClick={() => navigate('/auth?role=counselor')}
-            >
-              <GraduationCap className="h-8 w-8" />
-              <span className="font-medium">Counselor</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
-              onClick={() => navigate('/auth?role=student')}
-            >
-              <Users className="h-8 w-8" />
-              <span className="font-medium">Student</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
-              onClick={() => navigate('/auth?role=parent')}
-            >
-              <UserCircle className="h-8 w-8" />
-              <span className="font-medium">Parent</span>
-            </Button>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+                onClick={() => navigate('/auth?role=counselor')}
+              >
+                <GraduationCap className="h-8 w-8" />
+                <span className="font-medium">Counselor</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
-              onClick={() => navigate('/auth?role=principal')}
-            >
-              <Building2 className="h-8 w-8" />
-              <span className="font-medium">Principal</span>
-            </Button>
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+                onClick={() => navigate('/auth?role=principal')}
+              >
+                <Building2 className="h-8 w-8" />
+                <span className="font-medium">Principal</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
-              onClick={() => navigate('/auth?role=teacher')}
-            >
-              <BookOpen className="h-8 w-8" />
-              <span className="font-medium">Teacher</span>
-            </Button>
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+                onClick={() => navigate('/auth?role=student')}
+              >
+                <Users className="h-8 w-8" />
+                <span className="font-medium">Student</span>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 w-2/3 mx-auto">
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+                onClick={() => navigate('/auth?role=parent')}
+              >
+                <UserCircle className="h-8 w-8" />
+                <span className="font-medium">Parent</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-24 flex-col gap-3 hover:bg-primary hover:text-primary-foreground transition-all"
+                onClick={() => navigate('/auth?role=teacher')}
+              >
+                <BookOpen className="h-8 w-8" />
+                <span className="font-medium">Teacher</span>
+              </Button>
+            </div>
           </div>
 
           {/* Signup link */}
