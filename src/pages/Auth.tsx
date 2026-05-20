@@ -12,12 +12,12 @@ import primroseLogo from "@/assets/primrose-logo.png";
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const roleParam = searchParams.get('role') as 'counselor' | 'student' | 'parent' | 'principal' | null;
+  const roleParam = searchParams.get('role') as 'counselor' | 'student' | 'parent' | 'principal' | 'teacher' | null;
   const isAdminLogin = searchParams.get('admin') === '1';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | 'principal' | null>(roleParam);
+  const [selectedRole, setSelectedRole] = useState<'counselor' | 'student' | 'parent' | 'principal' | 'teacher' | null>(roleParam);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -66,6 +66,7 @@ const Auth = () => {
       case 'student': navigate('/student-dashboard'); break;
       case 'parent': navigate('/parent-portal'); break;
       case 'principal': navigate('/principal-dashboard'); break;
+      case 'teacher': navigate('/teacher-dashboard'); break;
       case 'admin': navigate('/superadmin'); break;
       default: navigate('/');
     }

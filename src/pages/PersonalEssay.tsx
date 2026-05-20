@@ -80,21 +80,12 @@ const PersonalEssay = () => {
         .maybeSingle();
 
       const schoolId = profileData?.school_id;
-      if (schoolId) {
-        const { data: teacherRows } = await (supabase as any)
-          .from("teacher_profiles")
-          .select("user_id")
-          .eq("school_id", schoolId);
+      if (!schoolId) return;
 
-        if (teacherRows && teacherRows.length > 0) {
-          const teacherIds = teacherRows.map((t: any) => t.user_id);
-          const { data: teacherProfilesData } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", teacherIds);
-          if (teacherProfilesData) setTeachers(teacherProfilesData as any);
-        }
-      }
+      const { data: teacherData } = await (supabase as any)
+        .rpc("get_teachers_by_school", { school_id_param: schoolId });
+
+      if (teacherData && teacherData.length > 0) setTeachers(teacherData);
     };
     fetchCounselorAndTeachers();
 

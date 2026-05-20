@@ -152,6 +152,15 @@ useEffect(() => {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
+      // Resolve teacher school_id BEFORE signup (unauthenticated, SECURITY DEFINER fn bypasses RLS)
+      let preResolvedTeacherSchoolId: string | null = null;
+      if (selectedRole === 'teacher' && inviteCodeParam) {
+        const { data: resolvedSchoolId } = await (supabase as any).rpc('get_school_id_by_invite', {
+          invite_code_param: inviteCodeParam,
+        });
+        preResolvedTeacherSchoolId = resolvedSchoolId ?? null;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -248,24 +257,9 @@ useEffect(() => {
           }
         }
 
-        // Teacher: inherit school_id from the counselor whose invite was used
-        if (selectedRole === 'teacher' && inviteCodeParam) {
-          const { data: inviteData } = await (supabase as any)
-            .from('counselor_invites')
-            .select('counselor_id')
-            .eq('invite_code', inviteCodeParam)
-            .maybeSingle();
-
-          if (inviteData) {
-            const { data: counselorProfile } = await supabase
-              .from('profiles')
-              .select('school_id')
-              .eq('user_id', inviteData.counselor_id)
-              .maybeSingle();
-            if (counselorProfile?.school_id) {
-              schoolId = counselorProfile.school_id;
-            }
-          }
+        // Teacher: use school_id resolved before signup via SECURITY DEFINER RPC
+        if (selectedRole === 'teacher' && preResolvedTeacherSchoolId) {
+          schoolId = preResolvedTeacherSchoolId;
         }
 
         const { error: profileError } = await supabase

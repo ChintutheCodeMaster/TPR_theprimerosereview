@@ -68,7 +68,7 @@ export const useTeacherEssays = () => {
           status: essay?.status ?? "pending",
           teacherStatus: share.teacher_status ?? "pending",
           teacherNotes: share.teacher_notes ?? null,
-          aiScore: essay?.ai_analysis?.overall_score ?? null,
+          aiScore: essay?.ai_analysis?.overallScore ?? null,
           aiAnalysis: essay?.ai_analysis ?? null,
           sharedAt: share.shared_at,
           updatedAt: essay?.updated_at ?? share.shared_at,

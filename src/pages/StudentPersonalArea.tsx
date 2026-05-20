@@ -78,8 +78,24 @@ const StudentPersonalArea = () => {
   } = useStudentPersonalArea();
 
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab]           = useState(() => searchParams.get("tab") ?? "essays");
-  const [selectedEssay, setSelectedEssay]   = useState<EssayFeedback | null>(null);
+  const [activeTab, setActiveTab]               = useState(() => searchParams.get("tab") ?? "essays");
+  const [selectedEssay, setSelectedEssay]       = useState<EssayFeedback | null>(null);
+  const [feedbackSource, setFeedbackSource]     = useState<'counselor' | 'teacher'>('counselor');
+  const [teacherFeedback, setTeacherFeedback]   = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!selectedEssay) { setTeacherFeedback(null); setFeedbackSource('counselor'); return; }
+    const fetchTeacherFeedback = async () => {
+      const { data } = await (supabase as any)
+        .from('essay_teacher_shares')
+        .select('feedback_items, track_changes, personal_message, sent_at, teacher_status')
+        .eq('essay_feedback_id', selectedEssay.id)
+        .eq('teacher_status', 'reviewed')
+        .maybeSingle();
+      setTeacherFeedback(data ?? null);
+    };
+    fetchTeacherFeedback();
+  }, [selectedEssay?.id]);
 
   const { applications, isLoading: isLoadingApplications } = useApplications();
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithProfile | null>(null);
@@ -669,40 +685,110 @@ const StudentPersonalArea = () => {
 
             {/* ── Right: feedback panel ── */}
             <div className="w-[320px] shrink-0 flex flex-col">
-              <div className="px-4 py-3 border-b bg-primary/5 shrink-0">
+              <div className="px-4 py-3 border-b bg-primary/5 shrink-0 space-y-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-primary" />
-                  Counselor Feedback
+                  Feedback
                 </h3>
+                <div className="flex rounded-lg border overflow-hidden text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackSource('counselor')}
+                    className={`flex-1 py-1.5 font-medium transition-colors ${
+                      feedbackSource === 'counselor'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-background text-muted-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    Counselor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackSource('teacher')}
+                    className={`flex-1 py-1.5 font-medium transition-colors ${
+                      feedbackSource === 'teacher'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-background text-muted-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    Teacher
+                    {teacherFeedback && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />}
+                  </button>
+                </div>
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3 space-y-3">
-                  {essayFeedback.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">No feedback yet</p>
-                      <p className="text-xs mt-1">Your counselor will review your essay soon</p>
-                    </div>
-                  ) : (
-                    essayFeedback.map((fb) => (
-                      <div key={fb.id} className="space-y-2">
 
-                        {/* Personal note */}
-                        {fb.personal_message && (
+                  {/* ── Counselor feedback ── */}
+                  {feedbackSource === 'counselor' && (
+                    essayFeedback.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No feedback yet</p>
+                        <p className="text-xs mt-1">Your counselor will review your essay soon</p>
+                      </div>
+                    ) : (
+                      essayFeedback.map((fb) => (
+                        <div key={fb.id} className="space-y-2">
+                          {fb.personal_message && (
+                            <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
+                              <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
+                              <p className="text-xs">{fb.personal_message}</p>
+                            </div>
+                          )}
+                          {fb.track_changes?.length > 0 && (
+                            <div className="rounded-xl border p-3 space-y-2 bg-muted/20">
+                              <p className="text-xs font-semibold flex items-center gap-1.5">
+                                <Strikethrough className="h-3.5 w-3.5" />
+                                Suggested Edits ({fb.track_changes.length})
+                              </p>
+                              {fb.track_changes.map((change) => (
+                                <div key={change.id} className="space-y-0.5 text-xs border-t pt-1.5 border-border/50">
+                                  <del className="text-red-500 line-through block">{change.originalText}</del>
+                                  <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {fb.feedback_items.map((item, idx) => (
+                            <div key={item.id ?? idx} className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5">
+                              {item.criterionName && (
+                                <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
+                              )}
+                              <p className="text-xs leading-snug">{item.text}</p>
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-muted-foreground text-right pt-1">
+                            Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
+                          </p>
+                        </div>
+                      ))
+                    )
+                  )}
+
+                  {/* ── Teacher feedback ── */}
+                  {feedbackSource === 'teacher' && (
+                    !teacherFeedback ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No feedback yet</p>
+                        <p className="text-xs mt-1">Your teacher hasn't sent feedback on this essay yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {teacherFeedback.personal_message && (
                           <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
                             <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
-                            <p className="text-xs">{fb.personal_message}</p>
+                            <p className="text-xs">{teacherFeedback.personal_message}</p>
                           </div>
                         )}
-
-                        {/* Tracked changes list */}
-                        {fb.track_changes?.length > 0 && (
+                        {teacherFeedback.track_changes?.length > 0 && (
                           <div className="rounded-xl border p-3 space-y-2 bg-muted/20">
                             <p className="text-xs font-semibold flex items-center gap-1.5">
                               <Strikethrough className="h-3.5 w-3.5" />
-                              Suggested Edits ({fb.track_changes.length})
+                              Suggested Edits ({teacherFeedback.track_changes.length})
                             </p>
-                            {fb.track_changes.map((change) => (
+                            {teacherFeedback.track_changes.map((change: any) => (
                               <div key={change.id} className="space-y-0.5 text-xs border-t pt-1.5 border-border/50">
                                 <del className="text-red-500 line-through block">{change.originalText}</del>
                                 <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
@@ -710,26 +796,21 @@ const StudentPersonalArea = () => {
                             ))}
                           </div>
                         )}
-
-                        {/* Counselor-added feedback items only */}
-                        {fb.feedback_items.map((item, idx) => (
-                          <div
-                            key={item.id ?? idx}
-                            className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5"
-                          >
+                        {(teacherFeedback.feedback_items ?? []).map((item: any, idx: number) => (
+                          <div key={item.id ?? idx} className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5">
                             {item.criterionName && (
                               <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
                             )}
                             <p className="text-xs leading-snug">{item.text}</p>
                           </div>
                         ))}
-
                         <p className="text-[10px] text-muted-foreground text-right pt-1">
-                          Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
+                          Received: {teacherFeedback.sent_at ? new Date(teacherFeedback.sent_at).toLocaleDateString() : 'Recently'}
                         </p>
                       </div>
-                    ))
+                    )
                   )}
+
                 </div>
               </ScrollArea>
             </div>
