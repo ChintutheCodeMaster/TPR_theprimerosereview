@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ export interface EvaluationResult {
 
 export interface EvaluationHistoryItem {
   id: string;
+  title: string | null;
   universities: string[];
   story_score: StoryScore;
   university_fit: UniversityFit[];
@@ -88,6 +89,25 @@ export const useEvaluationEngine = () => {
               university_fit: result.universityFit,
               roadmap: result.roadmap,
             });
+
+          // Per-university sliding window: keep only 4 most recent per school
+          for (const university of universities) {
+            const { data: existing } = await (supabase as any)
+              .from('evaluation_results')
+              .select('id, created_at')
+              .eq('student_id', user.id)
+              .filter('universities', 'cs', JSON.stringify([university]))
+              .order('created_at', { ascending: true });
+
+            if (existing && existing.length > 4) {
+              const toDelete = existing.slice(0, existing.length - 4).map((r: any) => r.id);
+              await (supabase as any)
+                .from('evaluation_results')
+                .delete()
+                .in('id', toDelete);
+            }
+          }
+
           queryClient.invalidateQueries({ queryKey: ['evaluation-history'] });
         }
       } catch {
@@ -116,14 +136,46 @@ export const useEvaluationHistory = () => {
 
       const { data, error } = await (supabase as any)
         .from('evaluation_results')
-        .select('id, universities, story_score, university_fit, roadmap, essay_snapshot, created_at')
+        .select('id, title, universities, story_score, university_fit, roadmap, essay_snapshot, created_at')
         .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
 
       if (error) return []; // Table may not exist yet — fail silently
       return (data ?? []) as EvaluationHistoryItem[];
     },
     staleTime: 30_000,
+  });
+};
+
+// ── useUpdateEvaluationTitle ──────────────────────────────────
+
+export const useUpdateEvaluationTitle = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const { error } = await (supabase as any)
+        .from('evaluation_results')
+        .update({ title })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, title }) => {
+      await queryClient.cancelQueries({ queryKey: ['evaluation-history'] });
+      const previous = queryClient.getQueryData(['evaluation-history']);
+      queryClient.setQueryData(
+        ['evaluation-history'],
+        (old: EvaluationHistoryItem[] | undefined) =>
+          old?.map(item => item.id === id ? { ...item, title } : item) ?? []
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['evaluation-history'], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['evaluation-history'] });
+    },
   });
 };

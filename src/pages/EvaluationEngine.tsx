@@ -10,18 +10,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip,
 } from "recharts";
 import {
   Sparkles, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp,
   CheckCircle, AlertCircle, Trophy, GraduationCap, TrendingUp, History, Zap,
+  Search, ChevronsUpDown, Check, Pencil, FileText,
 } from "lucide-react";
+import { backgroundStep } from "@/data/steps/background";
 import { useStudentPersonalArea } from "@/hooks/useStudentPersonalArea";
 import { useApplications } from "@/hooks/useApplications";
 import {
   useEvaluationEngine,
   useEvaluationHistory,
+  useUpdateEvaluationTitle,
   type EvaluationResult,
   type EvaluationHistoryItem,
   type StoryScore,
@@ -263,6 +268,26 @@ const RoadmapSection = ({ roadmap }: { roadmap: EvaluationResult['roadmap'] }) =
 
 const HistoryRow = ({ item }: { item: EvaluationHistoryItem }) => {
   const [expanded, setExpanded] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [essayExpanded, setEssayExpanded] = useState(false);
+  const { mutate: updateTitle } = useUpdateEvaluationTitle();
+
+  const defaultTitle = item.universities.slice(0, 3).join(', ') + (item.universities.length > 3 ? ` +${item.universities.length - 3}` : '');
+  const displayTitle = item.title || defaultTitle;
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTitleDraft(item.title || '');
+    setEditingTitle(true);
+  };
+
+  const commitTitle = () => {
+    const trimmed = titleDraft.trim();
+    updateTitle({ id: item.id, title: trimmed || defaultTitle });
+    setEditingTitle(false);
+  };
+
   return (
     <div className="border rounded-xl overflow-hidden">
       <button
@@ -274,10 +299,31 @@ const HistoryRow = ({ item }: { item: EvaluationHistoryItem }) => {
             <span className="text-lg font-black text-primary leading-none">{item.story_score.overall}</span>
             <span className="text-[10px] text-primary/70">score</span>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {item.universities.slice(0, 3).join(', ')}{item.universities.length > 3 ? ` +${item.universities.length - 3}` : ''}
-            </p>
+          <div className="min-w-0 flex-1">
+            {editingTitle ? (
+              <input
+                autoFocus
+                className="text-sm font-medium text-foreground bg-background border border-primary rounded px-2 py-0.5 w-full outline-none"
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
+                  if (e.key === 'Escape') setEditingTitle(false);
+                }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <div className="flex items-center gap-1.5 group">
+                <p className="text-sm font-medium text-foreground truncate">{displayTitle}</p>
+                <button
+                  onClick={startEditing}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                >
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">{timeAgo(item.created_at)}</p>
           </div>
         </div>
@@ -291,6 +337,27 @@ const HistoryRow = ({ item }: { item: EvaluationHistoryItem }) => {
           </div>
           <UniversityFitSection universityFit={item.university_fit} />
           <RoadmapSection roadmap={item.roadmap} />
+
+          {/* Essay snapshot */}
+          {item.essay_snapshot && (
+            <div className="border rounded-xl overflow-hidden">
+              <button
+                onClick={() => setEssayExpanded(v => !v)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Essay at time of evaluation</span>
+                </div>
+                {essayExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </button>
+              {essayExpanded && (
+                <div className="px-4 pb-4 border-t border-border">
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed pt-4">{item.essay_snapshot}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -299,10 +366,16 @@ const HistoryRow = ({ item }: { item: EvaluationHistoryItem }) => {
 
 // ── Main Page ─────────────────────────────────────────────────
 
+const allUniversityOptions: string[] = ((backgroundStep.questions[0] as any).subQuestions as any[])
+  .find((sq: any) => sq.id === 'university')?.options ?? [];
+
 const EvaluationEngine = () => {
   const [essayText, setEssayText] = useState('');
   const [selectedUnis, setSelectedUnis] = useState<string[]>([]);
-  const [customInput, setCustomInput] = useState('');
+  const [uniPopoverOpen, setUniPopoverOpen] = useState(false);
+  const [uniSearch, setUniSearch] = useState('');
+  const [otherInput, setOtherInput] = useState('');
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -328,12 +401,13 @@ const EvaluationEngine = () => {
   const toggleUni = (name: string) =>
     setSelectedUnis(prev => prev.includes(name) ? prev.filter(u => u !== name) : [...prev, name]);
 
-  const addCustomUni = () => {
-    const trimmed = customInput.trim();
+  const addOtherUni = () => {
+    const trimmed = otherInput.trim();
     if (trimmed && !selectedUnis.includes(trimmed)) {
       setSelectedUnis(prev => [...prev, trimmed]);
     }
-    setCustomInput('');
+    setOtherInput('');
+    setShowOtherInput(false);
   };
 
   const handleEvaluate = async () => {
@@ -525,28 +599,86 @@ const EvaluationEngine = () => {
                 </div>
               )}
 
-              {/* Free-form add */}
+              {/* University combobox */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">Add another university</p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g. Yale, MIT, Duke..."
-                    value={customInput}
-                    onChange={e => setCustomInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomUni(); } }}
-                    className="h-9 text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addCustomUni}
-                    disabled={!customInput.trim()}
-                    className="shrink-0 gap-1"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add
-                  </Button>
-                </div>
+                <Popover open={uniPopoverOpen} onOpenChange={setUniPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className="w-full h-9 justify-between font-normal text-sm"
+                    >
+                      <span className="text-muted-foreground">Select a university...</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <div className="flex items-center border-b px-3">
+                      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                      <input
+                        className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                        placeholder="Search universities..."
+                        value={uniSearch}
+                        onChange={e => setUniSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {(() => {
+                        const filtered = allUniversityOptions.filter(
+                          u => !selectedUnis.includes(u) &&
+                            (!uniSearch.trim() || u.toLowerCase().includes(uniSearch.toLowerCase()))
+                        );
+                        if (filtered.length === 0) return (
+                          <p className="py-6 text-center text-sm text-muted-foreground">No university found.</p>
+                        );
+                        return filtered.map(u => (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() => {
+                              if (u === 'Other') {
+                                setShowOtherInput(true);
+                              } else {
+                                setSelectedUnis(prev => [...prev, u]);
+                              }
+                              setUniPopoverOpen(false);
+                              setUniSearch('');
+                            }}
+                            className="relative flex w-full cursor-pointer select-none items-center px-4 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground text-left"
+                          >
+                            <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedUnis.includes(u) ? "opacity-100" : "opacity-0")} />
+                            {u}
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Other / custom input */}
+                {showOtherInput && (
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="Enter university name..."
+                      value={otherInput}
+                      onChange={e => setOtherInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOtherUni(); } }}
+                      className="h-9 text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addOtherUni}
+                      disabled={!otherInput.trim()}
+                      className="shrink-0 gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Selected list */}
