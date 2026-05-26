@@ -75,16 +75,20 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
       return;
     }
 
+    // Log every event so we can see what OpenAI is sending
+    console.log("[Realtime event]", event.type, event);
+
     switch (event.type) {
       case "session.created":
+        console.log("[Eva] Session created — waiting for greeting");
         break;
 
-      case "response.audio_transcript.delta":
+      case "response.output_audio_transcript.delta":
         setEvaTranscript(prev => prev + (event.delta || ""));
         setIsEvaSpeaking(true);
         break;
 
-      case "response.audio_transcript.done":
+      case "response.output_audio_transcript.done":
         setIsEvaSpeaking(false);
         if (event.transcript) {
           setLastEvaUtterance(event.transcript);
@@ -177,6 +181,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
       dcRef.current = dc;
 
       dc.onopen = () => {
+        console.log("[Realtime] Data channel open — connected to OpenAI");
         setConnectionState("connected");
       };
 
@@ -218,7 +223,9 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
 
       // Step 9: Set remote description with OpenAI's SDP answer
       const answerSdp = await sdpResponse.text();
+      console.log("[Realtime] SDP answer received, setting remote description");
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+      console.log("[Realtime] WebRTC setup complete — waiting for data channel to open");
 
       // Data channel onopen will fire and set connectionState to "connected"
     } catch (err) {
