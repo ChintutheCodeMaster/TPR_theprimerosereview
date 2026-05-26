@@ -71,6 +71,8 @@ import CounselorEditStudent from "./pages/CounselorEditStudent";
 import WeeklyChallenge from "./pages/WeeklyChallenge";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherEssays from "./pages/TeacherEssays";
+import InterviewSimulator from "./pages/InterviewSimulator";
+import AIVoiceChat from "./pages/AIVoiceChat";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +99,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     '/evaluation-engine',
     '/student-profile',
     '/weekly-challenge',
+    '/interview-simulator',
   ].includes(location.pathname) ||
   location.pathname === '/submit-essay' ||
   location.pathname === '/personal-essay' ||
@@ -425,6 +428,16 @@ const App = () => {
               </ProtectedRoute>
             </AppLayout>
           } />
+
+          <Route path="/interview-simulator" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <InterviewSimulator />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/ai-voice-chat" element={<AIVoiceChat />} />
 
           {/* ── Parent-only routes ── */}
           <Route path="/parent-portal" element={

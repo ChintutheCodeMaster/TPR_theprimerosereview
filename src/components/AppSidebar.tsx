@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft, Trophy, Calculator, ChevronDown, ChevronRight, Sparkles, LogOut } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft, Trophy, Calculator, ChevronDown, ChevronRight, Sparkles, LogOut, Mic } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,6 +86,7 @@ const essayJourneySteps: (NavItem & { step: number })[] = [
 ];
 
 const additionalToolItems: NavItem[] = [
+  { title: "Interview Simulator", url: "/interview-simulator", icon: Mic },
   { title: "Weekly Challenge", url: "/weekly-challenge", icon: Trophy },
   { title: "Scholarship Finder", url: "/scholarship-finder", icon: Star },
   { title: "Tuition Calculator", url: "/tuition-calculator", icon: Calculator },
@@ -153,7 +154,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine', '/weekly-challenge', '/student-profile'];
+const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine', '/weekly-challenge', '/student-profile', '/interview-simulator'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
 const teacherRoutes = ['/teacher-dashboard', '/teacher-essays'];
