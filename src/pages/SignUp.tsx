@@ -197,64 +197,31 @@ useEffect(() => {
 
           // Fall back to manual school name entry if no school resolved from invite
           if (!schoolId && schoolName.trim()) {
-            const { data: existingSchool } = await supabase
-              .from('schools')
-              .select('id')
-              .ilike('name', schoolName.trim())
-              .maybeSingle();
-
-            if (existingSchool) {
-              schoolId = existingSchool.id;
-            } else {
-              const { data: newSchool, error: schoolError } = await supabase
-                .from('schools')
-                .insert({ name: schoolName.trim() })
-                .select('id')
-                .single();
-              if (schoolError) throw schoolError;
-              schoolId = newSchool.id;
-            }
+            const { data: resolvedId, error: schoolError } = await (supabase as any).rpc(
+              'create_or_get_school',
+              { school_name: schoolName.trim() }
+            );
+            if (schoolError) throw schoolError;
+            schoolId = resolvedId;
           }
         }
 
         if (selectedRole === 'counselor' && counselorSchoolName.trim()) {
-          const { data: existingSchool } = await supabase
-            .from('schools')
-            .select('id')
-            .ilike('name', counselorSchoolName.trim())
-            .maybeSingle();
-
-          if (existingSchool) {
-            schoolId = existingSchool.id;
-          } else {
-            const { data: newSchool, error: schoolError } = await supabase
-              .from('schools')
-              .insert({ name: counselorSchoolName.trim() })
-              .select('id')
-              .single();
-            if (schoolError) throw schoolError;
-            schoolId = newSchool.id;
-          }
+          const { data: resolvedId, error: schoolError } = await (supabase as any).rpc(
+            'create_or_get_school',
+            { school_name: counselorSchoolName.trim() }
+          );
+          if (schoolError) throw schoolError;
+          schoolId = resolvedId;
         }
 
         if (selectedRole === 'principal' && principalSchoolName.trim()) {
-          const { data: existingSchool } = await supabase
-            .from('schools')
-            .select('id')
-            .ilike('name', principalSchoolName.trim())
-            .maybeSingle();
-
-          if (existingSchool) {
-            schoolId = existingSchool.id;
-          } else {
-            const { data: newSchool, error: schoolError } = await supabase
-              .from('schools')
-              .insert({ name: principalSchoolName.trim() })
-              .select('id')
-              .single();
-            if (schoolError) throw schoolError;
-            schoolId = newSchool.id;
-          }
+          const { data: resolvedId, error: schoolError } = await (supabase as any).rpc(
+            'create_or_get_school',
+            { school_name: principalSchoolName.trim() }
+          );
+          if (schoolError) throw schoolError;
+          schoolId = resolvedId;
         }
 
         // Teacher: use school_id resolved before signup via SECURITY DEFINER RPC
@@ -264,7 +231,8 @@ useEffect(() => {
 
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({ user_id: data.user.id, email, full_name: fullName, school_id: schoolId });
+          .update({ school_id: schoolId })
+          .eq('user_id', data.user.id);
         if (profileError) throw profileError;
 
         const { error: roleError } = await (supabase as any)
