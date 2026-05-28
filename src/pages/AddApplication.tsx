@@ -353,6 +353,11 @@ const AddApplication = () => {
           </CardContent>
         </Card>
 
+
+
+
+        
+
         {/* Section 3 — Essays */}
         <Card>
           <CardHeader>
