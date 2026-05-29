@@ -28,14 +28,22 @@ const InterviewContainer: React.FC<InterviewContainerProps> = ({
 }) => {
   const getStatusMessage = () => {
     if (!isConnected) return "Connecting...";
-    if (isEvaSpeaking) return "Eva is speaking — listen carefully";
-    if (isStudentSpeaking) return "Eva is listening to your response...";
-    return "Waiting for the next exchange...";
+    if (isEvaSpeaking) return "Eva is speaking";
+    if (isStudentSpeaking) return "Eva is listening";
+    return "Live session active";
   };
 
+  const statusDotClass = isConnected
+    ? isEvaSpeaking
+      ? "bg-primary animate-pulse"
+      : isStudentSpeaking
+      ? "bg-blue-400 animate-pulse"
+      : "bg-emerald-400"
+    : "bg-amber-400 animate-pulse";
+
   return (
-    <div className="max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 transition-all duration-700 opacity-100 scale-100">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[650px]">
+    <div className="max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[580px]">
         <EvaInterviewerSide
           isEvaSpeaking={isEvaSpeaking}
           evaTranscript={evaTranscript}
@@ -50,11 +58,14 @@ const InterviewContainer: React.FC<InterviewContainerProps> = ({
         />
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-amber-400'} ${isEvaSpeaking || isStudentSpeaking ? 'animate-pulse' : ''}`} />
-        <p className="text-sm text-slate-500 text-center">
-          {getStatusMessage()}
-        </p>
+      <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${statusDotClass}`} />
+          <p className="text-sm text-slate-500">{getStatusMessage()}</p>
+        </div>
+        <span className="text-xs text-slate-300 uppercase tracking-wide font-medium">
+          {isConnected ? "Connected" : "Connecting"}
+        </span>
       </div>
     </div>
   );
