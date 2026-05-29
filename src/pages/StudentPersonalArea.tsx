@@ -532,7 +532,7 @@ const StudentPersonalArea = () => {
                             Deadline: {new Date(app.deadline_date).toLocaleDateString()}
                           </span>
                           <span>
-                            Essays: {slotCounts[app.id]?.approved ?? 0}/{slotCounts[app.id]?.total ?? 0} approved
+                            Essays: {slotCounts[app.id]?.approved ?? 0}/{app.required_essays ?? 0} approved
                           </span>
                           <span>
                             Recs: {app.recommendations_submitted}/{app.recommendations_requested}
@@ -558,8 +558,8 @@ const StudentPersonalArea = () => {
                           })()}
                         </Badge>
                         <span className="text-sm font-medium text-primary">
-                          {slotCounts[app.id]?.total
-                            ? Math.round((slotCounts[app.id].approved / slotCounts[app.id].total) * 100)
+                          {app.required_essays
+                            ? Math.round(((slotCounts[app.id]?.approved ?? 0) / app.required_essays) * 100)
                             : 0}% complete
                         </span>
                         {app.urgent && (
@@ -570,8 +570,8 @@ const StudentPersonalArea = () => {
                       </div>
                     </div>
                     <Progress
-                      value={slotCounts[app.id]?.total
-                        ? Math.round((slotCounts[app.id].approved / slotCounts[app.id].total) * 100)
+                      value={app.required_essays
+                        ? Math.round(((slotCounts[app.id]?.approved ?? 0) / app.required_essays) * 100)
                         : 0}
                       className="mt-3 h-2"
                     />
