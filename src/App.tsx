@@ -73,8 +73,15 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherEssays from "./pages/TeacherEssays";
 import InterviewSimulator from "./pages/InterviewSimulator";
 import AIVoiceChat from "./pages/AIVoiceChat";
+import { useSessionTracking } from "./hooks/useSessionTracking";
 
 const queryClient = new QueryClient();
+
+// Must live inside <BrowserRouter> to access useLocation
+const SessionTracker = () => {
+  useSessionTracking();
+  return null;
+};
 
 // Layout component that conditionally shows sidebar
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -193,6 +200,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <SessionTracker />
         <Routes>
           {/* ── Public routes (no sidebar, no auth) ── */}
           <Route path="/" element={<Landing />} />
