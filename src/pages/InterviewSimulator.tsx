@@ -24,6 +24,7 @@ const InterviewSimulator = () => {
     evaTranscript,
     lastEvaUtterance,
     studentTranscript,
+    conversationHistory,
   } = useRealtimeInterview();
 
   // Transition to active once WebRTC connects, or back to idle on error
@@ -94,6 +95,7 @@ const InterviewSimulator = () => {
           <FinalFeedback
             university={university}
             programName={programName}
+            conversationHistory={conversationHistory}
             onReset={handleReset}
           />
         )}

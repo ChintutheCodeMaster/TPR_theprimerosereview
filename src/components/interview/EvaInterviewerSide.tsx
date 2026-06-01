@@ -42,7 +42,7 @@ const EvaInterviewerSide: React.FC<EvaInterviewerSideProps> = ({
       <div className="flex items-center space-x-2 mb-4">
         <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isEvaSpeaking ? "bg-primary animate-pulse" : "bg-primary/50"}`} />
         <h2 className="text-base font-semibold text-slate-700">
-          Eva — {university || "Admissions"} Interviewer
+          Eva — Your Admissions Coach
         </h2>
       </div>
 

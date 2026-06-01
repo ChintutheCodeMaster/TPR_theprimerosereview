@@ -4,6 +4,11 @@ import { toast } from "sonner";
 
 type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "error";
 
+export interface ConversationTurn {
+  role: "eva" | "student";
+  text: string;
+}
+
 export interface UseRealtimeInterviewReturn {
   connect: (programName: string, university: string) => Promise<void>;
   disconnect: () => void;
@@ -15,6 +20,7 @@ export interface UseRealtimeInterviewReturn {
   evaTranscript: string;
   lastEvaUtterance: string;
   studentTranscript: string;
+  conversationHistory: ConversationTurn[];
   error: string | null;
 }
 
@@ -25,6 +31,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
   const [evaTranscript, setEvaTranscript] = useState("");
   const [lastEvaUtterance, setLastEvaUtterance] = useState("");
   const [studentTranscript, setStudentTranscript] = useState("");
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -67,6 +74,11 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
     setIsStudentSpeaking(false);
   }, []);
 
+  const triggerEvaGreeting = useCallback(() => {
+    if (!dcRef.current || dcRef.current.readyState !== "open") return;
+    dcRef.current.send(JSON.stringify({ type: "response.create" }));
+  }, []);
+
   const handleDataChannelMessage = useCallback((raw: string) => {
     let event: any;
     try {
@@ -94,6 +106,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
         if (event.transcript) {
           setLastEvaUtterance(event.transcript);
           setEvaTranscript("");
+          setConversationHistory(prev => [...prev, { role: "eva", text: event.transcript }]);
         }
         break;
 
@@ -109,6 +122,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
       case "conversation.item.input_audio_transcription.completed":
         if (event.transcript) {
           setStudentTranscript(event.transcript);
+          setConversationHistory(prev => [...prev, { role: "student", text: event.transcript }]);
         }
         break;
 
@@ -135,6 +149,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
       setEvaTranscript("");
       setLastEvaUtterance("");
       setStudentTranscript("");
+      setConversationHistory([]);
 
       // Step 1: Get ephemeral token from our edge function
       const { data: sessionData, error: fnError } = await supabase.functions.invoke(
@@ -183,6 +198,12 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
       dc.onopen = () => {
         console.log("[Realtime] Data channel open — connected to OpenAI");
         setConnectionState("connected");
+        // Trigger Eva to speak first with her greeting
+        setTimeout(() => {
+          if (dc.readyState === "open") {
+            dc.send(JSON.stringify({ type: "response.create" }));
+          }
+        }, 500);
       };
 
       dc.onmessage = (event) => {
@@ -266,6 +287,7 @@ export const useRealtimeInterview = (): UseRealtimeInterviewReturn => {
     evaTranscript,
     lastEvaUtterance,
     studentTranscript,
+    conversationHistory,
     error,
   };
 };

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { motion } from "framer-motion";
-import { BookOpen, GraduationCap, ArrowRight, Volume2, ChevronsUpDown, Check } from "lucide-react";
+import { Sparkles, GraduationCap, ArrowRight, Volume2, ChevronsUpDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { backgroundStep } from "@/data/steps/background";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
   const handleStartInterview = () => {
     if (!programName) {
-      toast.warning("Please enter a program name first");
+      toast.warning("Please enter what you plan to study first");
       return;
     }
     if (isOther) {
@@ -86,18 +86,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <Volume2 className="h-7 w-7 text-white/90" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">AI Interview Practice</h2>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Meet Eva</h2>
         <p className="text-slate-500 text-sm leading-relaxed">
-          Practice your university admissions interview with Eva, your AI interviewer.
-          She'll ask real questions, listen to your answers, and guide you through the session.
+          Meet Eva, your AI admissions coach.
+          <br /><br />
+          Through a short conversation, Eva will learn about your experiences, interests, goals, achievements,
+          and defining moments. These insights help us provide more personalized feedback throughout your admissions journey.
         </p>
       </div>
 
       {/* Setup card */}
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
         <div className="flex items-center justify-center mb-6 gap-2">
-          <GraduationCap className="h-5 w-5 text-slate-400" />
-          <h3 className="text-base font-semibold text-slate-700">Set Up Your Interview</h3>
+          <Sparkles className="h-5 w-5 text-slate-400" />
+          <h3 className="text-base font-semibold text-slate-700">Build Your Profile</h3>
         </div>
 
         <div className="space-y-4 mb-8">
@@ -173,12 +175,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           {/* Step 2 — Program input */}
           <div className={`transition-all duration-500 ${step === 2 ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
             <Label className="text-sm font-medium text-slate-600 block mb-2">
-              Which program at {effectiveUniversity || university} are you applying to?
+              What do you plan to study?
             </Label>
             <Input
               value={programName}
               onChange={(e) => setProgramName(e.target.value)}
-              placeholder="e.g., Computer Science, Business Administration"
+              placeholder="e.g. Computer Science, Psychology, Business, Political Science"
               className="h-12 border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary/30"
               onKeyDown={(e) => e.key === "Enter" && handleStartInterview()}
             />
@@ -191,13 +193,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           size="lg"
           disabled={!canProceed}
         >
-          <BookOpen className="mr-2 h-5 w-5" />
-          Begin Practice Interview
+          <Sparkles className="mr-2 h-5 w-5" />
+          Start Conversation
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          Make sure your microphone is enabled — Eva will speak and listen in real time
+          This conversation takes approximately 5–10 minutes and helps personalize your experience across The Primrose Review.
         </p>
       </div>
     </motion.div>

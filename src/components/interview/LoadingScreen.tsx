@@ -32,7 +32,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ programName, university }
       transition={{ duration: 0.5 }}
       className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm"
     >
-      <h2 className="text-xl font-semibold text-slate-800 mb-1">Connecting to Eva</h2>
+      <h2 className="text-xl font-semibold text-slate-800 mb-1">Getting Eva ready</h2>
       <p className="text-slate-400 text-sm mb-10">
         {university || "University"} — {programName || "your program"}
       </p>
@@ -72,8 +72,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ programName, university }
         </div>
       </div>
 
-      <p className="text-slate-700 text-base mb-1">Setting up your interview session...</p>
-      <p className="text-slate-400 text-sm">Eva will greet you and guide you through the interview</p>
+      <p className="text-slate-700 text-base mb-1">Setting up your conversation...</p>
+      <p className="text-slate-400 text-sm">Eva will greet you and get to know you</p>
 
       {/* Progress bar */}
       <div className="mt-8 w-full h-1 bg-slate-100 rounded-full overflow-hidden">
