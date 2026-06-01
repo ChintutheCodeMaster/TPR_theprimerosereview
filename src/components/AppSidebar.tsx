@@ -90,7 +90,7 @@ const essayJourneySteps: (NavItem & { step: number })[] = [
 ];
 
 const additionalToolItems: NavItem[] = [
-  { title: "Interview Simulator", url: "/interview-simulator", icon: Mic },
+  { title: "Eva - Admissions Coach", url: "/interview-simulator", icon: Mic },
   { title: "The Primrose Challenge", url: "/weekly-challenge", icon: Trophy },
   { title: "Scholarship Finder", url: "/scholarship-finder", icon: Star },
   { title: "Tuition Calculator", url: "/tuition-calculator", icon: Calculator },
