@@ -715,8 +715,8 @@ export default function PrimroseLab() {
                 </div>
               )}
 
-              {/* Explore directions button */}
-              <div className="pt-1">
+              {/* Explore directions — temporarily disabled pending review */}
+              {/* <div className="pt-1">
                 <button
                   onClick={handleExploreDirections}
                   disabled={exploreState.status === 'loading'}
@@ -729,18 +729,18 @@ export default function PrimroseLab() {
                   )}
                   Explore directions
                 </button>
-              </div>
+              </div> */}
             </div>
 
-            {/* Explore panel */}
-            {showExplore && (
+            {/* Explore panel — temporarily disabled pending review */}
+            {/* {showExplore && (
               <ExplorePanel
                 exploreState={exploreState}
                 text={text}
                 onTextChange={setText}
                 onReanalyze={handleReanalyzeFromExplore}
               />
-            )}
+            )} */}
 
             {/* Version history */}
             {versions.length > 0 && (
