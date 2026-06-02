@@ -140,63 +140,67 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <PreviewModeContext.Provider value={isPreviewMode}>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
+        <div className="min-h-screen flex flex-col w-full">
+          {/* Sidebar + Main content row */}
+          <div className="flex flex-1 min-h-0">
+            <AppSidebar />
 
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {isPreviewMode && <PreviewBanner />}
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {isPreviewMode && <PreviewBanner />}
 
-            {/* Header with Logos */}
-            <header className="h-20 flex items-center justify-between border-b border-border bg-background px-4 shrink-0">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger />
-                <img
-                  src={primroseLogo}
-                  alt="The Primrose Review"
-                  className="h-12 w-auto"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                {isStudentRoute && !isPreviewMode && (
-                  onboardingCompleted ? (
-                    <Button
-                      onClick={() => toast.success("You've completed your onboarding — welcome aboard! We're so excited to have you here.", { duration: 4000 })}
-                      className="gap-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-medium transition-colors"
-                      size="sm"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Onboarding Complete!
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => navigate('/onboarding')}
-                      className="gap-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border font-medium transition-colors"
-                      size="sm"
-                    >
-                      <Rocket className="h-4 w-4" />
-                      Complete full onboarding here
-                    </Button>
-                  )
-                )}
-                <img
-                  src={logoSrc}
-                  alt="School Logo"
-                  className="h-16 w-auto rounded"
-                />
-              </div>
-            </header>
+              {/* Header with Logos */}
+              <header className="h-20 flex items-center justify-between border-b border-border bg-background px-4 shrink-0">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger />
+                  <img
+                    src={primroseLogo}
+                    alt="The Primrose Review"
+                    className="h-12 w-auto"
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  {isStudentRoute && !isPreviewMode && (
+                    onboardingCompleted ? (
+                      <Button
+                        onClick={() => toast.success("You've completed your onboarding — welcome aboard! We're so excited to have you here.", { duration: 4000 })}
+                        className="gap-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-medium transition-colors"
+                        size="sm"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Onboarding Complete!
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => navigate('/onboarding')}
+                        className="gap-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border font-medium transition-colors"
+                        size="sm"
+                      >
+                        <Rocket className="h-4 w-4" />
+                        Complete full onboarding here
+                      </Button>
+                    )
+                  )}
+                  <img
+                    src={logoSrc}
+                    alt="School Logo"
+                    className="h-16 w-auto rounded"
+                  />
+                </div>
+              </header>
 
-            {/* Page Content */}
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
+              {/* Page Content */}
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
 
-            <AppFooter />
+            {/* Demo Navigation - floating button */}
+            {/* <DemoNavigation /> */}
           </div>
 
-          {/* Demo Navigation - floating button */}
-          {/* <DemoNavigation /> */}
+          {/* Footer spans full width below sidebar + content */}
+          <AppFooter />
         </div>
       </SidebarProvider>
     </PreviewModeContext.Provider>
