@@ -152,13 +152,21 @@ useEffect(() => {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
-      // Resolve teacher school_id BEFORE signup (unauthenticated, SECURITY DEFINER fn bypasses RLS)
+      // Resolve school_id BEFORE signup (unauthenticated, SECURITY DEFINER fn bypasses RLS)
       let preResolvedTeacherSchoolId: string | null = null;
       if (selectedRole === 'teacher' && inviteCodeParam) {
         const { data: resolvedSchoolId } = await (supabase as any).rpc('get_school_id_by_invite', {
           invite_code_param: inviteCodeParam,
         });
         preResolvedTeacherSchoolId = resolvedSchoolId ?? null;
+      }
+
+      let preResolvedStudentSchoolId: string | null = null;
+      if (selectedRole === 'student' && inviteCodeParam) {
+        const { data: resolvedSchoolId } = await (supabase as any).rpc('get_school_id_by_student_invite', {
+          invite_code_param: inviteCodeParam,
+        });
+        preResolvedStudentSchoolId = resolvedSchoolId ?? null;
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -175,24 +183,9 @@ useEffect(() => {
         let schoolId: string | null = null;
 
         if (selectedRole === 'student') {
-          // If signing up via invite, inherit the counselor's school_id
-          if (inviteCodeParam) {
-            const { data: inviteData } = await supabase
-              .from('counselor_invites')
-              .select('counselor_id')
-              .eq('invite_code', inviteCodeParam)
-              .maybeSingle();
-
-            if (inviteData) {
-              const { data: counselorProfile } = await supabase
-                .from('profiles')
-                .select('school_id')
-                .eq('user_id', inviteData.counselor_id)
-                .maybeSingle();
-              if (counselorProfile?.school_id) {
-                schoolId = counselorProfile.school_id;
-              }
-            }
+          // Prefer pre-resolved school_id from invite (bypasses RLS)
+          if (preResolvedStudentSchoolId) {
+            schoolId = preResolvedStudentSchoolId;
           }
 
           // Fall back to manual school name entry if no school resolved from invite
