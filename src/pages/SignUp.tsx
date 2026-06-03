@@ -60,6 +60,9 @@ const Signup = () => {
 
   // Principal fields
   const [principalSchoolName, setPrincipalSchoolName] = useState("");
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
+  const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
+  const [schoolSearch, setSchoolSearch] = useState("");
 
   // Counselor fields
   const [counselorSchoolName, setCounselorSchoolName] = useState("");
@@ -110,6 +113,12 @@ useEffect(() => {
     })();
   }
 }, [inviteCodeParam, roleParam]);
+
+  useEffect(() => {
+    supabase.from("schools").select("id, name").order("name").then(({ data }) => {
+      if (data) setSchools(data);
+    });
+  }, []);
 
   const getRoleIcon = (role: string, size = "h-8 w-8") => {
     switch (role) {
@@ -768,18 +777,53 @@ useEffect(() => {
                 <div className="space-y-4 pt-2 border-t border-border">
                   <p className="text-sm font-medium text-muted-foreground">School Information</p>
                   <div className="space-y-2">
-                    <Label htmlFor="principalSchoolName">School Name</Label>
-                    <Input
-                      id="principalSchoolName"
-                      type="text"
-                      value={principalSchoolName}
-                      onChange={(e) => setPrincipalSchoolName(e.target.value)}
-                      placeholder="Lincoln High School"
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      If the school already exists, you'll be linked to it automatically.
-                    </p>
+                    <Label>School</Label>
+                    <Popover open={schoolDropdownOpen} onOpenChange={setSchoolDropdownOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            !principalSchoolName && "text-muted-foreground"
+                          )}
+                        >
+                          {principalSchoolName || "Select your school"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <div className="flex items-center border-b px-3">
+                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                          <input
+                            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                            placeholder="Search schools..."
+                            value={schoolSearch}
+                            onChange={(e) => setSchoolSearch(e.target.value)}
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {schools
+                            .filter((s) => s.name.toLowerCase().includes(schoolSearch.toLowerCase()))
+                            .map((s) => (
+                              <div
+                                key={s.id}
+                                className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent"
+                                onClick={() => {
+                                  setPrincipalSchoolName(s.name);
+                                  setSchoolDropdownOpen(false);
+                                  setSchoolSearch("");
+                                }}
+                              >
+                                <Check className={cn("h-4 w-4", principalSchoolName === s.name ? "opacity-100" : "opacity-0")} />
+                                {s.name}
+                              </div>
+                            ))}
+                          {schools.filter((s) => s.name.toLowerCase().includes(schoolSearch.toLowerCase())).length === 0 && (
+                            <p className="px-3 py-4 text-sm text-muted-foreground text-center">No schools found.</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               )}
