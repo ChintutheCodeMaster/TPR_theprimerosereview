@@ -192,7 +192,7 @@ const EssayDialog = ({ essay, onOpenFeedback, onUpdateStatus }: EssayDialogProps
                   <CardTitle className="text-sm">Update Status</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {['draft', 'in_progress', 'pending', 'sent'].map(s => (
+                  {['in_progress', 'pending', 'sent'].map(s => (
                     <Button
                       key={s}
                       variant={essay.status === s ? 'default' : 'outline'}
@@ -325,11 +325,12 @@ const fetchEssays = async () => {
       return;
     }
 
-    // Step 1 — fetch essays only for assigned students
+    // Step 1 — fetch essays only for assigned students; exclude drafts (not ready for counselor review)
     const { data: essayData, error } = await supabase
       .from("essay_feedback")
       .select("*")
       .in("student_id", studentIds)
+      .neq("status", "draft")
       .order("updated_at", { ascending: false });
 
     if (error) throw error;
@@ -404,7 +405,7 @@ const fetchEssays = async () => {
   // ─── Stats (computed from real data) ─────────────────────────
   const stats = {
     total: essays.length,
-    inReview: essays.filter(e => e.status === 'draft').length,
+    inReview: essays.filter(e => e.status === 'in_progress').length,
     needsAttention: essays.filter(e => e.status === 'pending').length,
     avgScore: essays.length
       ? Math.round(essays.filter(e => e.aiScore).reduce((sum, e) => sum + (e.aiScore || 0), 0) / essays.filter(e => e.aiScore).length) || 0
@@ -494,7 +495,6 @@ const fetchEssays = async () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="in_progress">In Review</SelectItem>
                   <SelectItem value="pending">Needs Attention</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>

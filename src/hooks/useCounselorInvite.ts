@@ -18,9 +18,13 @@ export const useCounselorInvite = () => {
 
       if (error) throw error;
 
-      // If no invite exists yet
       if (!data) {
-        return null;
+        const inviteCode = Math.random().toString(36).substring(2, 15);
+        const { error: insertError } = await supabase
+          .from("counselor_invites")
+          .insert({ counselor_id: user.id, invite_code: inviteCode, invite_role: "student" });
+        if (insertError) throw insertError;
+        return `${window.location.origin}/signup?invite=${inviteCode}`;
       }
 
       return `${window.location.origin}/signup?invite=${data.invite_code}`;

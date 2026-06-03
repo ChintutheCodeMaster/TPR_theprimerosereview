@@ -30,7 +30,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 
-const SUPABASE_URL = "https://fkvfngdwblbalrompzdj.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const WORD_LIMIT_OPTIONS = [250, 500, 650, 750, 1000];
 
 interface CriterionScore {
@@ -193,17 +193,23 @@ const SubmitEssay = () => {
           .eq("id", currentDraftId) as any);
         if (error) throw error;
       } else {
-        const { data: draft, error } = await (supabase
+        const newId = crypto.randomUUID();
+        const { error } = await (supabase
           .from("essay_feedback")
-          .insert(payload as any)
-          .select("id")
-          .single() as any);
+          .insert({ id: newId, ...payload } as any) as any);
         if (error) throw error;
-        setCurrentDraftId(draft.id);
+        setCurrentDraftId(newId);
+
+        if (slotId) {
+          await supabase
+            .from("application_essays")
+            .update({ essay_feedback_id: newId, status: "draft", updated_at: new Date().toISOString() })
+            .eq("id", slotId);
+        }
       }
 
       toast.success("Draft saved! Continue anytime from My Work → Essays.");
-      navigate("/student-personal-area?tab=essays");
+      navigate(applicationId ? `/student-personal-area?tab=applications` : `/student-personal-area?tab=essays`);
     } catch (err: any) {
       toast.error(err.message || "Failed to save draft");
     } finally {
@@ -346,7 +352,7 @@ const SubmitEssay = () => {
           .from("application_essays")
           .update({
             essay_feedback_id: essayId,
-            status:            "draft",
+            status:            "in_review",
             updated_at:        new Date().toISOString(),
           })
           .eq("id", slotId);

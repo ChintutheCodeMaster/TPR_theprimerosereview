@@ -71,13 +71,23 @@ import CounselorEditStudent from "./pages/CounselorEditStudent";
 import WeeklyChallenge from "./pages/WeeklyChallenge";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherEssays from "./pages/TeacherEssays";
+import InterviewSimulator from "./pages/InterviewSimulator";
+import AIVoiceChat from "./pages/AIVoiceChat";
+import { useSessionTracking } from "./hooks/useSessionTracking";
 import { AppFooter } from "@/components/AppFooter";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import ContactUs from "./pages/ContactUs";
+import ContactSupport from "./pages/ContactSupport";
 
 const queryClient = new QueryClient();
+
+// Must live inside <BrowserRouter> to access useLocation
+const SessionTracker = () => {
+  useSessionTracking();
+  return null;
+};
 
 // Layout component that conditionally shows sidebar
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -102,6 +112,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     '/evaluation-engine',
     '/student-profile',
     '/weekly-challenge',
+    '/interview-simulator',
   ].includes(location.pathname) ||
   location.pathname === '/submit-essay' ||
   location.pathname === '/personal-essay' ||
@@ -180,7 +191,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </header>
 
               {/* Page Content */}
-              <main className="flex-1 overflow-auto">
+              <main className="flex-1 overflow-auto pb-24">
                 {children}
               </main>
             </div>
@@ -201,6 +212,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <SessionTracker />
         <Routes>
           {/* ── Public routes (no sidebar, no auth) ── */}
           <Route path="/" element={<Landing />} />
@@ -437,6 +449,16 @@ const App = () => {
             </AppLayout>
           } />
 
+          <Route path="/interview-simulator" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <InterviewSimulator />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/ai-voice-chat" element={<AIVoiceChat />} />
+
           {/* ── Parent-only routes ── */}
           <Route path="/parent-portal" element={
             <AppLayout>
@@ -650,6 +672,7 @@ const App = () => {
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/contact-support" element={<ContactSupport />} />
 
           {/* ── Catch-all ── */}
           <Route path="*" element={<NotFound />} />

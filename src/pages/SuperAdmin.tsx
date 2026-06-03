@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import primroseLogo from "@/assets/primrose-logo.png";
+import { EngagementDashboard } from "@/components/EngagementDashboard";
 
 type SchoolRecord = { id: string; name: string; logo_url: string | null };
 
@@ -101,6 +102,7 @@ const SuperAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<RoleTab>("all");
+  const [activePage, setActivePage] = useState<'overview' | 'engagement'>('overview');
   const [schoolFilter, setSchoolFilter] = useState<string>("all");
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
@@ -432,6 +434,21 @@ const SuperAdmin = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mr-2">
+            <button
+              onClick={() => setActivePage('overview')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activePage === 'overview' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActivePage('engagement')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${activePage === 'engagement' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <Activity className="h-3 w-3" />
+              Engagement
+            </button>
+          </div>
           <Button size="sm" onClick={() => setBulkInviteOpen(true)}>
             <Mail className="h-4 w-4 mr-2" />
             Send Bulk Invites
@@ -449,6 +466,10 @@ const SuperAdmin = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
+        {/* ── Engagement tab ── */}
+        {activePage === 'engagement' && <EngagementDashboard />}
+
+        {activePage === 'overview' && <>
         {/* ── Stats row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
@@ -806,6 +827,7 @@ const SuperAdmin = () => {
             </div>
           )}
         </div>
+        </>}
       </div>
 
       {/* ── Delete Confirm Dialog ── */}

@@ -54,7 +54,8 @@ const Landing = () => {
                 onClick={() => navigate('/auth?role=counselor')}
               >
                 <GraduationCap className="h-8 w-8" />
-                <span className="font-medium">Counselor</span>
+                <span className="font-medium">Counselor
+                </span>
               </Button>
 
               <Button
@@ -102,7 +103,7 @@ const Landing = () => {
             <span className="text-sm text-muted-foreground">Don't have an account? </span>
             <button
               className="text-sm text-primary font-medium hover:underline"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/signup')}
             >
               Sign up here
             </button>
