@@ -11,7 +11,7 @@ const inviteHtml = (name: string, signupLink: string) => `
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Welcome to The Primrose Review</title>
+  <title>The Primrose Challenge - 10 Days Remaining</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px;">
@@ -23,10 +23,10 @@ const inviteHtml = (name: string, signupLink: string) => `
           <tr>
             <td style="background:linear-gradient(135deg,#6d28d9,#9333ea);padding:36px 40px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">
-                The Primrose Review
+                The Primrose Challenge
               </h1>
-              <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">
-                College Application Support Platform
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">
+                10 days remaining &mdash; in partnership with BISW
               </p>
             </td>
           </tr>
@@ -34,85 +34,78 @@ const inviteHtml = (name: string, signupLink: string) => `
           <!-- Body -->
           <tr>
             <td style="padding:40px;">
-              <p style="margin:0 0 20px;color:#111827;font-size:16px;">
-                Hi ${name},
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
+                Dear BISW Students,
+              </p>
+
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
+                There are just <strong>10 days remaining</strong> to take part in the Primrose Challenge.
+              </p>
+
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
+                Your challenge is simple: draft the best hook for your personal statement or college essay. In just a few lines, capture a moment, idea, or experience that makes the reader want to keep reading. The strongest essays often begin with a powerful opening.
+              </p>
+
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
+                Need help refining your draft? The <strong>Primrose Lab</strong> is available for you to experiment, receive feedback, and fine-tune your ideas before submitting. Use it to strengthen your narrative, sharpen your writing, and explore different ways to tell your story.
               </p>
 
               <p style="margin:0 0 16px;color:#374151;font-size:16px;line-height:1.7;">
-                Welcome to <strong>The Primrose Review</strong>, your school's new platform for college applications, essays, and admissions support.
+                And yes, there are prizes!
               </p>
 
-              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.7;">
-                Applying to university can feel overwhelming at times. The goal of this platform is to make the process clearer, more organized, and much less stressful.
-              </p>
-
-              <p style="margin:0 0 12px;color:#111827;font-size:15px;font-weight:600;">
-                Inside your dashboard, you can:
-              </p>
-
-              <!-- Feature list -->
-              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
-                <table cellpadding="0" cellspacing="0" width="100%">
-                  <tr>
-                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Track applications, deadlines, and progress</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Brainstorm and strengthen your personal statement</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Submit essays for counselor feedback</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Request recommendation letters</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Explore universities that fit your profile</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;">
-                      <span style="color:#6d28d9;font-weight:700;margin-right:10px;">&#10003;</span>
-                      <span style="color:#374151;font-size:14px;">Get support throughout the admissions journey</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-
-              <!-- Important note -->
-              <div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
-                <p style="margin:0;color:#4c1d95;font-size:14px;line-height:1.6;">
-                  <strong>One important thing:</strong> This platform is designed to help you develop your own voice, not generate generic AI applications. Think of it as a place to test ideas, improve your storytelling, and get structured support while keeping your application authentic and personal.
+              <!-- Prizes -->
+              <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
+                <p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.7;">
+                  <span style="font-size:18px;margin-right:6px;">&#127942;</span>
+                  The winning student will receive <strong>3 hours of 1:1 consultation</strong> with one of Primrose's top admissions consultants, providing personalised guidance on university selection, applications, essays, and admissions strategy.
+                </p>
+                <p style="margin:0;color:#374151;font-size:15px;line-height:1.7;">
+                  <span style="font-size:18px;margin-right:6px;">&#127942;</span>
+                  An additional prize includes a <strong>joint consultation session for you and your parent(s)</strong> with the Primrose team, offering expert advice and the opportunity to ask all your questions about the admissions journey ahead.
                 </p>
               </div>
 
-              <p style="margin:0 0 28px;color:#374151;font-size:16px;line-height:1.7;">
-                Your counselors are already connected to the platform, so you can begin using it right away.
+              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.7;">
+                Don't wait until the last minute &mdash; this is your chance to test your ideas, receive meaningful feedback, and elevate your application.
+              </p>
+
+              <p style="margin:0 0 8px;color:#111827;font-size:15px;font-weight:600;">
+                Deadline: in 10 days
+              </p>
+
+              <!-- How to take part -->
+              <p style="margin:24px 0 12px;color:#111827;font-size:15px;font-weight:600;">
+                How to take part
+              </p>
+              <p style="margin:0 0 16px;color:#374151;font-size:16px;line-height:1.7;">
+                If you haven't signed up yet, please use the link below to create your account and join the challenge. If you're already signed up, simply log in and enjoy the challenge!
               </p>
 
               <!-- CTA -->
-              <div style="text-align:center;margin-bottom:32px;">
+              <div style="text-align:center;margin-bottom:20px;">
                 <a href="${signupLink}"
                    style="display:inline-block;background:linear-gradient(135deg,#6d28d9,#9333ea);color:#ffffff;text-decoration:none;padding:15px 36px;border-radius:10px;font-size:16px;font-weight:600;">
-                  Sign up to the platform here &rarr;
+                  Sign Up &amp; Join the Challenge &rarr;
                 </a>
               </div>
 
-              <p style="margin:0;color:#374151;font-size:16px;line-height:1.7;">
-                Good luck!! we're excited to be part of your journey.
+              <p style="margin:0 0 28px;color:#6b7280;font-size:14px;line-height:1.7;text-align:center;">
+                Already signed up? Log in at <a href="https://primrosecrm.com" style="color:#6d28d9;text-decoration:none;">primrosecrm.com</a> and head to the Primrose Lab to get started.
+              </p>
+
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
+                We can't wait to read what you come up with.
+              </p>
+
+              <p style="margin:0 0 4px;color:#374151;font-size:16px;line-height:1.7;">
+                Best of luck,
+              </p>
+              <p style="margin:0 0 4px;color:#111827;font-size:16px;font-weight:600;">
+                The Primrose Team
+              </p>
+              <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.7;">
+                In partnership with BISW
               </p>
             </td>
           </tr>
@@ -120,9 +113,11 @@ const inviteHtml = (name: string, signupLink: string) => `
           <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-              <p style="margin:0 0 6px;color:#6b7280;font-size:13px;font-weight:600;">The Primrose Review Team</p>
+              <p style="margin:0 0 10px;color:#6b7280;font-size:13px;">
+                <a href="mailto:team@primrosecrm.com" style="color:#6b7280;text-decoration:none;">team@primrosecrm.com</a>
+              </p>
               <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
-                You're receiving this because your school has joined The Primrose Review platform.
+                You're receiving this because your school is participating in The Primrose Challenge.
               </p>
             </td>
           </tr>
@@ -167,7 +162,7 @@ serve(async (req) => {
         body: JSON.stringify({
           from: "The Primrose Review <team@primrosecrm.com>",
           to: email,
-          subject: "Your school has set up The Primrose Review — here's your access",
+          subject: "The Primrose Challenge - 10 Days Remaining",
           html: inviteHtml(displayName, referralLink),
         }),
       });

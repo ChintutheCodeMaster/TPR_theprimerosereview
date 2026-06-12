@@ -88,6 +88,7 @@ const Signup = () => {
 
   // Parent fields
   const [invitationCode, setInvitationCode] = useState("");
+  const [parentStudentEmail, setParentStudentEmail] = useState("");
 
  
 
@@ -315,6 +316,16 @@ useEffect(() => {
               }
             }
           }
+
+          // Resolve any parent accounts that signed up earlier with this
+          // student's email — runs for every student signup, invite or not.
+          try {
+            await (supabase as any).rpc('resolve_pending_parent_links_for_student', {
+              _student_id: data.user.id,
+            });
+          } catch (e) {
+            console.error('Failed to resolve pending parent links:', e);
+          }
         }
 
         // Counselor-specific insert
@@ -346,14 +357,31 @@ useEffect(() => {
           if (teacherProfileError) throw teacherProfileError;
         }
 
-        // Parent-specific: link to student via counselor invite code
+        // Parent-specific: link to student.
+        // Both inputs are optional — parents can sign up first and link later.
         if (selectedRole === 'parent') {
-          if (!invitationCode.trim()) throw new Error("Invite code is required for parent registration");
-          const { error: linkError } = await supabase.rpc('link_parent_to_student', {
-            _counselor_invite_code: invitationCode.trim(),
-            _parent_email: email.trim(),
-          });
-          if (linkError) throw new Error(linkError.message);
+          const code = invitationCode.trim();
+          const studentEmail = parentStudentEmail.trim();
+
+          if (code) {
+            const { error: linkError } = await supabase.rpc('link_parent_to_student', {
+              _counselor_invite_code: code,
+              _parent_email: email.trim(),
+            });
+            if (linkError) {
+              toast.warning(`Account created, but linking failed: ${linkError.message}`);
+            }
+          } else if (studentEmail) {
+            const { data: linkResult, error: linkError } = await (supabase as any).rpc(
+              'link_parent_by_student_email',
+              { _student_email: studentEmail }
+            );
+            if (linkError) {
+              toast.warning(`Account created, but linking failed: ${linkError.message}`);
+            } else if (linkResult === 'pending') {
+              toast.info("Your child hasn't signed up yet — we'll link your accounts automatically once they do.");
+            }
+          }
         }
       }
 
@@ -853,17 +881,36 @@ useEffect(() => {
 
               {/* Parent-specific fields */}
               {selectedRole === 'parent' && (
-                <div className="space-y-2 pt-2 border-t border-border">
-                  <Label htmlFor="invitationCode">
-                    Invitation Code <span className="text-muted-foreground font-normal">(from your child)</span>
-                  </Label>
-                  <Input
-                    id="invitationCode"
-                    type="text"
-                    value={invitationCode}
-                    onChange={(e) => setInvitationCode(e.target.value)}
-                    placeholder="Enter invitation code"
-                  />
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Link to your child (optional) — you can sign up now and we'll connect your accounts. If your child has already signed up we'll link you immediately; otherwise we'll link you automatically as soon as they do.
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="parentStudentEmail">
+                      Your Child's Email <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      id="parentStudentEmail"
+                      type="email"
+                      value={parentStudentEmail}
+                      onChange={(e) => setParentStudentEmail(e.target.value)}
+                      placeholder="student@email.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="invitationCode">
+                      Invitation Code <span className="text-muted-foreground font-normal">(optional, if you have one)</span>
+                    </Label>
+                    <Input
+                      id="invitationCode"
+                      type="text"
+                      value={invitationCode}
+                      onChange={(e) => setInvitationCode(e.target.value)}
+                      placeholder="Enter invitation code"
+                    />
+                  </div>
                 </div>
               )}
 
