@@ -190,6 +190,8 @@ serve(async (req) => {
         results.failed++;
         results.errors.push(`${email}: ${err.message || "unknown error"}`);
       }
+
+      await new Promise((r) => setTimeout(r, 500));
     }
 
     console.log(`Bulk invite: ${results.sent} sent, ${results.failed} failed`);
