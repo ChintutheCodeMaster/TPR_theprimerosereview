@@ -110,6 +110,8 @@ const inviteHtml = (_name: string, _signupLink: string) => `
                 If you would be interested in scheduling a free session, please simply reply to this email, and we will be happy to arrange a suitable time.
               </p>
 
+              
+
               <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.7;">
                 Thank you for partnering with us. We look forward to supporting your family throughout this exciting chapter.
               </p>
