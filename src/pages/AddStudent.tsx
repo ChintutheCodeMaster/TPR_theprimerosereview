@@ -135,7 +135,10 @@ const AddStudent = () => {
         email: manualForm.email,
         password: tempPassword,
         options: {
-          data: { full_name: `${manualForm.firstName} ${manualForm.lastName}` },
+          data: {
+            full_name: `${manualForm.firstName} ${manualForm.lastName}`,
+            role: "student",
+          },
         },
       });
       if (authError) throw authError;
@@ -176,11 +179,7 @@ const AddStudent = () => {
         .eq("user_id", studentUserId);
       if (profileError) throw profileError;
 
-      // ── Step 5: Assign student role ───────────────────────────
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: studentUserId, role: "student" });
-      if (roleError) throw roleError;
+      // Role insert handled by handle_new_user trigger; role is in signUp metadata above.
 
       // ── Step 6: Insert into student_profiles ──────────────────
       const { error: studentProfileError } = await supabase

@@ -90,15 +90,7 @@ export const useAuth = () => {
 
       if (profileError) throw profileError
 
-      // ── Step 4: Insert into user_roles ────────────────────────
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: formData.role,
-        })
-
-      if (roleError) throw roleError
+      // Role insert handled by handle_new_user trigger; role is in signUp metadata above.
 
       // ── Step 5: Insert into student_profiles (students only) ──
       if (formData.role === 'student') {

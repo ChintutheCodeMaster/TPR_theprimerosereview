@@ -184,7 +184,7 @@ useEffect(() => {
         password,
         options: {
           emailRedirectTo: redirectUrl,
-          data: { full_name: fullName }
+          data: { full_name: fullName, role: selectedRole }
         }
       });
       if (error) throw error;
@@ -239,10 +239,7 @@ useEffect(() => {
             .eq('user_id', data.user.id);
         }
 
-        const { error: roleError } = await (supabase as any)
-          .from('user_roles')
-          .insert({ user_id: data.user.id, role: selectedRole });
-        if (roleError) throw roleError;
+        // Role insert handled by handle_new_user trigger; role is in signUp metadata above.
 
         // Student-specific inserts
         if (selectedRole === 'student') {
