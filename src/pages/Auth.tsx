@@ -63,7 +63,7 @@ const Auth = () => {
   const navigateByRole = (role: string) => {
     switch (role) {
       case 'counselor': navigate('/dashboard'); break;
-      case 'student': navigate('/student-dashboard'); break;
+      case 'student': navigate('/student-guide'); break;
       case 'parent': navigate('/parent-portal'); break;
       case 'principal': navigate('/principal-dashboard'); break;
       case 'teacher': navigate('/teacher-dashboard'); break;

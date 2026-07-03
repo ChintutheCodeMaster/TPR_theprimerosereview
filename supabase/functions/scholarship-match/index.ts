@@ -23,6 +23,84 @@ interface MatchResult {
   personalizedTips: string[];
 }
 
+/**
+ * Robustly extract { matches: [...] } from an LLM response.
+ *
+ * Handles three failure modes seen in practice:
+ *   1. Response wrapped in ```json ... ``` markdown fences
+ *   2. Trailing prose after the JSON body
+ *   3. Mid-array truncation when the response hits max_tokens — we close
+ *      out the last complete object and seal the array/object, returning
+ *      whatever full matches we got rather than dropping the whole response.
+ */
+function extractMatches(raw: string): { matches: MatchResult[] } | null {
+  // Strip common markdown fences (```json ... ``` or ``` ... ```)
+  let s = raw.trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  // Locate the opening brace of the outer object.
+  const start = s.indexOf('{');
+  if (start === -1) return null;
+  const candidate = s.slice(start);
+
+  // Fast path: response is well-formed.
+  try {
+    const parsed = JSON.parse(candidate);
+    if (Array.isArray(parsed?.matches)) return parsed;
+  } catch (_) {
+    // fall through to salvage
+  }
+
+  // Salvage path: scan for the "matches" array, collect every COMPLETE
+  // object inside it, and ignore anything after the last complete one.
+  const matchesIdx = candidate.indexOf('"matches"');
+  if (matchesIdx === -1) return null;
+  const arrStart = candidate.indexOf('[', matchesIdx);
+  if (arrStart === -1) return null;
+
+  const completedObjects: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let objStart = -1;
+
+  for (let i = arrStart + 1; i < candidate.length; i++) {
+    const c = candidate[i];
+
+    if (inString) {
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') { inString = true; continue; }
+    if (c === '{') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && objStart !== -1) {
+        completedObjects.push(candidate.slice(objStart, i + 1));
+        objStart = -1;
+      }
+    } else if (c === ']' && depth === 0) {
+      break; // end of array
+    }
+  }
+
+  const parsedMatches: MatchResult[] = [];
+  for (const obj of completedObjects) {
+    try {
+      const m = JSON.parse(obj);
+      if (m && typeof m.scholarshipId === 'string') parsedMatches.push(m);
+    } catch (_) {
+      // skip malformed individual entry
+    }
+  }
+
+  return parsedMatches.length > 0 ? { matches: parsedMatches } : null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -88,7 +166,7 @@ Analyze the student's profile against each scholarship. Return the top 5–10 mo
     const content = await callAI({
       systemPrompt,
       userPrompt,
-      maxTokens: 2048,
+      maxTokens: 4096,
       fallbackToGemini: true,
       temperature: 0.4,
     });
@@ -100,16 +178,9 @@ Analyze the student's profile against each scholarship. Return the top 5–10 mo
       );
     }
 
-    let result: { matches: MatchResult[] };
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
-      }
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
+    const result = extractMatches(content);
+    if (!result) {
+      console.error("Failed to parse AI response. Raw content (first 500 chars):", content.slice(0, 500));
       return new Response(
         JSON.stringify({ error: "Failed to parse AI matching result" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

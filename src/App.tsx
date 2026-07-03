@@ -23,6 +23,7 @@ import Applications from "./pages/Applications";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import StudentDashboard from "./pages/StudentDashboard";
+import StudentGuide from "./pages/StudentGuide";
 import StudentPersonalArea from "./pages/StudentPersonalArea";
 import StudentStats from "./pages/StudentStats";
 import ParentPortal from "./pages/ParentPortal";
@@ -320,6 +321,12 @@ const App = () => {
           } />
 
           {/* ── Student-only routes ── */}
+          <Route path="/student-guide" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentGuide />
+            </ProtectedRoute>
+          } />
+
           <Route path="/student-profile" element={
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
