@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +11,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { StudentEssayFeedback } from "@/components/StudentEssayFeedback";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,16 +26,12 @@ import {
   MessageSquare,
   AlertCircle,
   Clock,
-  TrendingUp,
   Star,
-  Award,
   Loader2,
   MapPin,
-  Sparkles,
   Trophy,
   Flame,
   Crown,
-  Medal,
 } from "lucide-react";
 import { StudentTour, startStudentTour } from "@/components/StudentTour";
 
@@ -275,9 +275,9 @@ const StudentDashboard = () => {
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return 'bg-destructive text-destructive-foreground'
-      case 'important': return 'bg-orange-500 text-white'
-      default: return 'bg-muted text-muted-foreground'
+      case 'critical': return 'bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline'
+      case 'important': return 'bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline'
+      default: return 'bg-white/[0.03] text-muted-foreground hairline'
     }
   }
 
@@ -298,14 +298,23 @@ const StudentDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     )
   }
 
+  const progressTiers = [
+    { label: 'Essays', icon: FileText, data: data?.essays, tone: 'sage' as const, color: 'var(--pn-sage)' },
+    { label: 'Recommendations', icon: Star, data: data?.recommendations, tone: 'gold' as const, color: 'var(--pn-gold)' },
+  ]
+
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <PageShell>
+      <BlurOrb tone="pink" className="top-[-120px] right-[-120px] w-[520px] h-[520px]" />
+
       {/* Primrose Challenge popup — shown once per challenge per browser */}
       <Dialog open={!!challengePopup} onOpenChange={open => { if (!open) dismissChallengePopup() }}>
         <DialogContent className="sm:max-w-sm">
@@ -367,7 +376,6 @@ const StudentDashboard = () => {
           </DialogHeader>
 
           <div className="space-y-3 py-1">
-            {/* Winner callout */}
             {!resultsPopup?.isWinner && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
                 <Crown className="h-4 w-4 text-yellow-600 shrink-0" />
@@ -377,7 +385,6 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            {/* Student's own result */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-muted/50 text-center">
                 <div className="text-3xl font-bold text-primary">{resultsPopup?.myScore}</div>
@@ -408,245 +415,240 @@ const StudentDashboard = () => {
 
       <StudentTour />
 
-      {/* Welcome Header */}
-      <Card id="tour-welcome" className="bg-gradient-subtle border-none">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={data?.avatarUrl ?? undefined} />
-              <AvatarFallback className="text-lg">
-                {data?.studentName?.[0] ?? 'S'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground">
-                Hi {data?.studentName}, you are {overallProgress}% on track!
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Keep up the great work! Here's your college application progress.
-              </p>
-            </div>
+      {/* Editorial hero */}
+      <div id="tour-welcome" className="relative">
+        <PageHeader
+          eyebrow="Today"
+          title={<>Good evening, {data?.studentName}.</>}
+          subtitle={<>You are {overallProgress}% on track. Three moments stand between you and next week.</>}
+          actions={
             <div className="flex items-center gap-4">
               <button
                 onClick={startStudentTour}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors border border-border rounded-full px-3 py-1.5 hover:border-primary/40"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors hairline rounded-full px-3 py-1.5 hover:bg-white/[0.03]"
               >
                 <MapPin className="h-3 w-3" />
                 Take the tour
               </button>
               <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{overallProgress}%</div>
-                <p className="text-sm text-muted-foreground">Complete</p>
+                <div className="num-display text-4xl text-foreground leading-none">{overallProgress}%</div>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Complete</p>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          }
+        />
+      </div>
 
-      {/* Progress Overview */}
-      <div id="tour-progress" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="flex items-center justify-center">
-          <CardContent className="p-6 w-full">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Progress overview */}
+        <motion.div
+          id="tour-progress"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          variants={{
+            hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+            visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } }
+          }}
+        >
+          <HairlineCard variant="hero" className="flex items-center justify-center">
             <Button
               id="tour-add-application"
-              variant="outline"
-              className="h-16 w-full flex-col gap-2 border-primary/30 hover:bg-primary/5"
+              variant="ghost"
+              className="h-16 w-full flex-col gap-2 bg-transparent hairline hover:bg-white/[0.04] text-foreground"
               onClick={() => navigate('/add-application')}
             >
               <FileText className="h-5 w-5" />
               Add Application
             </Button>
-          </CardContent>
-        </Card>
-        {[
-          // { label: 'Applications', icon: Calendar, data: data?.applications },
-          { label: 'Essays', icon: FileText, data: data?.essays },
-          { label: 'Recommendations', icon: Star, data: data?.recommendations },
-        ].map(({ label, icon: Icon, data: d }) => {
-          const pct = d && d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
-          return (
-            <Card key={label}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Icon className="h-5 w-5 text-primary" />
-                  {label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          </HairlineCard>
+
+          {progressTiers.map(({ label, icon: Icon, data: d, color }) => {
+            const pct = d && d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
+            return (
+              <HairlineCard key={label}>
+                <div className="flex items-center gap-3 mb-4">
+                  <Icon className="h-5 w-5 text-foreground/60" />
+                  <h3 className="font-serif text-xl text-foreground leading-none">{label}</h3>
+                </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>{d?.completed ?? 0} of {d?.total ?? 0} completed</span>
-                    <span className="font-medium">{pct}%</span>
+                    <span className="text-muted-foreground">{d?.completed ?? 0} of {d?.total ?? 0} completed</span>
+                    <span className="num-display text-foreground">{pct}%</span>
                   </div>
-                  <Progress value={pct} className="h-2" />
+                  <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
+                    <motion.div
+                      className="h-full"
+                      style={{ background: color }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1], delay: 0.2 }}
+                    />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+              </HairlineCard>
+            )
+          })}
+        </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines */}
-        <Card id="tour-deadlines">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Upcoming Deadlines
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.upcomingDeadlines.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No upcoming deadlines — add applications to track them here
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {data?.upcomingDeadlines.map(deadline => (
-                  <div
-                    key={deadline.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-1.5 rounded-full ${getUrgencyColor(deadline.urgency)}`}>
-                        {getUrgencyIcon(deadline.urgency)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{deadline.title}</p>
-                        <p className="text-xs text-muted-foreground">{deadline.date}</p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={deadline.urgency === 'critical' ? 'destructive' : 'secondary'}
-                      className="text-xs"
+        {/* Two-column: deadlines + action items */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+              visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } }
+            }}
+          >
+            <HairlineCard id="tour-deadlines">
+              <div className="mb-6">
+                <h2 className="font-serif text-2xl text-foreground leading-tight">What's coming for you.</h2>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Weighted by urgency</p>
+              </div>
+              {data?.upcomingDeadlines.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic py-4 font-serif">
+                  Nothing on the horizon — yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {data?.upcomingDeadlines.map(deadline => (
+                    <div
+                      key={deadline.id}
+                      className="flex items-center justify-between p-3 rounded-lg hairline hover:bg-white/[0.02] transition-colors"
                     >
-                      {deadline.daysLeft < 0 ? 'Overdue' : `${deadline.daysLeft}d`}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Action Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Action Items
-              {(data?.pendingTasks.length ?? 0) > 0 && (
-                <span className="ml-1 inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                  {data!.pendingTasks.length} pending
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.pendingTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No pending tasks — you're all caught up!
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {data?.pendingTasks.map((task) => {
-                  const COLOR_MAP: Record<string, string> = {
-                    blue:   "bg-blue-500/10 border-blue-300 text-blue-700",
-                    purple: "bg-purple-500/10 border-purple-300 text-purple-700",
-                    green:  "bg-green-500/10 border-green-300 text-green-700",
-                    orange: "bg-orange-500/10 border-orange-300 text-orange-700",
-                    pink:   "bg-pink-500/10 border-pink-300 text-pink-700",
-                    yellow: "bg-yellow-500/10 border-yellow-300 text-yellow-700",
-                  }
-                  const color = COLOR_MAP[task.color] ?? COLOR_MAP.blue
-                  return (
-                    <div key={task.id} className={`flex items-start gap-3 p-3 rounded-xl border ${color}`}>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-snug">{task.task}</p>
-                        {task.due_date && (
-                          <p className="text-xs opacity-70 mt-0.5">
-                            Due: {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </p>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-full ${getUrgencyColor(deadline.urgency)}`}>
+                          {getUrgencyIcon(deadline.urgency)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{deadline.title}</p>
+                          <p className="text-xs text-muted-foreground">{deadline.date}</p>
+                        </div>
                       </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        deadline.urgency === 'critical'
+                          ? 'bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline'
+                          : 'bg-white/[0.03] text-muted-foreground hairline'
+                      }`}>
+                        {deadline.daysLeft < 0 ? 'Overdue' : `${deadline.daysLeft}d`}
+                      </span>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
+              )}
+            </HairlineCard>
+          </motion.div>
+
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+              visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } }
+            }}
+          >
+            <HairlineCard>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="font-serif text-2xl text-foreground leading-tight">Since we last spoke.</h2>
+                {(data?.pendingTasks.length ?? 0) > 0 && (
+                  <span className="inline-flex items-center rounded-full hairline bg-[color:var(--pn-pink)]/10 px-2 py-0.5 text-xs text-[color:var(--pn-pink)]">
+                    {data!.pendingTasks.length} pending
+                  </span>
+                )}
               </div>
-            )}
-            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2 mb-6">What you left for yourself</p>
+              {data?.pendingTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic py-4 font-serif">
+                  You're clear. Go write something.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {data?.pendingTasks.map((task) => {
+                    const DOT_COLOR: Record<string, string> = {
+                      blue:   "bg-sky-400",
+                      purple: "bg-violet-400",
+                      green:  "bg-emerald-400",
+                      orange: "bg-orange-400",
+                      pink:   "bg-[color:var(--pn-pink)]",
+                      yellow: "bg-[color:var(--pn-gold)]",
+                    }
+                    const dot = DOT_COLOR[task.color] ?? DOT_COLOR.blue
+                    return (
+                      <div key={task.id} className="flex items-start gap-3 p-3 rounded-xl hairline bg-white/[0.02]">
+                        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground leading-snug">{task.task}</p>
+                          {task.due_date && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Due: {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div className="mt-4 pt-3 hairline-t">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                  onClick={() => navigate('/student-personal-area?tab=tasks')}
+                >
+                  Manage all tasks in My Work →
+                </Button>
+              </div>
+            </HairlineCard>
+          </motion.div>
+        </div>
+
+        {/* Essay Feedback from Counselor */}
+        <motion.div
+          id="tour-essay-feedback"
+          variants={{
+            hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+            visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } }
+          }}
+        >
+          <StudentEssayFeedback />
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+            visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } }
+          }}
+        >
+          <HairlineCard id="tour-quick-actions">
+            <div className="mb-6">
+              <h2 className="font-serif text-2xl text-foreground leading-tight">Where to next.</h2>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Two quick moves</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                id="tour-upload-essay"
+                variant="ghost"
+                className="h-16 flex-col gap-2 hairline bg-transparent hover:bg-white/[0.03] text-foreground"
+                onClick={() => navigate('/submit-essay')}
+              >
+                <Upload className="h-5 w-5" />
+                Upload Essay
+              </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="w-full text-xs text-muted-foreground"
-                onClick={() => navigate('/student-personal-area?tab=tasks')}
+                className="h-16 flex-col gap-2 hairline bg-transparent hover:bg-white/[0.03] text-foreground"
+                onClick={() => navigate('/student-messages')}
               >
-                Manage all tasks in My Work →
+                <MessageSquare className="h-5 w-5" />
+                Message Counselor
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Essay Feedback from Counselor */}
-      <div id="tour-essay-feedback">
-        <StudentEssayFeedback />
-      </div>
-
-      {/* Quick Actions */}
-      <Card id="tour-quick-actions">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              id="tour-upload-essay"
-              variant="outline"
-              className="h-16 flex-col gap-2"
-              onClick={() => navigate('/submit-essay')}
-            >
-              <Upload className="h-5 w-5" />
-              Upload Essay
-            </Button>
-            {/* <Button
-              variant="outline"
-              className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
-              onClick={() => navigate('/personal-essay')}
-            >
-              <Sparkles className="h-5 w-5 text-primary" />
-              Personal Essay
-            </Button> */}
-            {/* <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/student-personal-area')}>
-              <FileText className="h-5 w-5" />
-              View Feedback
-            </Button> */}
-            <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/student-messages')}>
-              <MessageSquare className="h-5 w-5" />
-              Message Counselor
-            </Button>
-            {/* <Button
-              id="tour-rec-letters"
-              variant="outline"
-              className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
-              onClick={() => navigate('/student-recommendation-letters')}
-            >
-              <Award className="h-5 w-5 text-primary" />
-              Rec Letters
-            </Button> */}
-            {/* <Button
-              id="tour-add-application"
-              variant="outline"
-              className="h-16 flex-col gap-2 border-primary/30 hover:bg-primary/5"
-              onClick={() => navigate('/add-application')}
-            >
-              <FileText className="h-5 w-5" />
-              Add Application
-            </Button> */}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </HairlineCard>
+        </motion.div>
+      </motion.div>
+    </PageShell>
   )
 }
 

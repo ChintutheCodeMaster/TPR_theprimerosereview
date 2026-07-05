@@ -1,14 +1,19 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { useCelebration } from "@/hooks/useCelebration";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { useStudentRecommendations } from "@/hooks/useRecommendationRequests";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -61,31 +66,31 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "sent":
       return (
-        <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-          <CheckCircle className="h-3 w-3 mr-1" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)]">
+          <CheckCircle className="h-3 w-3" />
           Received
-        </Badge>
+        </span>
       );
     case "in_progress":
       return (
-        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
-          <Clock className="h-3 w-3 mr-1" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)]">
+          <Clock className="h-3 w-3" />
           In Progress
-        </Badge>
+        </span>
       );
     case "pending":
       return (
-        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-          <Clock className="h-3 w-3 mr-1" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-gold)]/10 text-[color:var(--pn-gold)]">
+          <Clock className="h-3 w-3" />
           Pending Review
-        </Badge>
+        </span>
       );
     default:
       return (
-        <Badge variant="outline">
-          <FileText className="h-3 w-3 mr-1" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hairline bg-white/[0.03] text-muted-foreground">
+          <FileText className="h-3 w-3" />
           Draft
-        </Badge>
+        </span>
       );
   }
 };
@@ -168,28 +173,35 @@ const StudentRecommendationLetters = () => {
   // ── Loading state ─────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     );
   }
 
   // ── Error state ───────────────────────────────────────────
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96 gap-3 text-destructive">
-        <AlertCircle className="h-6 w-6" />
-        <p>Failed to load recommendation requests. Please refresh and try again.</p>
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96 gap-3 text-[color:var(--pn-pink)]">
+          <AlertCircle className="h-6 w-6" />
+          <p className="font-serif italic">Failed to load recommendation requests. Please refresh and try again.</p>
+        </div>
+      </PageShell>
     );
   }
 
   // ── View Letter ───────────────────────────────────────────
   if (currentStep === "view" && selectedRequest) {
     return (
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <PageShell maxWidth="wide">
+        <BlurOrb tone="sage" className="top-[-100px] left-[-100px] w-[420px] h-[420px]" />
+
         <Button
           variant="ghost"
+          className="mb-6 text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
           onClick={() => {
             setCurrentStep("list");
             setSelectedRequest(null);
@@ -198,378 +210,424 @@ const StudentRecommendationLetters = () => {
           ← Back to Letters
         </Button>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">Recommendation Letter</CardTitle>
-                <p className="text-muted-foreground mt-1">From {selectedRequest.referee_name}</p>
-              </div>
-              {getStatusBadge(selectedRequest.status)}
+        <HairlineCard>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="font-serif text-3xl text-foreground leading-tight">A letter for you.</h1>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">From {selectedRequest.referee_name}</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {selectedRequest.status === 'sent' ? (
-              <div className="text-center py-12 space-y-4">
-                <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
-                <h2 className="text-xl font-semibold text-foreground">Recommendation Submitted</h2>
-                <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
-                  Your recommendation letter from <strong>{selectedRequest.referee_name}</strong> has been
-                  finalized by your counselor and submitted on your behalf.
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Your recommendation letter is being prepared.</p>
-                <p className="text-sm mt-2">You will be notified once it's ready.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            {getStatusBadge(selectedRequest.status)}
+          </div>
+
+          {selectedRequest.status === 'sent' ? (
+            <div className="text-center py-12 space-y-4">
+              <CheckCircle className="h-16 w-16 mx-auto text-[color:var(--pn-sage)]" />
+              <h2 className="font-serif text-2xl text-foreground">Submitted on your behalf.</h2>
+              <p className="font-serif italic text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                Your letter from <span className="text-foreground not-italic">{selectedRequest.referee_name}</span> has been
+                finalized by your counselor and sent.
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="font-serif italic text-muted-foreground">Being drafted, quietly.</p>
+              <p className="text-xs text-muted-foreground mt-2">You'll hear when it's ready.</p>
+            </div>
+          )}
+        </HairlineCard>
+      </PageShell>
     );
   }
 
   // ── Questionnaire Form ────────────────────────────────────
   if (currentStep === "form") {
+    const sectionVariants = {
+      hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+      visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } },
+    };
+
     return (
-      <div className="p-6 space-y-6 max-w-3xl mx-auto">
-        <Button variant="ghost" onClick={() => setCurrentStep("list")}>
+      <PageShell maxWidth="wide">
+        <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[480px] h-[480px]" />
+
+        <Button
+          variant="ghost"
+          className="mb-6 text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+          onClick={() => setCurrentStep("list")}
+        >
           ← Back to Letters
         </Button>
 
-        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <CardContent className="p-8 text-center">
-            <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground mb-3">
-              You are one step away from your recommendation letter
-            </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              To make this recommendation as accurate and personal as possible, please complete the
-              short questionnaire below. Your answers will help your counselor write the strongest
-              letter on your behalf.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Section 1: Referee Context */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Referee Context
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="refereeName">Who is this referee? *</Label>
-              <Input
-                id="refereeName"
-                placeholder="Full name, role, subject taught or position at school"
-                value={formData.refereeName}
-                onChange={(e) => setFormData({ ...formData, refereeName: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="refereeEmail" className="flex items-center gap-1.5">
-                <Mail className="h-4 w-4 text-primary" />
-                Teacher's email address *
-              </Label>
-              <Input
-                id="refereeEmail"
-                type="email"
-                placeholder="e.g. j.smith@school.edu"
-                value={formData.refereeEmail}
-                onChange={(e) => setFormData({ ...formData, refereeEmail: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                We'll send them a notification with a private link to write your letter.
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+          className="space-y-6 max-w-3xl mx-auto"
+        >
+          <motion.div variants={sectionVariants}>
+            <HairlineCard variant="pink" className="text-center p-8">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 text-[color:var(--pn-pink)]" />
+              <h1 className="font-serif text-3xl text-foreground mb-3 leading-tight">
+                One step. One letter.
+              </h1>
+              <p className="font-serif italic text-muted-foreground max-w-xl mx-auto">
+                The more specific your answers, the more precise your counselor can be.
+                A few paragraphs here become the strongest possible letter on your behalf.
               </p>
-            </div>
+            </HairlineCard>
+          </motion.div>
 
-            <div className="space-y-2">
-              <Label htmlFor="refereeRole">Their role/position *</Label>
-              <Input
-                id="refereeRole"
-                placeholder="e.g., AP Physics Teacher, Math Department Head"
-                value={formData.refereeRole}
-                onChange={(e) => setFormData({ ...formData, refereeRole: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="relationshipDuration">
-                How long have you known them and in what capacity? *
-              </Label>
-              <Textarea
-                id="relationshipDuration"
-                placeholder="e.g., taught me in Grade 11–12 Math, thesis supervisor, homeroom teacher"
-                value={formData.relationshipDuration}
-                onChange={(e) => setFormData({ ...formData, relationshipDuration: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="relationshipCapacity">How closely did you work together?</Label>
-              <Textarea
-                id="relationshipCapacity"
-                placeholder="Classes only, one-on-one mentoring, extracurricular supervision, research project, leadership role, etc."
-                value={formData.relationshipCapacity}
-                onChange={(e) =>
-                  setFormData({ ...formData, relationshipCapacity: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Section 2: Shared Work & Examples */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              Shared Work & Concrete Examples
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="meaningfulProject">
-                What is the most meaningful academic or personal project you did together?
-              </Label>
-              <Textarea
-                id="meaningfulProject"
-                placeholder="Briefly describe what you worked on and why it mattered"
-                value={formData.meaningfulProject}
-                onChange={(e) => setFormData({ ...formData, meaningfulProject: e.target.value })}
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bestMoment">
-                Can you describe one moment where this referee saw you at your best?
-              </Label>
-              <Textarea
-                id="bestMoment"
-                placeholder="A class discussion, project, challenge, leadership moment, or clear improvement over time"
-                value={formData.bestMoment}
-                onChange={(e) => setFormData({ ...formData, bestMoment: e.target.value })}
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="difficultiesOvercome">
-                Did you overcome any difficulty while working with them?
-              </Label>
-              <Textarea
-                id="difficultiesOvercome"
-                placeholder="Academic struggle, personal challenge, resilience, or growth"
-                value={formData.difficultiesOvercome}
-                onChange={(e) =>
-                  setFormData({ ...formData, difficultiesOvercome: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Section 3: Strengths */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Your Strengths Through Their Eyes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <Label>What do you think this referee would say you're especially strong at?</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {STRENGTH_OPTIONS.map((strength) => (
-                  <div key={strength} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={strength}
-                      checked={formData.strengths.includes(strength)}
-                      onCheckedChange={() => handleStrengthToggle(strength)}
-                    />
-                    <Label htmlFor={strength} className="text-sm font-normal cursor-pointer">
-                      {strength}
-                    </Label>
-                  </div>
-                ))}
+          {/* Section 1: Referee Context */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <User className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-2xl text-foreground leading-tight">Who they are.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">The person writing for you</p>
+                </div>
               </div>
-            </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="refereeName" className="text-foreground">Who is this referee? *</Label>
+                  <Input
+                    id="refereeName"
+                    placeholder="Full name, role, subject taught or position at school"
+                    value={formData.refereeName}
+                    onChange={(e) => setFormData({ ...formData, refereeName: e.target.value })}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="personalNotes">
-                Would you like to add a few personal notes for your counselor? (Optional)
-              </Label>
-              <Textarea
-                id="personalNotes"
-                placeholder="Any additional context or information you'd like to share..."
-                value={formData.personalNotes}
-                onChange={(e) => setFormData({ ...formData, personalNotes: e.target.value })}
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="refereeEmail" className="flex items-center gap-1.5 text-foreground">
+                    <Mail className="h-4 w-4 text-[color:var(--pn-pink)]" />
+                    Teacher's email address *
+                  </Label>
+                  <Input
+                    id="refereeEmail"
+                    type="email"
+                    placeholder="e.g. j.smith@school.edu"
+                    value={formData.refereeEmail}
+                    onChange={(e) => setFormData({ ...formData, refereeEmail: e.target.value })}
+                    className="bg-white/[0.02] hairline"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    We'll send them a notification with a private link to write your letter.
+                  </p>
+                </div>
 
-        {/* Submit */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <Button
-              onClick={handleSubmit}
-              size="lg"
-              className="w-full"
-              disabled={
-                createRequest.isPending ||
-                !formData.refereeName ||
-                !formData.refereeEmail ||
-                !EMAIL_RE.test(formData.refereeEmail) ||
-                !formData.refereeRole ||
-                !formData.relationshipDuration
-              }
-            >
-              {createRequest.isPending ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5 mr-2" />
-              )}
-              Submit for Recommendation Letter
-            </Button>
-            <p className="text-center text-sm text-muted-foreground mt-3">
-              Your counselor will review your answers and prepare your recommendation letter.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+                <div className="space-y-2">
+                  <Label htmlFor="refereeRole" className="text-foreground">Their role/position *</Label>
+                  <Input
+                    id="refereeRole"
+                    placeholder="e.g., AP Physics Teacher, Math Department Head"
+                    value={formData.refereeRole}
+                    onChange={(e) => setFormData({ ...formData, refereeRole: e.target.value })}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="relationshipDuration" className="text-foreground">
+                    How long have you known them and in what capacity? *
+                  </Label>
+                  <Textarea
+                    id="relationshipDuration"
+                    placeholder="e.g., taught me in Grade 11–12 Math, thesis supervisor, homeroom teacher"
+                    value={formData.relationshipDuration}
+                    onChange={(e) => setFormData({ ...formData, relationshipDuration: e.target.value })}
+                    rows={3}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="relationshipCapacity" className="text-foreground">How closely did you work together?</Label>
+                  <Textarea
+                    id="relationshipCapacity"
+                    placeholder="Classes only, one-on-one mentoring, extracurricular supervision, research project, leadership role, etc."
+                    value={formData.relationshipCapacity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, relationshipCapacity: e.target.value })
+                    }
+                    rows={3}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+              </div>
+            </HairlineCard>
+          </motion.div>
+
+          {/* Section 2: Shared Work & Examples */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <Award className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-2xl text-foreground leading-tight">What you did together.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Concrete moments, specific details</p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="meaningfulProject" className="text-foreground">
+                    What is the most meaningful academic or personal project you did together?
+                  </Label>
+                  <Textarea
+                    id="meaningfulProject"
+                    placeholder="Briefly describe what you worked on and why it mattered"
+                    value={formData.meaningfulProject}
+                    onChange={(e) => setFormData({ ...formData, meaningfulProject: e.target.value })}
+                    rows={4}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bestMoment" className="text-foreground">
+                    Can you describe one moment where this referee saw you at your best?
+                  </Label>
+                  <Textarea
+                    id="bestMoment"
+                    placeholder="A class discussion, project, challenge, leadership moment, or clear improvement over time"
+                    value={formData.bestMoment}
+                    onChange={(e) => setFormData({ ...formData, bestMoment: e.target.value })}
+                    rows={4}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="difficultiesOvercome" className="text-foreground">
+                    Did you overcome any difficulty while working with them?
+                  </Label>
+                  <Textarea
+                    id="difficultiesOvercome"
+                    placeholder="Academic struggle, personal challenge, resilience, or growth"
+                    value={formData.difficultiesOvercome}
+                    onChange={(e) =>
+                      setFormData({ ...formData, difficultiesOvercome: e.target.value })
+                    }
+                    rows={4}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+              </div>
+            </HairlineCard>
+          </motion.div>
+
+          {/* Section 3: Strengths */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <Sparkles className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-2xl text-foreground leading-tight">How they see you.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Strengths through their eyes</p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-foreground">What do you think this referee would say you're especially strong at?</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {STRENGTH_OPTIONS.map((strength) => (
+                      <div key={strength} className="flex items-center space-x-2 p-2 rounded-lg hairline bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                        <Checkbox
+                          id={strength}
+                          checked={formData.strengths.includes(strength)}
+                          onCheckedChange={() => handleStrengthToggle(strength)}
+                        />
+                        <Label htmlFor={strength} className="text-sm font-normal cursor-pointer text-foreground">
+                          {strength}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="personalNotes" className="text-foreground">
+                    Would you like to add a few personal notes for your counselor? (Optional)
+                  </Label>
+                  <Textarea
+                    id="personalNotes"
+                    placeholder="Any additional context or information you'd like to share..."
+                    value={formData.personalNotes}
+                    onChange={(e) => setFormData({ ...formData, personalNotes: e.target.value })}
+                    rows={4}
+                    className="bg-white/[0.02] hairline"
+                  />
+                </div>
+              </div>
+            </HairlineCard>
+          </motion.div>
+
+          {/* Submit */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard variant="sage">
+              <Button
+                onClick={handleSubmit}
+                size="lg"
+                className="w-full bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+                disabled={
+                  createRequest.isPending ||
+                  !formData.refereeName ||
+                  !formData.refereeEmail ||
+                  !EMAIL_RE.test(formData.refereeEmail) ||
+                  !formData.refereeRole ||
+                  !formData.relationshipDuration
+                }
+              >
+                {createRequest.isPending ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5 mr-2" />
+                )}
+                Submit for Recommendation Letter
+              </Button>
+              <p className="text-center text-xs text-muted-foreground mt-3 font-serif italic">
+                Your counselor will read this before writing the letter.
+              </p>
+            </HairlineCard>
+          </motion.div>
+        </motion.div>
+      </PageShell>
     );
   }
 
   // ── Main List View ────────────────────────────────────────
+  const listSectionVariants = {
+    hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] } },
+  };
+
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <PageShell maxWidth="wide">
+      <BlurOrb tone="sage" className="top-[-100px] right-[-120px] w-[500px] h-[500px]" />
       <CelebrationOverlay event={activeEvent} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Recommendation Letters</h1>
-          <p className="text-muted-foreground">Request and view your recommendation letters</p>
-        </div>
-        <Button onClick={() => setCurrentStep("form")}>
-          <FileText className="h-4 w-4 mr-2" />
-          Request New Letter
-        </Button>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold text-foreground">{requests?.length ?? 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <PageHeader
+        eyebrow="Recommendations"
+        title={<>Letters, on your behalf.</>}
+        subtitle={<>The teachers and mentors speaking for you.</>}
+        actions={
+          <Button
+            onClick={() => setCurrentStep("form")}
+            className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Request New Letter
+          </Button>
+        }
+      />
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {requests?.filter((r) => r.status === "pending" || r.status === "in_progress")
-                    .length ?? 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Received</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {requests?.filter((r) => r.status === "sent").length ?? 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Letters List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Recommendation Letters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!requests || requests.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No recommendation letters yet.</p>
-              <Button variant="outline" className="mt-4" onClick={() => setCurrentStep("form")}>
-                Request Your First Letter
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {requests.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedRequest(request);
-                    setCurrentStep("view");
-                    if (request.status === 'sent') celebrate('rec_letter_received');
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{request.referee_name}</p>
-                      <p className="text-sm text-muted-foreground">{request.referee_role}</p>
-                    </div>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+        className="space-y-6"
+      >
+        {/* Stats */}
+        <motion.div variants={listSectionVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              icon: FileText,
+              tone: "sage" as const,
+              label: "Total Requests",
+              value: requests?.length ?? 0,
+            },
+            {
+              icon: Clock,
+              tone: "gold" as const,
+              label: "Pending",
+              value: requests?.filter((r) => r.status === "pending" || r.status === "in_progress").length ?? 0,
+            },
+            {
+              icon: CheckCircle,
+              tone: "sage" as const,
+              label: "Received",
+              value: requests?.filter((r) => r.status === "sent").length ?? 0,
+            },
+          ].map(({ icon: Icon, tone, label, value }) => {
+            const toneVar = tone === "sage" ? "var(--pn-sage)" : "var(--pn-gold)";
+            return (
+              <HairlineCard key={label}>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="p-2 rounded-lg hairline"
+                    style={{ backgroundColor: `color-mix(in oklab, ${toneVar} 12%, transparent)` }}
+                  >
+                    <Icon className="h-5 w-5" style={{ color: toneVar }} />
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Submitted</p>
-                      <p className="text-sm font-medium">
-                        {new Date(request.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {getStatusBadge(request.status)}
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                    <p className="num-display text-2xl text-foreground mt-1">{value}</p>
                   </div>
                 </div>
-              ))}
+              </HairlineCard>
+            );
+          })}
+        </motion.div>
+
+        {/* Letters List */}
+        <motion.div variants={listSectionVariants}>
+          <HairlineCard>
+            <div className="mb-6">
+              <h2 className="font-serif text-2xl text-foreground leading-tight">The teachers speaking for you.</h2>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Each name, each letter</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            {!requests || requests.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+                <p className="font-serif italic text-muted-foreground mb-6">No one lined up — yet.</p>
+                <Button
+                  className="bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+                  onClick={() => setCurrentStep("form")}
+                >
+                  Request your first letter
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex items-center justify-between p-4 rounded-lg hairline hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedRequest(request);
+                      setCurrentStep("view");
+                      if (request.status === 'sent') celebrate('rec_letter_received');
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-white/[0.03] hairline rounded-lg">
+                        <User className="h-5 w-5 text-foreground/60" />
+                      </div>
+                      <div>
+                        <p className="text-foreground">{request.referee_name}</p>
+                        <p className="text-sm text-muted-foreground">{request.referee_role}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
+                        <p className="text-sm text-foreground mt-0.5">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {getStatusBadge(request.status)}
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </HairlineCard>
+        </motion.div>
+      </motion.div>
+    </PageShell>
   );
 };
 

@@ -196,7 +196,9 @@ export function AppSidebar() {
   }, [isPreviewMode]);
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground";
+    isActive
+      ? "bg-white/[0.06] text-foreground hairline"
+      : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground";
 
   const renderMenuItem = (item: NavItem) => (
     <SidebarMenuItem key={item.title}>
@@ -230,18 +232,18 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar className={open ? "w-64" : "w-16"} variant="sidebar">
+      <Sidebar className={`${open ? "w-64" : "w-16"} hairline-r bg-background`} variant="sidebar">
         <SidebarContent>
           {/* Logo Section */}
-          <div className="p-4 border-b border-border">
+          <div className="p-4 hairline-b">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-lg hairline bg-white/[0.03] flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-foreground/80" />
               </div>
               {open && (
                 <div>
-                  <h1 className="font-bold text-foreground">The Primrose Review</h1>
-                  <p className="text-xs text-muted-foreground">CRM Platform</p>
+                  <h1 className="font-serif text-lg text-foreground leading-none">The Primrose Review</h1>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">CRM Platform</p>
                 </div>
               )}
             </div>
@@ -253,7 +255,7 @@ export function AppSidebar() {
               <div className="px-3 pt-3 pb-1">
                 <button
                   onClick={() => navigate(previewExitPath ?? '/dashboard')}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full px-2 py-1.5 rounded-md hover:bg-accent"
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full px-2 py-1.5 rounded-md hover:bg-white/[0.03]"
                 >
                   <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
                   {open && <span>Exit student preview</span>}
@@ -300,7 +302,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild>
                         <NavLink to={step.url} end className={getNavCls} id={step.tourId}>
                           {open ? (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full hairline bg-white/[0.03] text-[11px] font-medium text-muted-foreground">
                               {step.step}
                             </span>
                           ) : (

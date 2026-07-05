@@ -152,9 +152,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               {isPreviewMode && <PreviewBanner />}
 
               {/* Header with Logos */}
-              <header className="h-20 flex items-center justify-between border-b border-border bg-background px-4 shrink-0">
+              <header className="h-20 flex items-center justify-between hairline-b bg-background/70 backdrop-blur-xl px-4 shrink-0 sticky top-0 z-40">
                 <div className="flex items-center gap-4">
-                  <SidebarTrigger />
+                  <SidebarTrigger className="text-foreground/70 hover:text-foreground" />
                   <img
                     src={primroseLogo}
                     alt="The Primrose Review"
@@ -166,7 +166,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     onboardingCompleted ? (
                       <Button
                         onClick={() => toast.success("You've completed your onboarding — welcome aboard! We're so excited to have you here.", { duration: 4000 })}
-                        className="gap-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-medium transition-colors"
+                        className="gap-2 bg-transparent hairline text-[color:var(--pn-sage)] hover:bg-white/[0.03] font-medium transition-colors shadow-none"
                         size="sm"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -175,7 +175,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     ) : (
                       <Button
                         onClick={() => navigate('/onboarding')}
-                        className="gap-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border font-medium transition-colors"
+                        className="gap-2 bg-transparent hairline text-muted-foreground hover:text-foreground hover:bg-white/[0.03] font-medium transition-colors shadow-none"
                         size="sm"
                       >
                         <Rocket className="h-4 w-4" />

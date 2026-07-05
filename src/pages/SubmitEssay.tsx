@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { usePreviewMode } from "@/contexts/PreviewModeContext";
 import { useCelebration } from "@/hooks/useCelebration";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -417,116 +422,148 @@ const SubmitEssay = () => {
   // ── Success ───────────────────────────────────────────────
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex items-center justify-center p-6">
+      <PageShell>
+        <BlurOrb tone="sage" className="top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px]" />
         <CelebrationOverlay event={activeEvent} />
-        <Card className="max-w-md w-full p-8 text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+        <div className="flex items-center justify-center min-h-[70vh]">
+          <HairlineCard variant="sage" className="max-w-md w-full text-center p-10 space-y-6">
+            <div className="flex justify-center">
+              <div className="h-20 w-20 rounded-full hairline bg-[color:var(--pn-sage)]/12 flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-[color:var(--pn-sage)]" />
+              </div>
             </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Essay Submitted!</h2>
-            <p className="text-muted-foreground mt-2">
-              {slotId
-                ? "Your essay has been linked to your application."
-                : recipient === 'teacher'
-                ? "Your teacher has received your essay and will review it soon."
-                : recipient === 'both'
-                ? "Your counselor and teacher have both received your essay."
-                : "Your counselor has received your essay and will review it soon."}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={() =>
-                applicationId ? navigate(`/student-personal-area?tab=applications`) : navigate(-1)
-              }
-              className="w-full"
-            >
-              {applicationId ? "Back to Applications" : "Back to My Work"}
-            </Button>
-            {!slotId && (
+            <div>
+              <h2 className="font-serif text-3xl text-foreground leading-tight">Sent.</h2>
+              <p className="font-serif italic text-muted-foreground mt-3">
+                {slotId
+                  ? "Linked to your application."
+                  : recipient === 'teacher'
+                  ? "Your teacher has it. They'll read soon."
+                  : recipient === 'both'
+                  ? "Counselor and teacher — both have it."
+                  : "Your counselor has it. They'll read soon."}
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
               <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setIsSuccess(false);
-                  setTitle("");
-                  setPrompt("");
-                  setContent("");
-                  setTargetSchool("");
-                  setWordLimit(null);
-                  setCustomWordLimit("");
-                  setAnalysisResult(null);
-                  setSelectedText("");
-                  setSelectionFeedback(null);
-                }}
+                onClick={() =>
+                  applicationId ? navigate(`/student-personal-area?tab=applications`) : navigate(-1)
+                }
+                className="w-full bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
               >
-                Submit Another Essay
+                {applicationId ? "Back to Applications" : "Back to My Work"}
               </Button>
-            )}
-          </div>
-        </Card>
-      </div>
+              {!slotId && (
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                  onClick={() => {
+                    setIsSuccess(false);
+                    setTitle("");
+                    setPrompt("");
+                    setContent("");
+                    setTargetSchool("");
+                    setWordLimit(null);
+                    setCustomWordLimit("");
+                    setAnalysisResult(null);
+                    setSelectedText("");
+                    setSelectionFeedback(null);
+                  }}
+                >
+                  Submit another
+                </Button>
+              )}
+            </div>
+          </HairlineCard>
+        </div>
+      </PageShell>
     );
   }
 
   const showAnalysisPanel = analysisResult !== null || isAnalysing;
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 8, filter: 'blur(4px)' },
+    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] } },
+  };
+
+  const severityPill = (severity: "low" | "medium" | "high") => {
+    if (severity === "high") return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+    if (severity === "medium") return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    return "bg-white/[0.03] text-muted-foreground hairline";
+  };
+
   // ── Form ──────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 p-6">
-      <div className={`mx-auto space-y-6 transition-all duration-300 ${showAnalysisPanel ? "max-w-6xl" : "max-w-3xl"}`}>
+    <PageShell maxWidth={showAnalysisPanel ? "wide" : "container"}>
+      <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[480px] h-[480px]" />
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" className="gap-2" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+      <Button
+        variant="ghost"
+        className="mb-6 gap-2 text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+        onClick={() => navigate(-1)}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
+
+      <PageHeader
+        eyebrow={isReadonly ? "Final draft" : "The essay"}
+        title={
+          isReadonly
+            ? <>The final version.</>
+            : slotId
+              ? <>Writing for {slotLabel}.</>
+              : <>Send it, when it's ready.</>
+        }
+        subtitle={
+          isReadonly
+            ? <>Approved by your counselor — {slotLabel ?? "essay"}</>
+            : slotId
+              ? undefined
+              : <>Your counselor will read and write back.</>
+        }
+      />
+
+      {isReadonly && (
+        <div className="mb-6 flex items-center gap-2 px-3 py-2 hairline bg-[color:var(--pn-sage)]/10 rounded-lg w-fit">
+          <CheckCircle className="h-4 w-4 text-[color:var(--pn-sage)] shrink-0" />
+          <span className="text-sm text-[color:var(--pn-sage)]">
+            Approved. No further edits needed.
+          </span>
         </div>
-
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {isReadonly ? "Final Draft" : "Submit an Essay"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isReadonly
-              ? `Approved final version — ${slotLabel ?? "essay"}`
-              : slotId
-                ? `Writing for: ${slotLabel}`
-                : "Your counselor will review and provide feedback"}
-          </p>
-          {isReadonly && (
-            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg w-fit">
-              <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-              <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                This essay has been approved by your counselor. No further edits needed.
-              </span>
-            </div>
-          )}
-          {!isReadonly && slotId && (
-            <Badge variant="outline" className="mt-2">Linked to application slot</Badge>
-          )}
+      )}
+      {!isReadonly && slotId && (
+        <div className="mb-6 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hairline bg-white/[0.03] text-muted-foreground">
+          Linked to application slot
         </div>
+      )}
 
-        <div className={`gap-6 ${showAnalysisPanel ? "grid grid-cols-[1fr_380px]" : ""}`}>
+      <div className={`gap-6 ${showAnalysisPanel ? "grid grid-cols-[1fr_380px]" : ""}`}>
 
-          {/* ── Left column: form ── */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ── Left column: form ── */}
+        <motion.form
+          onSubmit={handleSubmit}
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+          className="space-y-6"
+        >
 
-            {/* Essay Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Essay Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Essay Info */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-xl text-foreground leading-tight">The frame.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Title, target, context</p>
+                </div>
+              </div>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">
-                    Essay Title <span className="text-destructive">*</span>
+                  <Label htmlFor="title" className="text-foreground">
+                    Essay Title <span className="text-[color:var(--pn-pink)]">*</span>
                   </Label>
                   <div className="relative">
                     <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -535,7 +572,7 @@ const SubmitEssay = () => {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Common App Personal Statement"
-                      className="pl-10"
+                      className="pl-10 bg-white/[0.02] hairline"
                       required
                       disabled={isReadonly}
                     />
@@ -543,9 +580,9 @@ const SubmitEssay = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="targetSchool">Target School</Label>
+                  <Label htmlFor="targetSchool" className="text-foreground">Target School</Label>
                   {slotId && urlSchoolName ? (
-                    <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-muted/40 text-sm">
+                    <div className="flex items-center gap-2 h-10 px-3 rounded-md hairline bg-white/[0.02] text-sm">
                       <School className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-foreground">{urlSchoolName}</span>
                     </div>
@@ -557,111 +594,123 @@ const SubmitEssay = () => {
                         value={targetSchool}
                         onChange={(e) => setTargetSchool(e.target.value)}
                         placeholder="e.g. MIT, Harvard, Stanford..."
-                        className="pl-10"
+                        className="pl-10 bg-white/[0.02] hairline"
                       />
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </HairlineCard>
+          </motion.div>
 
-            {/* Word Limit */}
-            {!isReadonly && <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Hash className="h-5 w-5 text-primary" />
-                  Word Limit
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {WORD_LIMIT_OPTIONS.map((limit) => (
-                    <button
-                      key={limit}
-                      type="button"
-                      onClick={() => { setWordLimit(limit); setCustomWordLimit(""); }}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        wordLimit === limit
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
-                      }`}
-                    >
-                      {limit} words
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setWordLimit(null)}
-                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                      wordLimit === null && !customWordLimit
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
-                    }`}
-                  >
-                    No limit
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Or custom:</span>
-                  <Input
-                    type="number"
-                    placeholder="e.g. 800"
-                    value={customWordLimit}
-                    onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
-                    className="w-32"
-                    min="1"
-                  />
-                </div>
-              </CardContent>
-            </Card>}
-
-            {/* Essay Content */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <AlignLeft className="h-5 w-5 text-primary" />
-                    Essay Content <span className="text-destructive">*</span>
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
-                    >
-                      {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
-                    </Badge>
-                    {isOverLimit && <Badge variant="destructive">Over limit</Badge>}
-                    {!isReadonly && wordCount >= 50 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleAnalyseEssay}
-                        disabled={isAnalysing}
-                        className="gap-1.5"
-                      >
-                        {isAnalysing ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            Analysing…
-                          </>
-                        ) : (
-                          <>
-                            <ScanText className="h-3.5 w-3.5" />
-                            Analyse Essay
-                          </>
-                        )}
-                      </Button>
-                    )}
+          {/* Word Limit */}
+          {!isReadonly && (
+            <motion.div variants={sectionVariants}>
+              <HairlineCard>
+                <div className="flex items-center gap-3 mb-6">
+                  <Hash className="h-5 w-5 text-foreground/60" />
+                  <div>
+                    <h2 className="font-serif text-xl text-foreground leading-tight">How long.</h2>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Pick a target or set your own</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {WORD_LIMIT_OPTIONS.map((limit) => (
+                      <button
+                        key={limit}
+                        type="button"
+                        onClick={() => { setWordLimit(limit); setCustomWordLimit(""); }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-all hairline ${
+                          wordLimit === limit
+                            ? "bg-white/[0.08] text-foreground"
+                            : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span className="num-display">{limit}</span> words
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setWordLimit(null)}
+                      className={`px-4 py-2 rounded-lg text-sm transition-all hairline ${
+                        wordLimit === null && !customWordLimit
+                          ? "bg-white/[0.08] text-foreground"
+                          : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      No limit
+                    </button>
+                  </div>
 
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">Or custom:</span>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 800"
+                      value={customWordLimit}
+                      onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
+                      className="w-32 bg-white/[0.02] hairline"
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </HairlineCard>
+            </motion.div>
+          )}
+
+          {/* Essay Content */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <AlignLeft className="h-5 w-5 text-foreground/60" />
+                  <div>
+                    <h2 className="font-serif text-xl text-foreground leading-tight">
+                      The essay itself. <span className="text-[color:var(--pn-pink)]">*</span>
+                    </h2>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Draft, revise, submit</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline ${
+                    isOverLimit ? "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]" : "bg-white/[0.02] text-muted-foreground"
+                  }`}>
+                    <span className="num-display">{wordCount}</span>{effectiveWordLimit ? <> / <span className="num-display">{effectiveWordLimit}</span></> : ""} words
+                  </span>
+                  {isOverLimit && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]">
+                      Over limit
+                    </span>
+                  )}
+                  {!isReadonly && wordCount >= 50 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleAnalyseEssay}
+                      disabled={isAnalysing}
+                      className="gap-1.5 hairline hover:bg-white/[0.04] text-foreground"
+                    >
+                      {isAnalysing ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Analysing…
+                        </>
+                      ) : (
+                        <>
+                          <ScanText className="h-3.5 w-3.5" />
+                          Analyse Essay
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-3">
                 {!isReadonly && (
-                  <p className="text-xs text-muted-foreground">
-                    Tip: highlight any passage to get AI coaching on that section.
+                  <p className="text-xs text-muted-foreground font-serif italic">
+                    Highlight any passage for AI coaching on that section.
                   </p>
                 )}
 
@@ -672,8 +721,8 @@ const SubmitEssay = () => {
                   onMouseUp={isReadonly ? undefined : handleSelectionChange}
                   onKeyUp={isReadonly ? undefined : handleSelectionChange}
                   placeholder="Write or paste your essay here..."
-                  className={`resize-none min-h-[400px] text-sm leading-relaxed ${
-                    isOverLimit ? "border-destructive focus-visible:ring-destructive" : ""
+                  className={`resize-none min-h-[400px] font-serif text-base leading-relaxed bg-white/[0.02] hairline ${
+                    isOverLimit ? "border-[color:var(--pn-pink)] focus-visible:ring-[color:var(--pn-pink)]" : ""
                   } ${isReadonly ? "opacity-80 cursor-default" : ""}`}
                   required
                   readOnly={isReadonly}
@@ -681,11 +730,11 @@ const SubmitEssay = () => {
 
                 {/* Selection coaching bar */}
                 {!isReadonly && selectedText && (
-                  <div className="border border-primary/20 rounded-lg bg-primary/5 p-3 space-y-2">
+                  <div className="hairline rounded-lg bg-[color:var(--pn-pink)]/8 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-sm font-medium text-foreground">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MessageSquare className="h-4 w-4 text-[color:var(--pn-pink)] shrink-0" />
+                        <p className="text-sm text-foreground font-serif italic truncate">
                           "{selectedText.length > 60 ? selectedText.slice(0, 60) + "…" : selectedText}"
                         </p>
                       </div>
@@ -693,10 +742,10 @@ const SubmitEssay = () => {
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
+                          variant="ghost"
                           onClick={handleGetCoaching}
                           disabled={isCoaching}
-                          className="gap-1.5 h-7 text-xs"
+                          className="gap-1.5 h-7 text-xs hairline bg-white/[0.03] hover:bg-white/[0.06] text-foreground"
                         >
                           {isCoaching ? (
                             <>
@@ -721,7 +770,7 @@ const SubmitEssay = () => {
                     </div>
 
                     {selectionFeedback && (
-                      <div className="pt-1 border-t border-primary/10">
+                      <div className="pt-2 hairline-t">
                         <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
                           {selectionFeedback}
                         </p>
@@ -729,225 +778,234 @@ const SubmitEssay = () => {
                     )}
                   </div>
                 )}
-
-              </CardContent>
-            </Card>
-
-            {/* Recipient */}
-            {!isReadonly && <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Send className="h-5 w-5 text-primary" />
-                  Send To
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  {([
-                    { value: 'counselor', label: 'My Counselor', icon: GraduationCap },
-                    { value: 'teacher',   label: 'A Teacher',    icon: Users },
-                    { value: 'both',      label: 'Both',         icon: Send },
-                  ] as const).map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setRecipient(value)}
-                      className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-sm font-medium transition-all ${
-                        recipient === value
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {(recipient === 'teacher' || recipient === 'both') && (
-                  <div className="space-y-2 pt-1">
-                    <p className="text-xs text-muted-foreground font-medium">Select teacher</p>
-                    {teachers.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        No teachers found at your school. Ask your counselor to add one.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
-                        {teachers.map((t) => (
-                          <button
-                            key={t.user_id}
-                            type="button"
-                            onClick={() => setSelectedTeacherId(t.user_id)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm text-left transition-all ${
-                              selectedTeacherId === t.user_id
-                                ? "border-primary bg-primary/5 text-primary"
-                                : "border-border hover:bg-muted/50"
-                            }`}
-                          >
-                            <Users className="h-3.5 w-3.5 shrink-0" />
-                            {t.full_name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>}
-
-            {/* Submit */}
-            <div className="flex gap-3 pb-6">
-              {isReadonly ? (
-                <Button type="button" className="flex-1" onClick={() => navigate(-1)}>
-                  Back to Application
-                </Button>
-              ) : (
-              <>
-              <Button type="button" variant="outline" className="flex-1" onClick={() => navigate(-1)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 border-primary/30 text-primary hover:bg-primary/5"
-                disabled={isSavingDraft || isSubmitting}
-                onClick={handleSaveDraft}
-              >
-                {isSavingDraft ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Save & Continue Later
-                  </>
-                )}
-              </Button>
-              <Button type="submit" className="flex-1" disabled={isSubmitting || isSavingDraft || isOverLimit}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Submit Essay
-                  </>
-                )}
-              </Button>
-              </>
-              )}
-            </div>
-
-          </form>
-
-          {/* ── Right column: analysis panel ── */}
-          {showAnalysisPanel && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between sticky top-6">
-                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <ScanText className="h-4 w-4 text-primary" />
-                  Essay Analysis
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setAnalysisResult(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
               </div>
+            </HairlineCard>
+          </motion.div>
 
-              {isAnalysing && (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Bear with us, analysing your essay…
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysisResult && (
-                <>
-                  {/* Overall score */}
-                  <Card>
-                    <CardContent className="pt-5 pb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-foreground">Overall Score</span>
-                        <span className="text-2xl font-bold text-primary">
-                          {analysisResult.overallScore}
-                          <span className="text-sm font-normal text-muted-foreground">/100</span>
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {analysisResult.criteria.map((c) => (
-                          <div key={c.id}>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-muted-foreground">{c.name}</span>
-                              <span className="font-medium">{c.score}</span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{ width: `${c.score}%`, backgroundColor: c.color }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Issues */}
-                  <div className="space-y-2">
-                    {analysisResult.issues.map((issue) => (
-                      <Card key={issue.id} className="overflow-hidden">
-                        <div className="h-1 w-full" style={{ backgroundColor: issue.color }} />
-                        <CardContent className="pt-3 pb-3 space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold" style={{ color: issue.color }}>
-                              {issue.criterionName}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={`text-xs ${
-                                issue.severity === "high"
-                                  ? "border-destructive text-destructive"
-                                  : issue.severity === "medium"
-                                  ? "border-amber-500 text-amber-600"
-                                  : "border-muted-foreground text-muted-foreground"
-                              }`}
-                            >
-                              {issue.severity}
-                            </Badge>
-                          </div>
-                          <p className="text-xs font-medium text-foreground">{issue.problemType}</p>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {issue.problemDescription}
-                          </p>
-                          <div className="pt-1 border-t border-border">
-                            <p className="text-xs text-foreground leading-relaxed">
-                              <span className="font-medium">Suggestion: </span>
-                              {issue.recommendation}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
+          {/* Recipient */}
+          {!isReadonly && (
+            <motion.div variants={sectionVariants}>
+              <HairlineCard>
+                <div className="flex items-center gap-3 mb-6">
+                  <Send className="h-5 w-5 text-foreground/60" />
+                  <div>
+                    <h2 className="font-serif text-xl text-foreground leading-tight">Who reads it.</h2>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Choose your reader</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'counselor', label: 'My Counselor', icon: GraduationCap },
+                      { value: 'teacher',   label: 'A Teacher',    icon: Users },
+                      { value: 'both',      label: 'Both',         icon: Send },
+                    ] as const).map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setRecipient(value)}
+                        className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg text-sm transition-all hairline ${
+                          recipient === value
+                            ? "bg-white/[0.08] text-foreground"
+                            : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
+
+                  {(recipient === 'teacher' || recipient === 'both') && (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Select teacher</p>
+                      {teachers.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic font-serif">
+                          No teachers found at your school. Ask your counselor to add one.
+                        </p>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {teachers.map((t) => (
+                            <button
+                              key={t.user_id}
+                              type="button"
+                              onClick={() => setSelectedTeacherId(t.user_id)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all hairline ${
+                                selectedTeacherId === t.user_id
+                                  ? "bg-white/[0.08] text-foreground"
+                                  : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              <Users className="h-3.5 w-3.5 shrink-0" />
+                              {t.full_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </HairlineCard>
+            </motion.div>
           )}
 
-        </div>
+          {/* Submit */}
+          <motion.div variants={sectionVariants} className="flex gap-3 pb-6">
+            {isReadonly ? (
+              <Button
+                type="button"
+                className="flex-1 bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+                onClick={() => navigate(-1)}
+              >
+                Back to Application
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 hairline hover:bg-white/[0.03] text-muted-foreground"
+                  onClick={() => navigate(-1)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 hairline bg-transparent hover:bg-white/[0.04] text-foreground"
+                  disabled={isSavingDraft || isSubmitting}
+                  onClick={handleSaveDraft}
+                >
+                  {isSavingDraft ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Save & Continue Later
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-[color:var(--pn-pink)]/15 hairline text-[color:var(--pn-pink)] hover:bg-[color:var(--pn-pink)]/25 shadow-none"
+                  disabled={isSubmitting || isSavingDraft || isOverLimit}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Submit Essay
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </motion.div>
+
+        </motion.form>
+
+        {/* ── Right column: analysis panel ── */}
+        {showAnalysisPanel && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between sticky top-6">
+              <h2 className="font-serif text-lg text-foreground flex items-center gap-2">
+                <ScanText className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                What the reader sees.
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAnalysisResult(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {isAnalysing && (
+              <HairlineCard>
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground text-center font-serif italic">
+                    Reading it now.
+                  </p>
+                </div>
+              </HairlineCard>
+            )}
+
+            {analysisResult && (
+              <>
+                {/* Overall score */}
+                <HairlineCard>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Overall Score</span>
+                    <span className="num-display text-3xl text-foreground">
+                      {analysisResult.overallScore}
+                      <span className="text-sm text-muted-foreground">/100</span>
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {analysisResult.criteria.map((c) => (
+                      <div key={c.id}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">{c.name}</span>
+                          <span className="num-display text-foreground">{c.score}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: c.color }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${c.score}%` }}
+                            transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1] }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </HairlineCard>
+
+                {/* Issues */}
+                <div className="space-y-2">
+                  {analysisResult.issues.map((issue) => (
+                    <HairlineCard key={issue.id} className="overflow-hidden p-0">
+                      <div className="h-1 w-full" style={{ backgroundColor: issue.color }} />
+                      <div className="px-4 py-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color: issue.color }}>
+                            {issue.criterionName}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${severityPill(issue.severity)}`}>
+                            {issue.severity}
+                          </span>
+                        </div>
+                        <p className="text-xs text-foreground">{issue.problemType}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {issue.problemDescription}
+                        </p>
+                        <div className="pt-2 hairline-t">
+                          <p className="text-xs text-foreground leading-relaxed">
+                            <span className="text-[color:var(--pn-sage)]">Suggestion: </span>
+                            {issue.recommendation}
+                          </p>
+                        </div>
+                      </div>
+                    </HairlineCard>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
       </div>
-    </div>
+    </PageShell>
   );
 };
 

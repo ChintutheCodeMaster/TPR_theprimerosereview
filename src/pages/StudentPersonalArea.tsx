@@ -1,11 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/useStudentPersonalArea.ts";
 import { StudentActionItemsSection } from "@/components/StudentActionItemsSection";
 import type { TrackedChange } from "@/components/EssayFeedbackModal";
@@ -25,7 +30,6 @@ import {
   Clock,
   Calendar,
   Star,
-  History,
   AlertCircle,
   TrendingUp,
   MessageCircle,
@@ -37,15 +41,15 @@ import {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "approved":    return "bg-green-500 text-white";
-    case "sent":        return "bg-blue-500 text-white";
-    case "review":      return "bg-yellow-500 text-white";
-    case "in_progress": return "bg-yellow-500 text-white";
-    case "draft":       return "bg-blue-500 text-white";
-    case "completed":   return "bg-green-500 text-white";
-    case "in-progress": return "bg-yellow-500 text-white";
-    case "not-started": return "bg-gray-500 text-white";
-    default:            return "bg-gray-500 text-white";
+    case "approved":    return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+    case "sent":        return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+    case "review":      return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "in_progress": return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "draft":       return "bg-white/[0.06] text-foreground/80 hairline";
+    case "completed":   return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+    case "in-progress": return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "not-started": return "bg-white/[0.03] text-muted-foreground hairline";
+    default:            return "bg-white/[0.03] text-muted-foreground hairline";
   }
 };
 
@@ -212,45 +216,33 @@ const StudentPersonalArea = () => {
 
   // ── Render ────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">My Work</h1>
-        <p className="text-muted-foreground">
-          Manage your essays, tasks, and track your progress
-        </p>
-      </div>
+    <PageShell>
+      <BlurOrb tone="sage" className="top-[-100px] left-[-120px] w-[480px] h-[480px]" />
+
+      <PageHeader
+        eyebrow="My work"
+        title={<>Every draft you're carrying.</>}
+        subtitle={<>Essays, tasks, applications — the roster only you can see.</>}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="essays">Essays</TabsTrigger>
-          <TabsTrigger value="feedback">Feedback</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 bg-white/[0.02] hairline p-1 h-auto">
+          <TabsTrigger value="essays" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Essays</TabsTrigger>
+          <TabsTrigger value="feedback" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Feedback</TabsTrigger>
+          <TabsTrigger value="tasks" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Tasks</TabsTrigger>
+          <TabsTrigger value="applications" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Applications</TabsTrigger>
+          <TabsTrigger value="messages" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Messages</TabsTrigger>
         </TabsList>
 
         {/* ── Essays Tab ── */}
         <TabsContent value="essays" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">My Essays</h2>
-
-
-    
-            {/* <Button onClick={() => navigate('/submit-essay')}>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload New Essay
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/personal-essay')}>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Personal Essay
-            </Button> */}
+            <div>
+              <h2 className="font-serif text-2xl text-foreground leading-tight">Your drafts.</h2>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">In progress and finished</p>
+            </div>
             <div className="flex gap-2">
-              {/* <Button onClick={() => navigate('/submit-essay')}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload New Essay
-              </Button> */}
-
-              <Button onClick={() => navigate('/personal-essay')}>
+              <Button onClick={() => navigate('/personal-essay')} className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Personal Essay
               </Button>
@@ -259,59 +251,65 @@ const StudentPersonalArea = () => {
 
           {isLoadingEssays ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : essays.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No essays yet. Upload your first essay to get started.</p>
-              </CardContent>
-            </Card>
+            <HairlineCard variant="pink" className="p-12 text-center">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="font-serif italic text-muted-foreground">Nothing by that name — yet.</p>
+            </HairlineCard>
           ) : (
-            <div className="grid gap-4">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+              className="grid gap-4"
+            >
               {essays.map((essay) => (
-                <Card
+                <motion.div
                   key={essay.id}
-                  className="border-l-4 border-l-muted cursor-pointer hover:shadow-md transition-all"
-                  onClick={() => setSelectedEssay(essay)}
+                  variants={{
+                    hidden: { opacity: 0, y: 8, filter: 'blur(4px)' },
+                    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] } }
+                  }}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{essay.essay_title}</CardTitle>
+                  <HairlineCard
+                    className="cursor-pointer hover:bg-white/[0.03] transition-colors"
+                    onClick={() => setSelectedEssay(essay)}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif text-lg text-foreground leading-tight">{essay.essay_title}</h3>
                         {essay.essay_prompt && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {essay.essay_prompt}
                           </p>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge className={getStatusColor(essay.status)}>
+                      <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(essay.status)}`}>
                           {getStatusIcon(essay.status)}
-                          <span className="ml-1">{getStatusLabel(essay.status)}</span>
-                        </Badge>
+                          <span className="capitalize">{getStatusLabel(essay.status)}</span>
+                        </span>
                         {essay.status === "sent" && (
-                          <span className="text-xs text-blue-500 font-medium">(check feedback below)</span>
+                          <span className="text-[10px] text-[color:var(--pn-pink)]">(check feedback below)</span>
                         )}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Word Count</p>
-                        <p className="font-medium">{essay.essay_content.split(/\s+/).filter(Boolean).length} words</p>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Word Count</p>
+                        <p className="num-display text-foreground mt-1">{essay.essay_content.split(/\s+/).filter(Boolean).length}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Submitted</p>
-                        <p className="font-medium">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
+                        <p className="text-foreground mt-1">
                           {new Date(essay.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Feedback</p>
-                        <p className="font-medium">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Feedback</p>
+                        <p className="text-foreground mt-1">
                           {essay.status === "sent" || essay.status === "read"
                             ? "Available"
                             : "Pending"}
@@ -322,8 +320,7 @@ const StudentPersonalArea = () => {
                       {essay.status === "draft" ? (
                         <Button
                           size="sm"
-                          className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-                          variant="outline"
+                          className="bg-transparent hairline hover:bg-white/[0.04] text-[color:var(--pn-pink)] shadow-none"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(essay.target_school
@@ -335,132 +332,138 @@ const StudentPersonalArea = () => {
                         </Button>
                       ) : (
                         <>
-                          {/* <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="hairline hover:bg-white/[0.03] text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEssay(essay);
+                            }}
+                          >
                             View Details
-                          </Button> */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEssay(essay);
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          {/* <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="hairline hover:bg-white/[0.03] text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadEssay(essay);
+                            }}
+                          >
                             Download
-                          </Button> */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadEssay(essay);
-                              }}
-                            >
-                              Download
-                            </Button>
+                          </Button>
                         </>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </HairlineCard>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </TabsContent>
 
         {/* ── Feedback Tab ── */}
         <TabsContent value="feedback" className="space-y-6">
-          <h2 className="text-xl font-semibold">Feedback & Comments</h2>
+          <div>
+            <h2 className="font-serif text-2xl text-foreground leading-tight">What they said.</h2>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">Comments, scores, suggested edits</p>
+          </div>
 
           {isLoadingFeedback ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : sentFeedback.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No feedback yet. Your counselor will review your essays soon.</p>
-              </CardContent>
-            </Card>
+            <HairlineCard variant="sage" className="p-12 text-center">
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="font-serif italic text-muted-foreground">No news. Your counselor is reading.</p>
+            </HairlineCard>
           ) : (
-            <div className="space-y-4">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+              className="space-y-4"
+            >
               {sentFeedback.map((fb) => (
-                <Card key={fb.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">Essay Feedback</CardTitle>
-                      <Badge variant="outline">{fb.essay_title}</Badge>
+                <motion.div
+                  key={fb.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 8, filter: 'blur(4px)' },
+                    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] } }
+                  }}
+                >
+                  <HairlineCard>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-5 w-5 text-[color:var(--pn-gold)]" />
+                      <h3 className="font-serif text-xl text-foreground">Essay Feedback</h3>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline text-muted-foreground bg-white/[0.02]">{fb.essay_title}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mb-4">
                       Received{" "}
                       {fb.sent_at
                         ? new Date(fb.sent_at).toLocaleDateString()
                         : new Date(fb.created_at).toLocaleDateString()}
                     </p>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Personal message */}
-                    {fb.personal_message && (
-                      <div className="bg-primary/10 p-3 rounded-lg">
-                        <p className="text-xs font-medium text-primary mb-1">Personal Note:</p>
-                        <p className="text-sm">{fb.personal_message}</p>
-                      </div>
-                    )}
 
-                    {/* Score */}
-                    {fb.ai_analysis?.overallScore && (
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">
-                          Overall Score: {fb.ai_analysis.overallScore}/100
-                        </span>
-                      </div>
-                    )}
+                    <div className="space-y-4">
+                      {fb.personal_message && (
+                        <div className="hairline bg-white/[0.02] p-3 rounded-lg">
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Personal Note</p>
+                          <p className="text-sm text-foreground font-serif italic">{fb.personal_message}</p>
+                        </div>
+                      )}
 
-                    {/* Strengths / Improvements */}
-                    {(fb.ai_analysis?.strengths || fb.ai_analysis?.improvements) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {fb.ai_analysis.strengths && (
-                          <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
-                            <h4 className="font-medium text-sm mb-2 text-green-700 dark:text-green-400">
-                              Strengths
-                            </h4>
-                            <ul className="text-sm space-y-1">
-                              {fb.ai_analysis.strengths.map((s, i) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <CheckCircle className="h-3 w-3 text-green-600 mt-0.5 shrink-0" />
-                                  {s}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {fb.ai_analysis.improvements && (
-                          <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg">
-                            <h4 className="font-medium text-sm mb-2 text-orange-700 dark:text-orange-400">
-                              Areas to Improve
-                            </h4>
-                            <ul className="text-sm space-y-1">
-                              {fb.ai_analysis.improvements.map((s, i) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <TrendingUp className="h-3 w-3 text-orange-600 mt-0.5 shrink-0" />
-                                  {s}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      {fb.ai_analysis?.overallScore && (
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                          <span className="text-sm text-foreground">
+                            Overall Score: <span className="num-display">{fb.ai_analysis.overallScore}</span>/100
+                          </span>
+                        </div>
+                      )}
+
+                      {(fb.ai_analysis?.strengths || fb.ai_analysis?.improvements) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {fb.ai_analysis.strengths && (
+                            <div className="hairline bg-[color:var(--pn-sage)]/5 p-3 rounded-lg">
+                              <h4 className="text-[10px] uppercase tracking-[0.18em] mb-2 text-[color:var(--pn-sage)]">
+                                Strengths
+                              </h4>
+                              <ul className="text-sm space-y-1 text-foreground">
+                                {fb.ai_analysis.strengths.map((s, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <CheckCircle className="h-3 w-3 text-[color:var(--pn-sage)] mt-0.5 shrink-0" />
+                                    {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {fb.ai_analysis.improvements && (
+                            <div className="hairline bg-[color:var(--pn-gold)]/5 p-3 rounded-lg">
+                              <h4 className="text-[10px] uppercase tracking-[0.18em] mb-2 text-[color:var(--pn-gold)]">
+                                Areas to Improve
+                              </h4>
+                              <ul className="text-sm space-y-1 text-foreground">
+                                {fb.ai_analysis.improvements.map((s, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <TrendingUp className="h-3 w-3 text-[color:var(--pn-gold)] mt-0.5 shrink-0" />
+                                    {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </HairlineCard>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </TabsContent>
 
@@ -472,34 +475,41 @@ const StudentPersonalArea = () => {
         {/* ── Messages Tab ── */}
         <TabsContent value="messages" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Messages with Counselor</h2>
-            <Button>
+            <div>
+              <h2 className="font-serif text-2xl text-foreground leading-tight">Threads with your counselor.</h2>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">The quiet back-channel</p>
+            </div>
+            <Button className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none">
               <MessageSquare className="h-4 w-4 mr-2" />
               New Message
             </Button>
           </div>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center py-8">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Start a Conversation</h3>
-                <p className="text-muted-foreground mb-4">
-                  Send a message to your counselor for help with essays, applications, or any
-                  questions.
-                </p>
-                <Button onClick={() => navigate('/student-messages')}>
-                  Check if you have messages
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <HairlineCard variant="pink" className="p-12 text-center">
+            <MessageSquare className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+            <h3 className="font-serif text-lg text-foreground mb-2">Nothing here yet.</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+              Say hello, or ask about a draft. Your counselor is on the other end.
+            </p>
+            <Button
+              onClick={() => navigate('/student-messages')}
+              className="bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+            >
+              Check if you have messages
+            </Button>
+          </HairlineCard>
         </TabsContent>
 
         {/* ── Applications Tab ── */}
         <TabsContent value="applications" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">My Applications</h2>
-            <Button onClick={() => navigate('/add-application')}>
+            <div>
+              <h2 className="font-serif text-2xl text-foreground leading-tight">Your list.</h2>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">The names, weighted by deadline</p>
+            </div>
+            <Button
+              onClick={() => navigate('/add-application')}
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Application
             </Button>
@@ -507,86 +517,105 @@ const StudentPersonalArea = () => {
 
           {isLoadingApplications ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : applications.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                <GraduationCap className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No applications yet.</p>
-                <Button variant="outline" className="mt-4" onClick={() => navigate('/add-application')}>
-                  Add Your First Application
-                </Button>
-              </CardContent>
-            </Card>
+            <HairlineCard variant="gold" className="p-12 text-center">
+              <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="font-serif italic text-muted-foreground mb-6">Nothing added yet.</p>
+              <Button
+                onClick={() => navigate('/add-application')}
+                className="bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+              >
+                Add your first application
+              </Button>
+            </HairlineCard>
           ) : (
-            <div className="grid gap-4">
-              {applications.map((app) => (
-                <Card
-  key={app.id}
-  className="border-l-4 border-l-primary/30 cursor-pointer hover:shadow-md transition-all"
-  onClick={() => setSelectedApplication(app as ApplicationWithProfile)}
->
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{app.school_name}</h3>
-                        {app.program && (
-                          <p className="text-sm text-muted-foreground">{app.program}</p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Deadline: {new Date(app.deadline_date).toLocaleDateString()}
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+              className="grid gap-4"
+            >
+              {applications.map((app) => {
+                const pct = app.required_essays
+                  ? Math.round((((slotCounts[app.id]?.approved ?? 0) + (slotCounts[app.id]?.inReview ?? 0) + (slotCounts[app.id]?.sent ?? 0)) / app.required_essays) * 100)
+                  : 0
+                const statusPillClass = (() => {
+                  if (app.status === "sent") return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)]"
+                  const c = slotCounts[app.id]
+                  if (!c || c.total === 0) return "bg-white/[0.03] text-muted-foreground"
+                  if (c.inReview > 0 || c.approved > 0) return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)]"
+                  if (c.draft > 0) return "bg-white/[0.06] text-foreground/80"
+                  return "bg-white/[0.03] text-muted-foreground"
+                })()
+                const statusLabel = (() => {
+                  if (app.status === "sent") return "Submitted"
+                  const c = slotCounts[app.id]
+                  if (!c || c.total === 0) return "Not Started"
+                  if (c.inReview > 0 || c.sent > 0 || c.approved > 0) return "In Progress"
+                  if (c.draft > 0) return "In Draft"
+                  return "Not Started"
+                })()
+                return (
+                  <motion.div
+                    key={app.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 8, filter: 'blur(4px)' },
+                      visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] } }
+                    }}
+                  >
+                    <HairlineCard
+                      className="cursor-pointer hover:bg-white/[0.03] transition-colors"
+                      onClick={() => setSelectedApplication(app as ApplicationWithProfile)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-serif text-lg text-foreground leading-tight">{app.school_name}</h3>
+                          {app.program && (
+                            <p className="text-sm text-muted-foreground mt-1">{app.program}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground flex-wrap">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3" />
+                              Deadline: {new Date(app.deadline_date).toLocaleDateString()}
+                            </span>
+                            <span>
+                              Essays: <span className="text-foreground">{(slotCounts[app.id]?.approved ?? 0) + (slotCounts[app.id]?.inReview ?? 0) + (slotCounts[app.id]?.sent ?? 0)}/{app.required_essays ?? 0}</span>
+                            </span>
+                            <span>
+                              Recs: <span className="text-foreground">{app.recommendations_submitted}/{app.recommendations_requested}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline ${statusPillClass}`}>
+                            {statusLabel}
                           </span>
-                          <span>
-                            Essays: {(slotCounts[app.id]?.approved ?? 0) + (slotCounts[app.id]?.inReview ?? 0) + (slotCounts[app.id]?.sent ?? 0)}/{app.required_essays ?? 0} submitted
+                          <span className="num-display text-lg text-foreground">
+                            {pct}%
                           </span>
-                          <span>
-                            Recs: {app.recommendations_submitted}/{app.recommendations_requested}
-                          </span>
+                          {app.urgent && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]">
+                              ⚠ Urgent
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge className={(() => {
-                          if (app.status === "sent") return "bg-green-500 text-white";
-                          const c = slotCounts[app.id];
-                          if (!c || c.total === 0) return "bg-gray-500 text-white";
-                          if (c.inReview > 0 || c.approved > 0) return "bg-yellow-500 text-white";
-                          if (c.draft > 0) return "bg-blue-500 text-white";
-                          return "bg-gray-500 text-white";
-                        })()}>
-                          {(() => {
-                            if (app.status === "sent") return "Submitted";
-                            const c = slotCounts[app.id];
-                            if (!c || c.total === 0) return "Not Started";
-                            if (c.inReview > 0 || c.sent > 0 || c.approved > 0) return "In Progress";
-                            if (c.draft > 0) return "In Draft";
-                            return "Not Started";
-                          })()}
-                        </Badge>
-                        <span className="text-sm font-medium text-primary">
-                          {app.required_essays
-                            ? Math.round((((slotCounts[app.id]?.approved ?? 0) + (slotCounts[app.id]?.inReview ?? 0) + (slotCounts[app.id]?.sent ?? 0)) / app.required_essays) * 100)
-                            : 0}% complete
-                        </span>
-                        {app.urgent && (
-                          <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-                            ⚠ Urgent
-                          </Badge>
-                        )}
+                      <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden mt-3">
+                        <motion.div
+                          className="h-full"
+                          style={{ background: 'var(--pn-sage)' }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1], delay: 0.15 }}
+                        />
                       </div>
-                    </div>
-                    <Progress
-                      value={app.required_essays
-                        ? Math.round((((slotCounts[app.id]?.approved ?? 0) + (slotCounts[app.id]?.inReview ?? 0) + (slotCounts[app.id]?.sent ?? 0)) / app.required_essays) * 100)
-                        : 0}
-                      className="mt-3 h-2"
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </HairlineCard>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
           )}
         </TabsContent>
         <ApplicationDetailModal
@@ -608,19 +637,19 @@ const StudentPersonalArea = () => {
 
       {/* ── Essay Detail Modal ── */}
       <Dialog open={!!selectedEssay} onOpenChange={() => setSelectedEssay(null)}>
-        <DialogContent className="max-w-[95vw] w-[1200px] h-[88vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b shrink-0">
+        <DialogContent className="max-w-[95vw] w-[1200px] h-[88vh] p-0 flex flex-col bg-pn-card">
+          <DialogHeader className="px-6 py-4 hairline-b shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg">{selectedEssay?.essay_title}</DialogTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <DialogTitle className="font-serif text-2xl text-foreground leading-tight">{selectedEssay?.essay_title}</DialogTitle>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">
                   {new Date(selectedEssay?.created_at ?? "").toLocaleDateString()}
                 </p>
               </div>
-              <Badge className={getStatusColor(selectedEssay?.status ?? "")}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(selectedEssay?.status ?? "")}`}>
                 {getStatusIcon(selectedEssay?.status ?? "")}
-                <span className="ml-1 capitalize">{getStatusLabel(selectedEssay?.status ?? "")}</span>
-              </Badge>
+                <span className="capitalize">{getStatusLabel(selectedEssay?.status ?? "")}</span>
+              </span>
             </div>
           </DialogHeader>
 
@@ -628,16 +657,14 @@ const StudentPersonalArea = () => {
 
             {/* ── Left sidebar: score + criteria ── */}
             {essayFeedback.some(fb => fb.ai_analysis?.overallScore) && (
-              <div className="w-[140px] shrink-0 border-r flex flex-col gap-4 p-4 overflow-y-auto">
+              <div className="w-[140px] shrink-0 hairline-r flex flex-col gap-4 p-4 overflow-y-auto">
                 {essayFeedback.map(fb => fb.ai_analysis?.overallScore ? (
                   <div key={fb.id}>
-                    <Card className="bg-gradient-to-br from-primary/5 to-primary/10 mb-3">
-                      <CardContent className="p-3 text-center">
-                        <Star className="h-4 w-4 text-primary mx-auto mb-1" />
-                        <div className="text-2xl font-bold text-primary">{fb.ai_analysis!.overallScore}</div>
-                        <div className="text-[10px] text-muted-foreground">/100</div>
-                      </CardContent>
-                    </Card>
+                    <div className="hairline bg-[color:var(--pn-gold)]/10 rounded-2xl p-3 text-center mb-3">
+                      <Star className="h-4 w-4 text-[color:var(--pn-gold)] mx-auto mb-1" />
+                      <div className="num-display text-2xl text-foreground">{fb.ai_analysis!.overallScore}</div>
+                      <div className="text-[10px] text-muted-foreground">/100</div>
+                    </div>
                     {Array.isArray(fb.ai_analysis?.criteria) && fb.ai_analysis!.criteria.map((c: any) => (
                       <div key={c.id} className="space-y-1 mb-2">
                         <div className="flex items-center gap-1">
@@ -645,8 +672,10 @@ const StudentPersonalArea = () => {
                           <span className="text-[10px] text-muted-foreground truncate">{c.name?.split(' & ')[0]}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Progress value={c.score} className="h-1.5 flex-1" />
-                          <span className="text-[10px] font-medium w-5 text-right">{c.score}</span>
+                          <div className="h-1.5 rounded-full bg-white/[0.05] flex-1 overflow-hidden">
+                            <div className="h-full" style={{ width: `${c.score}%`, backgroundColor: c.color }} />
+                          </div>
+                          <span className="num-display text-[10px] w-5 text-right text-foreground">{c.score}</span>
                         </div>
                       </div>
                     ))}
@@ -656,31 +685,31 @@ const StudentPersonalArea = () => {
             )}
 
             {/* ── Center: essay with tracked changes ── */}
-            <div className="flex-1 flex flex-col min-w-0 border-r">
+            <div className="flex-1 flex flex-col min-w-0 hairline-r">
               {selectedEssay?.essay_prompt && (
-                <div className="px-5 py-3 border-b bg-muted/30 shrink-0">
-                  <p className="text-xs text-muted-foreground font-medium">Prompt</p>
-                  <p className="text-xs mt-0.5">{selectedEssay.essay_prompt}</p>
+                <div className="px-5 py-3 hairline-b bg-white/[0.02] shrink-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Prompt</p>
+                  <p className="text-xs mt-1 text-foreground font-serif italic">{selectedEssay.essay_prompt}</p>
                 </div>
               )}
               {trackedChanges.length > 0 && (
-                <div className="px-5 py-2 border-b bg-muted/20 shrink-0">
+                <div className="px-5 py-2 hairline-b bg-white/[0.015] shrink-0">
                   <p className="text-xs text-muted-foreground">
-                    Your counselor suggested edits are shown inline —{" "}
-                    <del className="text-red-500">original</del>{" "}
-                    <ins className="text-green-700 no-underline font-medium">replacement</ins>
+                    Suggested edits shown inline —{" "}
+                    <del className="text-[color:var(--pn-pink)]">original</del>{" "}
+                    <ins className="text-[color:var(--pn-sage)] no-underline">replacement</ins>
                   </p>
                 </div>
               )}
               <ScrollArea className="flex-1">
-                <div className="p-5">
+                <div className="p-6">
                   {selectedEssay?.essay_content ? (
-                    <div className="space-y-0">
+                    <div className="space-y-0 font-serif text-base leading-relaxed text-foreground max-w-[68ch]">
                       {paragraphData.map((para) => {
                         const paraChanges = paragraphChangeMap.get(para.index) ?? [];
                         return (
                           <div key={para.index} className="min-h-[1.5em]">
-                            <div className="text-sm leading-relaxed text-foreground">
+                            <div>
                               {para.text.trim() === ''
                                 ? <span>&nbsp;</span>
                                 : renderParagraph(para.text, para.start, paraChanges)
@@ -692,8 +721,8 @@ const StudentPersonalArea = () => {
                     </div>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No content yet.</p>
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-40" />
+                      <p className="font-serif italic">No content yet.</p>
                     </div>
                   )}
                 </div>
@@ -702,19 +731,19 @@ const StudentPersonalArea = () => {
 
             {/* ── Right: feedback panel ── */}
             <div className="w-[320px] shrink-0 flex flex-col">
-              <div className="px-4 py-3 border-b bg-primary/5 shrink-0 space-y-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-primary" />
+              <div className="px-4 py-3 hairline-b bg-white/[0.015] shrink-0 space-y-2">
+                <h3 className="text-sm font-serif text-foreground flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-[color:var(--pn-pink)]" />
                   Feedback
                 </h3>
-                <div className="flex rounded-lg border overflow-hidden text-xs">
+                <div className="flex rounded-lg hairline overflow-hidden text-xs">
                   <button
                     type="button"
                     onClick={() => setFeedbackSource('counselor')}
-                    className={`flex-1 py-1.5 font-medium transition-colors ${
+                    className={`flex-1 py-1.5 transition-colors ${
                       feedbackSource === 'counselor'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-background text-muted-foreground hover:bg-muted/50'
+                        ? 'bg-white/[0.08] text-foreground'
+                        : 'bg-transparent text-muted-foreground hover:bg-white/[0.03]'
                     }`}
                   >
                     Counselor
@@ -722,14 +751,14 @@ const StudentPersonalArea = () => {
                   <button
                     type="button"
                     onClick={() => setFeedbackSource('teacher')}
-                    className={`flex-1 py-1.5 font-medium transition-colors ${
+                    className={`flex-1 py-1.5 transition-colors ${
                       feedbackSource === 'teacher'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-background text-muted-foreground hover:bg-muted/50'
+                        ? 'bg-white/[0.08] text-foreground'
+                        : 'bg-transparent text-muted-foreground hover:bg-white/[0.03]'
                     }`}
                   >
                     Teacher
-                    {teacherFeedback && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />}
+                    {teacherFeedback && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[color:var(--pn-sage)] inline-block" />}
                   </button>
                 </div>
               </div>
@@ -740,39 +769,38 @@ const StudentPersonalArea = () => {
                   {feedbackSource === 'counselor' && (
                     essayFeedback.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground">
-                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">No feedback yet</p>
-                        <p className="text-xs mt-1">Your counselor will review your essay soon</p>
+                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                        <p className="font-serif italic text-sm">No news. Your counselor is reading.</p>
                       </div>
                     ) : (
                       essayFeedback.map((fb) => (
                         <div key={fb.id} className="space-y-2">
                           {fb.personal_message && (
-                            <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
-                              <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
-                              <p className="text-xs">{fb.personal_message}</p>
+                            <div className="hairline bg-white/[0.02] p-3 rounded-xl">
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Personal Note</p>
+                              <p className="text-xs text-foreground font-serif italic">{fb.personal_message}</p>
                             </div>
                           )}
                           {fb.track_changes?.length > 0 && (
-                            <div className="rounded-xl border p-3 space-y-2 bg-muted/20">
-                              <p className="text-xs font-semibold flex items-center gap-1.5">
+                            <div className="rounded-xl hairline p-3 space-y-2 bg-white/[0.02]">
+                              <p className="text-xs flex items-center gap-1.5 text-foreground">
                                 <Strikethrough className="h-3.5 w-3.5" />
                                 Suggested Edits ({fb.track_changes.length})
                               </p>
                               {fb.track_changes.map((change) => (
-                                <div key={change.id} className="space-y-0.5 text-xs border-t pt-1.5 border-border/50">
-                                  <del className="text-red-500 line-through block">{change.originalText}</del>
-                                  <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
+                                <div key={change.id} className="space-y-0.5 text-xs hairline-t pt-1.5">
+                                  <del className="text-[color:var(--pn-pink)] line-through block">{change.originalText}</del>
+                                  <ins className="text-[color:var(--pn-sage)] no-underline block">{change.suggestedText}</ins>
                                 </div>
                               ))}
                             </div>
                           )}
                           {fb.feedback_items.map((item, idx) => (
-                            <div key={item.id ?? idx} className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5">
+                            <div key={item.id ?? idx} className="p-2.5 rounded-xl hairline bg-white/[0.02] space-y-0.5">
                               {item.criterionName && (
-                                <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.criterionName}</p>
                               )}
-                              <p className="text-xs leading-snug">{item.text}</p>
+                              <p className="text-xs leading-snug text-foreground">{item.text}</p>
                             </div>
                           ))}
                           <p className="text-[10px] text-muted-foreground text-right pt-1">
@@ -787,38 +815,37 @@ const StudentPersonalArea = () => {
                   {feedbackSource === 'teacher' && (
                     !teacherFeedback ? (
                       <div className="text-center py-12 text-muted-foreground">
-                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">No feedback yet</p>
-                        <p className="text-xs mt-1">Your teacher hasn't sent feedback on this essay yet</p>
+                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                        <p className="font-serif italic text-sm">Your teacher hasn't weighed in yet.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {teacherFeedback.personal_message && (
-                          <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
-                            <p className="text-xs font-semibold text-primary mb-1">Personal Note</p>
-                            <p className="text-xs">{teacherFeedback.personal_message}</p>
+                          <div className="hairline bg-white/[0.02] p-3 rounded-xl">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Personal Note</p>
+                            <p className="text-xs text-foreground font-serif italic">{teacherFeedback.personal_message}</p>
                           </div>
                         )}
                         {teacherFeedback.track_changes?.length > 0 && (
-                          <div className="rounded-xl border p-3 space-y-2 bg-muted/20">
-                            <p className="text-xs font-semibold flex items-center gap-1.5">
+                          <div className="rounded-xl hairline p-3 space-y-2 bg-white/[0.02]">
+                            <p className="text-xs flex items-center gap-1.5 text-foreground">
                               <Strikethrough className="h-3.5 w-3.5" />
                               Suggested Edits ({teacherFeedback.track_changes.length})
                             </p>
                             {teacherFeedback.track_changes.map((change: any) => (
-                              <div key={change.id} className="space-y-0.5 text-xs border-t pt-1.5 border-border/50">
-                                <del className="text-red-500 line-through block">{change.originalText}</del>
-                                <ins className="text-green-700 no-underline block font-medium">{change.suggestedText}</ins>
+                              <div key={change.id} className="space-y-0.5 text-xs hairline-t pt-1.5">
+                                <del className="text-[color:var(--pn-pink)] line-through block">{change.originalText}</del>
+                                <ins className="text-[color:var(--pn-sage)] no-underline block">{change.suggestedText}</ins>
                               </div>
                             ))}
                           </div>
                         )}
                         {(teacherFeedback.feedback_items ?? []).map((item: any, idx: number) => (
-                          <div key={item.id ?? idx} className="p-2.5 rounded-xl border border-border bg-muted/30 space-y-0.5">
+                          <div key={item.id ?? idx} className="p-2.5 rounded-xl hairline bg-white/[0.02] space-y-0.5">
                             {item.criterionName && (
-                              <p className="text-[10px] font-medium text-muted-foreground">{item.criterionName}</p>
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.criterionName}</p>
                             )}
-                            <p className="text-xs leading-snug">{item.text}</p>
+                            <p className="text-xs leading-snug text-foreground">{item.text}</p>
                           </div>
                         ))}
                         <p className="text-[10px] text-muted-foreground text-right pt-1">
@@ -833,9 +860,9 @@ const StudentPersonalArea = () => {
             </div>
           </div>
 
-          <div className="p-4 border-t flex gap-2">
+          <div className="p-4 hairline-t flex gap-2">
             <Button
-              className="flex-1"
+              className="flex-1 bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
               onClick={() => {
                 const id = selectedEssay?.id;
                 setSelectedEssay(null);
@@ -848,7 +875,7 @@ const StudentPersonalArea = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 
