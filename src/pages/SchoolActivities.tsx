@@ -1,10 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Music,
   Star,
-  FlaskConical,
   BookOpen,
   Trophy,
   Heart,
@@ -17,36 +15,36 @@ import {
 } from "lucide-react";
 import { useSchoolActivities, type SchoolActivity } from "@/hooks/useSchoolActivities";
 import { useSchoolIdForCurrentUser } from "@/hooks/useSchoolIdForCurrentUser";
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
-// ── Category styling maps (same look as before) ───────────────────────────────
-const categoryColors: Record<string, string> = {
-  Performance: "bg-pink-100 text-pink-700 border-pink-200",
-  Social:      "bg-violet-100 text-violet-700 border-violet-200",
-  Academic:    "bg-sky-100 text-sky-700 border-sky-200",
-  Ceremony:    "bg-red-100 text-red-700 border-red-200",
-  Sports:      "bg-orange-100 text-orange-700 border-orange-200",
-  Community:   "bg-teal-100 text-teal-700 border-teal-200",
-  General:     "bg-gray-100 text-gray-600 border-gray-200",
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
 };
 
-const categoryGradients: Record<string, string> = {
-  Performance: "from-pink-500 to-rose-500",
-  Social:      "from-violet-500 to-purple-600",
-  Academic:    "from-sky-500 to-blue-600",
-  Ceremony:    "from-red-400 to-pink-500",
-  Sports:      "from-orange-500 to-yellow-500",
-  Community:   "from-teal-500 to-emerald-600",
-  General:     "from-gray-400 to-slate-500",
+const categoryTone: Record<string, string> = {
+  Performance: "var(--pn-pink)",
+  Social:      "var(--pn-pink)",
+  Academic:    "var(--pn-sage)",
+  Ceremony:    "var(--pn-pink)",
+  Sports:      "var(--pn-gold)",
+  Community:   "var(--pn-sage)",
+  General:     "rgba(255,255,255,0.5)",
 };
 
-const categoryBg: Record<string, string> = {
-  Performance: "bg-pink-50 border-pink-200",
-  Social:      "bg-violet-50 border-violet-200",
-  Academic:    "bg-sky-50 border-sky-200",
-  Ceremony:    "bg-red-50 border-red-200",
-  Sports:      "bg-orange-50 border-orange-200",
-  Community:   "bg-teal-50 border-teal-200",
-  General:     "bg-gray-50 border-gray-200",
+const categoryPill: Record<string, string> = {
+  Performance: "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline",
+  Social:      "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline",
+  Academic:    "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline",
+  Ceremony:    "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline",
+  Sports:      "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline",
+  Community:   "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline",
+  General:     "bg-white/[0.03] text-muted-foreground hairline",
 };
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -59,79 +57,80 @@ const categoryIcons: Record<string, React.ElementType> = {
   General:     Star,
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 const UpcomingCard = ({ activity }: { activity: SchoolActivity }) => {
   const Icon = categoryIcons[activity.category] ?? Star;
-  const gradient = categoryGradients[activity.category] ?? "from-gray-400 to-slate-500";
-  const bg = categoryBg[activity.category] ?? "bg-gray-50 border-gray-200";
-  const badgeColor = categoryColors[activity.category] ?? "bg-gray-100 text-gray-600 border-gray-200";
+  const tone = categoryTone[activity.category] ?? "rgba(255,255,255,0.5)";
+  const pill = categoryPill[activity.category] ?? "bg-white/[0.03] text-muted-foreground hairline";
 
   return (
-    <Card className={`border-2 ${bg} overflow-hidden hover:shadow-md transition-shadow`}>
-      <div className={`h-1.5 w-full bg-gradient-to-r ${gradient}`} />
+    <HairlineCard className="p-0 overflow-hidden hover:bg-white/[0.02] transition-colors">
+      <div className="h-1.5 w-full" style={{ background: tone }} />
       <div className="p-5 space-y-3">
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-            <Icon className="h-5 w-5 text-white" />
+          <div
+            className="w-10 h-10 rounded-xl hairline flex items-center justify-center shrink-0"
+            style={{ background: `${tone}20` }}
+          >
+            <Icon className="h-5 w-5" style={{ color: tone }} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-foreground leading-tight">{activity.title}</h3>
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              <Badge className={`text-xs font-medium border ${badgeColor}`}>
+            <h3 className="font-serif text-xl text-foreground leading-tight">{activity.title}</h3>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.14em] ${pill}`}>
                 {activity.category}
-              </Badge>
+              </span>
             </div>
           </div>
         </div>
 
         <div className="space-y-1.5 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-medium text-foreground">{activity.date}</span>
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-[color:var(--pn-gold)]" />
+            <span className="text-foreground">{activity.date}</span>
           </div>
           {activity.time && (
             <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <Clock className="h-3.5 w-3.5 shrink-0 text-[color:var(--pn-sage)]" />
               <span>{activity.time}</span>
             </div>
           )}
           {activity.location && (
             <div className="flex items-start gap-2">
-              <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-[color:var(--pn-pink)]" />
               <span>{activity.location}</span>
             </div>
           )}
         </div>
 
         {activity.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed border-t border-inherit pt-3">
+          <p className="text-sm text-muted-foreground leading-relaxed hairline-t pt-3 font-serif italic">
             {activity.description}
           </p>
         )}
       </div>
-    </Card>
+    </HairlineCard>
   );
 };
 
 const PastCard = ({ activity }: { activity: SchoolActivity }) => {
   const Icon = categoryIcons[activity.category] ?? Star;
   return (
-    <Card className="border bg-gray-50 overflow-hidden opacity-80">
-      <div className="h-1.5 w-full bg-gray-300" />
+    <HairlineCard className="p-0 overflow-hidden opacity-70 hover:opacity-90 transition-opacity">
+      <div className="h-1.5 w-full bg-white/[0.08]" />
       <div className="p-5 space-y-3">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
-            <Icon className="h-5 w-5 text-gray-500" />
+          <div className="w-10 h-10 rounded-xl hairline bg-white/[0.03] flex items-center justify-center shrink-0">
+            <Icon className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-foreground leading-tight">{activity.title}</h3>
-            <div className="flex gap-1.5 mt-1.5">
-              <Badge className="text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+            <h3 className="font-serif text-lg text-foreground leading-tight">{activity.title}</h3>
+            <div className="flex gap-1.5 mt-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.14em] bg-white/[0.03] text-muted-foreground hairline">
                 {activity.category}
-              </Badge>
-              <Badge className="text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.14em] bg-white/[0.03] text-muted-foreground hairline">
                 Completed
-              </Badge>
+              </span>
             </div>
           </div>
         </div>
@@ -150,16 +149,15 @@ const PastCard = ({ activity }: { activity: SchoolActivity }) => {
         </div>
 
         {activity.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed border-t border-gray-200 pt-3">
+          <p className="text-sm text-muted-foreground leading-relaxed hairline-t pt-3 font-serif italic">
             {activity.description}
           </p>
         )}
       </div>
-    </Card>
+    </HairlineCard>
   );
 };
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 const SchoolActivities = () => {
   const { data: schoolId } = useSchoolIdForCurrentUser();
   const { data: activities = [], isLoading } = useSchoolActivities(schoolId ?? undefined);
@@ -168,60 +166,70 @@ const SchoolActivities = () => {
   const past      = activities.filter(a => a.status === "Past" || a.status === "Cancelled");
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">School Activities</h1>
-        <p className="text-base text-muted-foreground mt-1">
-          Upcoming and recent events at your school
-        </p>
-      </div>
+    <PageShell>
+      <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
-        </div>
-      ) : activities.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
-          <PartyPopper className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">No activities posted yet.</p>
-        </Card>
-      ) : (
-        <>
-          {/* Upcoming */}
-          {upcoming.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 rounded-full bg-gradient-to-b from-violet-500 to-pink-500" />
-                <h2 className="text-xl font-bold text-foreground">Upcoming Events</h2>
-                <span className="ml-1 text-sm font-semibold px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200">
-                  {upcoming.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {upcoming.map(a => <UpcomingCard key={a.id} activity={a} />)}
-              </div>
-            </section>
-          )}
+      <PageHeader
+        eyebrow="School"
+        title={<>What's happening on campus.</>}
+        subtitle={<>Upcoming events and recent moments from your child's school.</>}
+      />
 
-          {/* Past */}
-          {past.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 rounded-full bg-gray-300" />
-                <h2 className="text-xl font-bold text-foreground">Past Events</h2>
-                <span className="ml-1 text-sm font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
-                  {past.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {past.map(a => <PastCard key={a.id} activity={a} />)}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-    </div>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-8 max-w-5xl mx-auto"
+      >
+        {isLoading ? (
+          <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
+          </motion.div>
+        ) : activities.length === 0 ? (
+          <motion.div variants={sectionVariants}>
+            <HairlineCard variant="pink" className="p-12 text-center">
+              <PartyPopper className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+              <h3 className="font-serif text-xl text-foreground mb-2">Nothing on the horizon — yet.</h3>
+              <p className="font-serif italic text-muted-foreground">
+                Once the school posts events, they'll appear here.
+              </p>
+            </HairlineCard>
+          </motion.div>
+        ) : (
+          <>
+            {upcoming.length > 0 && (
+              <motion.section variants={sectionVariants}>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-1 h-6 rounded-full bg-[color:var(--pn-pink)]" />
+                  <h2 className="font-serif text-2xl text-foreground leading-tight">Coming up.</h2>
+                  <span className="hairline rounded-full px-2.5 py-0.5 text-xs bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] num-display">
+                    {upcoming.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {upcoming.map(a => <UpcomingCard key={a.id} activity={a} />)}
+                </div>
+              </motion.section>
+            )}
+
+            {past.length > 0 && (
+              <motion.section variants={sectionVariants}>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-1 h-6 rounded-full bg-white/[0.15]" />
+                  <h2 className="font-serif text-2xl text-foreground leading-tight">Already happened.</h2>
+                  <span className="hairline rounded-full px-2.5 py-0.5 text-xs bg-white/[0.03] text-muted-foreground num-display">
+                    {past.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {past.map(a => <PastCard key={a.id} activity={a} />)}
+                </div>
+              </motion.section>
+            )}
+          </>
+        )}
+      </motion.div>
+    </PageShell>
   );
 };
 
