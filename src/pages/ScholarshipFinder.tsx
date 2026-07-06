@@ -1,13 +1,18 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
-  Trophy, Sparkles, Loader2, RefreshCw, Bookmark, BookmarkCheck,
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+  SignalRing,
+} from "@/components/primrose-night";
+import {
+  Trophy, Sparkles, RefreshCw, Bookmark, BookmarkCheck,
   ExternalLink, ChevronRight, AlertCircle, CheckCircle2, Globe,
   GraduationCap, Target, Clock, Lightbulb, Info,
 } from "lucide-react";
@@ -23,37 +28,30 @@ import {
 
 // ── Config ────────────────────────────────────────────────────
 
-const MATCH_CONFIG = {
-  high: {
-    label: "High match",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    text: "text-emerald-700",
-    dot: "bg-emerald-500",
-    badgeCls: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  },
-  possible: {
-    label: "Possible",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    text: "text-blue-700",
-    dot: "bg-blue-500",
-    badgeCls: "bg-blue-100 text-blue-700 border-blue-200",
-  },
-  reach: {
-    label: "Reach",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    text: "text-amber-700",
-    dot: "bg-amber-500",
-    badgeCls: "bg-amber-100 text-amber-700 border-amber-200",
-  },
-} as const;
+type Tone = "sage" | "gold" | "pink";
 
-const COVERAGE_CONFIG = {
-  full: { label: "Full funding", cls: "bg-violet-100 text-violet-700 border-violet-200" },
-  partial: { label: "Partial", cls: "bg-sky-100 text-sky-700 border-sky-200" },
-  stipend: { label: "Stipend", cls: "bg-teal-100 text-teal-700 border-teal-200" },
+const MATCH_CONFIG: Record<'high' | 'possible' | 'reach', { label: string; tone: Tone }> = {
+  high:     { label: "High match", tone: 'sage' },
+  possible: { label: "Possible",   tone: 'gold' },
+  reach:    { label: "Reach",      tone: 'pink' },
+};
+
+const COVERAGE_CONFIG: Record<'full' | 'partial' | 'stipend', { label: string; tone: Tone | 'neutral' }> = {
+  full:    { label: "Full funding", tone: 'sage' },
+  partial: { label: "Partial",      tone: 'gold' },
+  stipend: { label: "Stipend",      tone: 'neutral' },
+};
+
+const toneVar = (t: Tone) => `var(--pn-${t})`;
+
+const tonePill = (t: Tone | 'neutral') =>
+  t === 'neutral'
+    ? "bg-white/[0.03] text-muted-foreground hairline"
+    : `bg-[color:var(--pn-${t})]/15 text-[color:var(--pn-${t})] hairline`;
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] as const } },
 };
 
 // ── Sub-components ────────────────────────────────────────────
@@ -61,8 +59,8 @@ const COVERAGE_CONFIG = {
 const MatchBadge = ({ level }: { level: 'high' | 'possible' | 'reach' }) => {
   const cfg = MATCH_CONFIG[level];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badgeCls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${tonePill(cfg.tone)}`}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: toneVar(cfg.tone) }} />
       {cfg.label}
     </span>
   );
@@ -71,19 +69,9 @@ const MatchBadge = ({ level }: { level: 'high' | 'possible' | 'reach' }) => {
 const CoverageTag = ({ coverage }: { coverage: 'full' | 'partial' | 'stipend' }) => {
   const cfg = COVERAGE_CONFIG[coverage];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${cfg.cls}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${tonePill(cfg.tone)}`}>
       {cfg.label}
     </span>
-  );
-};
-
-const ScoreRing = ({ score, level }: { score: number; level: 'high' | 'possible' | 'reach' }) => {
-  const cfg = MATCH_CONFIG[level];
-  return (
-    <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 ${cfg.border} ${cfg.bg} shrink-0`}>
-      <span className={`text-xl font-black leading-none ${cfg.text}`}>{score}</span>
-      <span className={`text-[9px] font-medium uppercase tracking-wide ${cfg.text} opacity-80`}>match</span>
-    </div>
   );
 };
 
@@ -99,60 +87,66 @@ const ScholarshipCard = ({
   onViewDetails: () => void;
 }) => {
   const { scholarship: s, matchLevel, matchScore, matchReason } = match;
+  const tone = MATCH_CONFIG[matchLevel].tone;
   return (
-    <div className={`rounded-2xl border-2 bg-white p-5 flex flex-col gap-4 hover:shadow-md transition-shadow ${MATCH_CONFIG[matchLevel].border}`}>
+    <div className="hairline rounded-2xl bg-white/[0.02] p-5 flex flex-col gap-4 hover:bg-white/[0.03] transition-colors">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <ScoreRing score={matchScore} level={matchLevel} />
+        <SignalRing value={matchScore} tone={tone} label="match" size={64} strokeWidth={3} />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-bold text-gray-900 text-base leading-snug">{s.name}</h3>
+            <h3 className="font-serif text-lg text-foreground leading-tight">{s.name}</h3>
             <button
+              type="button"
               onClick={e => { e.stopPropagation(); onSave(); }}
-              className="text-gray-400 hover:text-violet-600 transition-colors shrink-0 mt-0.5"
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
               title={isSaved ? "Remove from saved" : "Save scholarship"}
             >
               {isSaved
-                ? <BookmarkCheck className="h-5 w-5 text-violet-600" />
+                ? <BookmarkCheck className="h-5 w-5 text-[color:var(--pn-gold)]" />
                 : <Bookmark className="h-5 w-5" />
               }
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{s.provider}</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">{s.provider}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <MatchBadge level={matchLevel} />
             <CoverageTag coverage={s.coverage} />
-            <span className="text-xs text-gray-500 font-medium">{s.amount}</span>
+            <span className="num-display text-xs text-foreground/80">{s.amount}</span>
           </div>
         </div>
       </div>
 
       {/* Eligibility + deadline */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
-        <span className="flex items-center gap-1">
-          <Globe className="h-3.5 w-3.5 text-gray-400" />
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Globe className="h-3.5 w-3.5" />
           {s.studyCountries.length ? s.studyCountries.join(', ') : 'Flexible location'}
         </span>
-        <span className="flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5 text-gray-400" />
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" />
           {s.deadlineNote}
         </span>
       </div>
 
-      <p className="text-sm text-gray-600 leading-snug">{s.eligibilitySummary}</p>
+      <p className="text-sm text-foreground/85 leading-snug">{s.eligibilitySummary}</p>
 
       {/* Match reason */}
-      <div className={`rounded-xl px-3.5 py-2.5 text-sm ${MATCH_CONFIG[matchLevel].bg} ${MATCH_CONFIG[matchLevel].text} leading-snug`}>
-        <span className="font-semibold">Why it matches: </span>
-        {matchReason}
+      <div
+        className="rounded-xl px-3.5 py-2.5 text-sm hairline leading-snug"
+        style={{ background: `color-mix(in oklch, ${toneVar(tone)} 8%, transparent)`, color: toneVar(tone) }}
+      >
+        <span className="font-serif italic">Why it matches: </span>
+        <span className="text-foreground/85">{matchReason}</span>
       </div>
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
         <Button
+          type="button"
           size="sm"
           onClick={onViewDetails}
-          className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium"
+          className="flex-1 bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
         >
           View details
           <ChevronRight className="h-3.5 w-3.5 ml-1" />
@@ -175,22 +169,24 @@ const DetailSheet = ({
 }) => {
   const s = match?.scholarship;
   if (!s || !match) return null;
+  const tone = MATCH_CONFIG[match.matchLevel].tone;
 
   return (
     <Sheet open={!!match} onOpenChange={open => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto" side="right">
-        <SheetHeader className="pb-4 border-b border-gray-100">
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-pn-card" side="right">
+        <SheetHeader className="pb-4 hairline-b">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <SheetTitle className="text-xl font-black text-gray-900 leading-tight">{s.name}</SheetTitle>
-              <p className="text-sm text-gray-500 mt-1">{s.provider}</p>
+              <SheetTitle className="font-serif text-2xl text-foreground leading-tight">{s.name}</SheetTitle>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1.5">{s.provider}</p>
             </div>
             <button
+              type="button"
               onClick={onSave}
-              className="text-gray-400 hover:text-violet-600 transition-colors shrink-0 mt-1"
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
             >
               {isSaved
-                ? <BookmarkCheck className="h-6 w-6 text-violet-600" />
+                ? <BookmarkCheck className="h-6 w-6 text-[color:var(--pn-gold)]" />
                 : <Bookmark className="h-6 w-6" />
               }
             </button>
@@ -198,37 +194,40 @@ const DetailSheet = ({
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <MatchBadge level={match.matchLevel} />
             <CoverageTag coverage={s.coverage} />
-            <span className="text-sm font-semibold text-gray-700">{s.amount}</span>
+            <span className="num-display text-sm text-foreground">{s.amount}</span>
           </div>
         </SheetHeader>
 
         <div className="space-y-6 py-6">
 
           {/* Match reason */}
-          <div className={`rounded-xl px-4 py-3 ${MATCH_CONFIG[match.matchLevel].bg} border ${MATCH_CONFIG[match.matchLevel].border}`}>
-            <p className={`text-sm font-semibold ${MATCH_CONFIG[match.matchLevel].text} mb-1`}>Why it matches you</p>
-            <p className={`text-sm ${MATCH_CONFIG[match.matchLevel].text} leading-relaxed`}>{match.matchReason}</p>
+          <div
+            className="rounded-xl px-4 py-3 hairline"
+            style={{ background: `color-mix(in oklch, ${toneVar(tone)} 8%, transparent)` }}
+          >
+            <p className="text-[10px] uppercase tracking-[0.18em] mb-1.5" style={{ color: toneVar(tone) }}>Why it matches you</p>
+            <p className="text-sm text-foreground/85 leading-relaxed">{match.matchReason}</p>
           </div>
 
           {/* Description */}
           <div>
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-              <Info className="h-4 w-4 text-gray-400" />
+            <h4 className="font-serif text-lg text-foreground leading-tight mb-2 flex items-center gap-1.5">
+              <Info className="h-4 w-4 text-muted-foreground" />
               About this scholarship
             </h4>
-            <p className="text-sm text-gray-600 leading-relaxed">{s.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
           </div>
 
           {/* What it covers */}
           <div>
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <h4 className="font-serif text-lg text-foreground leading-tight mb-2 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-[color:var(--pn-sage)]" />
               What it covers
             </h4>
             <ul className="space-y-1.5">
               {s.whatItCovers.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <span className="text-emerald-500 font-bold mt-0.5">✓</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground/85">
+                  <span className="text-[color:var(--pn-sage)] mt-0.5">✓</span>
                   {item}
                 </li>
               ))}
@@ -237,14 +236,14 @@ const DetailSheet = ({
 
           {/* Requirements */}
           <div>
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-              <Target className="h-4 w-4 text-violet-500" />
+            <h4 className="font-serif text-lg text-foreground leading-tight mb-2 flex items-center gap-1.5">
+              <Target className="h-4 w-4 text-[color:var(--pn-gold)]" />
               Key requirements
             </h4>
             <ul className="space-y-1.5">
               {s.requirements.map((req, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <span className="text-violet-400 font-bold mt-0.5 shrink-0">•</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground/85">
+                  <span className="text-[color:var(--pn-gold)] mt-0.5 shrink-0">•</span>
                   {req}
                 </li>
               ))}
@@ -253,27 +252,27 @@ const DetailSheet = ({
 
           {/* Timeline */}
           <div>
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-amber-500" />
+            <h4 className="font-serif text-lg text-foreground leading-tight mb-2 flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-[color:var(--pn-pink)]" />
               Timeline
             </h4>
-            <p className="text-sm text-gray-600 leading-relaxed">{s.timeline}</p>
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 flex items-start gap-1.5">
+            <p className="text-sm text-muted-foreground leading-relaxed">{s.timeline}</p>
+            <p className="text-xs hairline bg-[color:var(--pn-gold)]/8 text-[color:var(--pn-gold)] rounded-lg px-3 py-2 mt-2 flex items-start gap-1.5">
               <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              Deadline shown is approximate. Always verify the current cycle on the official site.
+              <span>Deadline shown is approximate. Always verify the current cycle on the official site.</span>
             </p>
           </div>
 
           {/* Personalized tips */}
           <div>
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-              <Lightbulb className="h-4 w-4 text-indigo-500" />
+            <h4 className="font-serif text-lg text-foreground leading-tight mb-2 flex items-center gap-1.5">
+              <Lightbulb className="h-4 w-4 text-[color:var(--pn-sage)]" />
               Tips for your application
             </h4>
             <ul className="space-y-2.5">
               {match.personalizedTips.map((tip, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700 bg-indigo-50 rounded-xl px-3.5 py-2.5 leading-snug">
-                  <span className="text-indigo-500 font-bold shrink-0 mt-0.5">{i + 1}.</span>
+                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/85 hairline bg-[color:var(--pn-sage)]/6 rounded-xl px-3.5 py-2.5 leading-snug">
+                  <span className="num-display text-[color:var(--pn-sage)] shrink-0 mt-0.5">{i + 1}.</span>
                   {tip}
                 </li>
               ))}
@@ -285,7 +284,7 @@ const DetailSheet = ({
             href={s.officialUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl hairline bg-white/[0.05] hover:bg-white/[0.08] text-foreground text-sm transition-colors"
           >
             <ExternalLink className="h-4 w-4" />
             Visit official site
@@ -322,239 +321,252 @@ export default function ScholarshipFinder() {
   const reachMatches = matches.filter(m => m.matchLevel === 'reach');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/20 to-indigo-50/30">
+    <PageShell>
+      <BlurOrb tone="gold" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-      {/* ── Hero Header ── */}
-      <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50 border-b border-amber-100 px-6 py-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
-              <Trophy className="h-5 w-5 text-amber-600" />
-            </div>
-            <span className="text-amber-500 text-sm font-medium uppercase tracking-widest">Scholarship Finder</span>
+      <PageHeader
+        eyebrow="Scholarship Finder"
+        title={<>Find what you qualify for.</>}
+        subtitle={<>Tell us about you — we'll match, and explain why.</>}
+        actions={
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full hairline bg-white/[0.03]">
+            <Trophy className="h-3.5 w-3.5 text-[color:var(--pn-gold)]" />
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Match</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-tight">Find what you actually qualify for.</h1>
-          <p className="text-gray-500 mt-1 text-lg">
-            Tell us about yourself. We'll match you to the right scholarships and explain why.
-          </p>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <div className="space-y-6">
 
         {/* ── Profile Form ── */}
         {!hasResults && !isLoading && (
-          <Card className="border-2 border-amber-100 shadow-lg shadow-amber-50/50 bg-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-amber-500" />
-                Your profile
-              </CardTitle>
-              <p className="text-sm text-gray-500">5 quick fields — then we match you.</p>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-2">
-
-              {/* Row 1: Citizenship + Study Country */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="citizenship" className="text-sm font-semibold text-gray-700">
-                    Your citizenship / nationality <span className="text-red-400">*</span>
-                  </Label>
-                  <Input
-                    id="citizenship"
-                    value={profile.citizenship}
-                    onChange={e => updateProfile({ citizenship: e.target.value })}
-                    placeholder="e.g. American, British, Canadian..."
-                    className="border-amber-100 focus:border-amber-300"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-gray-700">
-                    Where do you want to study? <span className="text-red-400">*</span>
-                  </Label>
-                  <Select value={profile.studyCountry} onValueChange={v => updateProfile({ studyCountry: v })}>
-                    <SelectTrigger className="border-amber-100 focus:border-amber-300">
-                      <SelectValue placeholder="Select destination" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STUDY_COUNTRIES.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-2">
+                <GraduationCap className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-xl text-foreground leading-tight">Who you are.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">5 quick fields — then we match you</p>
                 </div>
               </div>
 
-              {/* Row 2: Degree + Field */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-gray-700">
-                    Degree level <span className="text-red-400">*</span>
-                  </Label>
-                  <Select value={profile.degreeType} onValueChange={v => updateProfile({ degreeType: v })}>
-                    <SelectTrigger className="border-amber-100 focus:border-amber-300">
-                      <SelectValue placeholder="Select degree" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DEGREE_TYPES.map(d => (
-                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-gray-700">
-                    Field of study <span className="text-red-400">*</span>
-                  </Label>
-                  <Select value={profile.fieldOfStudy} onValueChange={v => updateProfile({ fieldOfStudy: v })}>
-                    <SelectTrigger className="border-amber-100 focus:border-amber-300">
-                      <SelectValue placeholder="Select field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FIELDS_OF_STUDY.map(f => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <div className="space-y-6 pt-4">
 
-              {/* GPA */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold text-gray-700">
-                  Your GPA (approximate) <span className="text-red-400">*</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {GPA_RANGES.map(g => (
-                    <button
-                      key={g.value}
-                      onClick={() => updateProfile({ gpaRange: g.value })}
-                      className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
-                        profile.gpaRange === g.value
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-md'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-                      }`}
-                    >
-                      {g.label}
-                    </button>
-                  ))}
+                {/* Row 1: Citizenship + Study Country */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="citizenship" className="text-sm text-foreground">
+                      Your citizenship / nationality <span className="text-[color:var(--pn-pink)]">*</span>
+                    </Label>
+                    <Input
+                      id="citizenship"
+                      value={profile.citizenship}
+                      onChange={e => updateProfile({ citizenship: e.target.value })}
+                      placeholder="e.g. American, British, Canadian..."
+                      className="bg-white/[0.02] hairline"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-foreground">
+                      Where do you want to study? <span className="text-[color:var(--pn-pink)]">*</span>
+                    </Label>
+                    <Select value={profile.studyCountry} onValueChange={v => updateProfile({ studyCountry: v })}>
+                      <SelectTrigger className="bg-white/[0.02] hairline">
+                        <SelectValue placeholder="Select destination" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STUDY_COUNTRIES.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
 
-              {/* Background tags */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700">
-                  Your background <span className="text-gray-400 font-normal">(optional — improves matching)</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {BACKGROUND_TAGS.map(tag => {
-                    const isSelected = profile.backgroundTags.includes(tag.value);
-                    return (
+                {/* Row 2: Degree + Field */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-foreground">
+                      Degree level <span className="text-[color:var(--pn-pink)]">*</span>
+                    </Label>
+                    <Select value={profile.degreeType} onValueChange={v => updateProfile({ degreeType: v })}>
+                      <SelectTrigger className="bg-white/[0.02] hairline">
+                        <SelectValue placeholder="Select degree" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEGREE_TYPES.map(d => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-foreground">
+                      Field of study <span className="text-[color:var(--pn-pink)]">*</span>
+                    </Label>
+                    <Select value={profile.fieldOfStudy} onValueChange={v => updateProfile({ fieldOfStudy: v })}>
+                      <SelectTrigger className="bg-white/[0.02] hairline">
+                        <SelectValue placeholder="Select field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELDS_OF_STUDY.map(f => (
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* GPA */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-foreground">
+                    Your GPA (approximate) <span className="text-[color:var(--pn-pink)]">*</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {GPA_RANGES.map(g => (
                       <button
-                        key={tag.value}
-                        onClick={() => toggleBackgroundTag(tag.value)}
-                        className={`px-3.5 py-1.5 rounded-full text-sm font-medium border-2 transition-all ${
-                          isSelected
-                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
+                        key={g.value}
+                        type="button"
+                        onClick={() => updateProfile({ gpaRange: g.value })}
+                        className={`px-4 py-2 rounded-full text-sm transition-all hairline ${
+                          profile.gpaRange === g.value
+                            ? 'bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)]'
+                            : 'bg-white/[0.02] text-muted-foreground hover:bg-white/[0.04] hover:text-foreground'
                         }`}
                       >
-                        {tag.label}
+                        {g.label}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Submit */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5" />
-                  Deadline info is approximate — always verify on official sites.
-                </p>
-                <Button
-                  onClick={findMatches}
-                  disabled={!isProfileComplete}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-7 shadow-lg shadow-amber-200 disabled:opacity-40 disabled:shadow-none"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Find my matches
-                </Button>
-              </div>
-
-              {searchState.status === 'error' && (
-                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 rounded-xl px-4 py-3">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {searchState.message}
+                {/* Background tags */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-foreground">
+                    Your background <span className="text-muted-foreground text-xs">(optional — improves matching)</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {BACKGROUND_TAGS.map(tag => {
+                      const isSelected = profile.backgroundTags.includes(tag.value);
+                      return (
+                        <button
+                          key={tag.value}
+                          type="button"
+                          onClick={() => toggleBackgroundTag(tag.value)}
+                          className={`px-3.5 py-1.5 rounded-full text-sm transition-all hairline ${
+                            isSelected
+                              ? 'bg-white/[0.08] text-foreground'
+                              : 'bg-white/[0.02] text-muted-foreground hover:bg-white/[0.04] hover:text-foreground'
+                          }`}
+                        >
+                          {tag.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                {/* Submit */}
+                <div className="flex items-center justify-between pt-2 hairline-t">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5 mt-4">
+                    <Info className="h-3.5 w-3.5" />
+                    Deadline info is approximate
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={findMatches}
+                    disabled={!isProfileComplete}
+                    className="mt-4 bg-[color:var(--pn-gold)]/15 hairline text-[color:var(--pn-gold)] hover:bg-[color:var(--pn-gold)]/25 shadow-none px-7 disabled:opacity-40"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Find my matches
+                  </Button>
+                </div>
+
+                {searchState.status === 'error' && (
+                  <div className="flex items-center gap-2 text-[color:var(--pn-pink)] text-sm hairline bg-[color:var(--pn-pink)]/10 rounded-xl px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {searchState.message}
+                  </div>
+                )}
+              </div>
+            </HairlineCard>
+          </motion.div>
         )}
 
         {/* ── Loading ── */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-28 gap-6">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-200">
-                <Trophy className="h-8 w-8 text-white" />
+          <HairlineCard>
+            <div className="flex flex-col items-center justify-center py-20 gap-6">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full hairline bg-[color:var(--pn-gold)]/12 flex items-center justify-center">
+                  <Trophy className="h-8 w-8 text-[color:var(--pn-gold)]" />
+                </div>
+                <div className="absolute inset-0 rounded-full border border-[color:var(--pn-gold)]/40 animate-ping opacity-60" />
               </div>
-              <div className="absolute inset-0 rounded-full border-4 border-amber-300 animate-ping opacity-60" />
+              <div className="text-center">
+                <p className="font-serif text-2xl text-foreground leading-tight">Reading the field.</p>
+                <p className="font-serif italic text-muted-foreground mt-1">
+                  {profile.citizenship} students in {profile.fieldOfStudy}.
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-xl font-bold text-gray-800">Finding your matches...</p>
-              <p className="text-gray-500 mt-1">Analyzing {profile.citizenship} students in {profile.fieldOfStudy}.</p>
-            </div>
-          </div>
+          </HairlineCard>
         )}
 
         {/* ── Results ── */}
         {hasResults && (
-          <div className="space-y-6">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+            className="space-y-6"
+          >
 
             {/* Results header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            <motion.div variants={sectionVariants} className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h2 className="text-2xl font-black text-gray-900">Your matches</h2>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  {matches.length} scholarships found · Best fits first
+                <h2 className="font-serif text-3xl text-foreground leading-tight">Your matches.</h2>
+                <p className="font-serif italic text-muted-foreground mt-1">
+                  <span className="num-display">{matches.length}</span> scholarships — best fits first.
                 </p>
               </div>
               <Button
-                variant="outline"
+                type="button"
+                variant="ghost"
                 size="sm"
                 onClick={reset}
-                className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                className="hairline hover:bg-white/[0.03] text-muted-foreground"
               >
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                 New search
               </Button>
-            </div>
+            </motion.div>
 
             {/* Summary pills */}
-            <div className="flex flex-wrap gap-2">
+            <motion.div variants={sectionVariants} className="flex flex-wrap gap-2">
               {highMatches.length > 0 && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {highMatches.length} High match{highMatches.length > 1 ? 'es' : ''}
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs ${tonePill('sage')}`}>
+                  <span className="w-2 h-2 rounded-full bg-[color:var(--pn-sage)]" />
+                  <span className="num-display">{highMatches.length}</span> High match{highMatches.length > 1 ? 'es' : ''}
                 </span>
               )}
               {possibleMatches.length > 0 && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  {possibleMatches.length} Possible
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs ${tonePill('gold')}`}>
+                  <span className="w-2 h-2 rounded-full bg-[color:var(--pn-gold)]" />
+                  <span className="num-display">{possibleMatches.length}</span> Possible
                 </span>
               )}
               {reachMatches.length > 0 && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  {reachMatches.length} Reach
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs ${tonePill('pink')}`}>
+                  <span className="w-2 h-2 rounded-full bg-[color:var(--pn-pink)]" />
+                  <span className="num-display">{reachMatches.length}</span> Reach
                 </span>
               )}
-            </div>
+            </motion.div>
 
             {/* Cards grid */}
-            <div className="grid grid-cols-1 gap-4">
+            <motion.div variants={sectionVariants} className="grid grid-cols-1 gap-4">
               {matches.map(match => (
                 <ScholarshipCard
                   key={match.scholarshipId}
@@ -564,17 +576,17 @@ export default function ScholarshipFinder() {
                   onViewDetails={() => setSelectedMatch(match)}
                 />
               ))}
-            </div>
+            </motion.div>
 
             {/* Disclaimer */}
-            <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-400" />
-              <p>
+            <motion.div variants={sectionVariants} className="flex items-start gap-2 text-xs text-muted-foreground hairline bg-white/[0.02] rounded-xl px-4 py-3">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
                 Scholarship details are based on historical data and AI analysis. Deadlines, amounts, and eligibility can change annually.
                 Always verify on the official scholarship website before applying.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
       </div>
@@ -586,6 +598,6 @@ export default function ScholarshipFinder() {
         onSave={() => selectedMatch && toggleSaved(selectedMatch.scholarshipId)}
         onClose={() => setSelectedMatch(null)}
       />
-    </div>
+    </PageShell>
   );
 }

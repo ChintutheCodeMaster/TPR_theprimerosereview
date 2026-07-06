@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -338,67 +343,85 @@ const PersonalEssay = () => {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 flex items-center justify-center p-6">
-        <Card className="max-w-md w-full p-8 text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+      <PageShell>
+        <BlurOrb tone="sage" className="top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px]" />
+        <div className="flex items-center justify-center min-h-[70vh]">
+          <HairlineCard variant="sage" className="max-w-md w-full text-center p-10 space-y-6">
+            <div className="flex justify-center">
+              <div className="h-20 w-20 rounded-full hairline bg-[color:var(--pn-sage)]/12 flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-[color:var(--pn-sage)]" />
+              </div>
             </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Essay Submitted!</h2>
-            <p className="text-muted-foreground mt-2">
-              {recipient === 'teacher'
-                ? "Your teacher has received your personal essay and will review it soon."
-                : recipient === 'both'
-                ? "Your counselor and teacher have both received your personal essay."
-                : "Your counselor has received your personal essay and will review it soon."}
-            </p>
-          </div>
-          <Button onClick={() => navigate("/student-personal-area?tab=essays")} className="w-full">
-            Back to My Work
-          </Button>
-        </Card>
-      </div>
+            <div>
+              <h2 className="font-serif text-3xl text-foreground leading-tight">Sent.</h2>
+              <p className="font-serif italic text-muted-foreground mt-3">
+                {recipient === 'teacher'
+                  ? "Your teacher has it. They'll read soon."
+                  : recipient === 'both'
+                  ? "Counselor and teacher — both have it."
+                  : "Your counselor has it. They'll read soon."}
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate("/student-personal-area?tab=essays")}
+              className="w-full bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
+            >
+              Back to My Work
+            </Button>
+          </HairlineCard>
+        </div>
+      </PageShell>
     );
   }
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 8, filter: 'blur(4px)' },
+    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] } },
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <PageShell maxWidth="wide">
+      <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" className="gap-2" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
+      <Button
+        variant="ghost"
+        className="mb-6 gap-2 text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+        onClick={() => navigate(-1)}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
 
-        <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-            <Sparkles className="h-7 w-7 text-primary" />
-            Personal Essay
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Write your Common App personal statement with AI coaching tailored to your story.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Personal statement"
+        title={<>Your story, still becoming.</>}
+        subtitle={<>Write your Common App essay — with a coach at your elbow.</>}
+      />
 
-        <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
+      <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
 
-          {/* Left: form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ── Left: form ── */}
+        <motion.form
+          onSubmit={handleSubmit}
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+          className="space-y-6"
+        >
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Essay Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Essay Info */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-xl text-foreground leading-tight">The frame.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Title and prompt</p>
+                </div>
+              </div>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Essay Title</Label>
+                  <Label htmlFor="title" className="text-foreground">Essay Title</Label>
                   <div className="relative">
                     <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -406,56 +429,62 @@ const PersonalEssay = () => {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Common App Personal Statement"
-                      className="pl-10"
+                      className="pl-10 bg-white/[0.02] hairline"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prompt">
+                  <Label htmlFor="prompt" className="text-foreground">
                     Essay Prompt{" "}
-                    <span className="text-muted-foreground text-xs">(optional — paste for more targeted AI suggestions)</span>
+                    <span className="text-muted-foreground text-xs font-normal">
+                      (optional — paste for more targeted AI suggestions)
+                    </span>
                   </Label>
                   <Textarea
                     id="prompt"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="e.g. Some students have a background, identity, interest, or talent so meaningful they believe their application would be incomplete without it..."
-                    className="resize-none min-h-[80px] text-sm"
+                    className="resize-none min-h-[80px] text-sm bg-white/[0.02] hairline"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </HairlineCard>
+          </motion.div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Hash className="h-5 w-5 text-primary" />
-                  Word Limit
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Word Limit */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <Hash className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-xl text-foreground leading-tight">How long.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Pick a target or set your own</p>
+                </div>
+              </div>
+              <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {WORD_LIMIT_OPTIONS.map((limit) => (
                     <button
                       key={limit}
                       type="button"
                       onClick={() => { setWordLimit(limit); setCustomWordLimit(""); }}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      className={`px-4 py-2 rounded-lg text-sm transition-all hairline ${
                         wordLimit === limit
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                          ? "bg-white/[0.08] text-foreground"
+                          : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {limit} words
+                      <span className="num-display">{limit}</span> words
                     </button>
                   ))}
                   <button
                     type="button"
                     onClick={() => setWordLimit(null)}
-                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    className={`px-4 py-2 rounded-lg text-sm transition-all hairline ${
                       wordLimit === null && !customWordLimit
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                        ? "bg-white/[0.08] text-foreground"
+                        : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     No limit
@@ -468,56 +497,65 @@ const PersonalEssay = () => {
                     placeholder="e.g. 800"
                     value={customWordLimit}
                     onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
-                    className="w-32"
+                    className="w-32 bg-white/[0.02] hairline"
                     min="1"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </HairlineCard>
+          </motion.div>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <AlignLeft className="h-5 w-5 text-primary" />
-                    Essay Content <span className="text-destructive ml-1">*</span>
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
-                    >
-                      {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
-                    </Badge>
-                    {isOverLimit && <Badge variant="destructive">Over limit</Badge>}
-                    {wordCount >= 200 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleAnalyzeEssay}
-                        disabled={isLoadingSuggestions}
-                        className="gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                      >
-                        {isLoadingSuggestions && isAnalysisMode ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            Analysing…
-                          </>
-                        ) : (
-                          <>
-                            <ScanText className="h-3.5 w-3.5" />
-                            Analyse Essay
-                          </>
-                        )}
-                      </Button>
-                    )}
+          {/* Essay Content */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <AlignLeft className="h-5 w-5 text-foreground/60" />
+                  <div>
+                    <h2 className="font-serif text-xl text-foreground leading-tight">
+                      The essay itself. <span className="text-[color:var(--pn-pink)]">*</span>
+                    </h2>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Draft, revise, submit</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Tip: highlight any passage to get AI coaching on that section.
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline ${
+                    isOverLimit ? "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]" : "bg-white/[0.02] text-muted-foreground"
+                  }`}>
+                    <span className="num-display">{wordCount}</span>{effectiveWordLimit ? <> / <span className="num-display">{effectiveWordLimit}</span></> : ""} words
+                  </span>
+                  {isOverLimit && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs hairline bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]">
+                      Over limit
+                    </span>
+                  )}
+                  {wordCount >= 200 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleAnalyzeEssay}
+                      disabled={isLoadingSuggestions}
+                      className="gap-1.5 hairline hover:bg-white/[0.04] text-foreground"
+                    >
+                      {isLoadingSuggestions && isAnalysisMode ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Analysing…
+                        </>
+                      ) : (
+                        <>
+                          <ScanText className="h-3.5 w-3.5" />
+                          Analyse Essay
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground font-serif italic">
+                  Highlight any passage for AI coaching on that section.
                 </p>
 
                 <Textarea
@@ -527,18 +565,18 @@ const PersonalEssay = () => {
                   onMouseUp={handleSelectionChange}
                   onKeyUp={handleSelectionChange}
                   placeholder="Start writing your personal statement here..."
-                  className={`resize-none min-h-[420px] text-sm leading-relaxed ${
-                    isOverLimit ? "border-destructive focus-visible:ring-destructive" : ""
+                  className={`resize-none min-h-[420px] font-serif text-base leading-relaxed bg-white/[0.02] hairline ${
+                    isOverLimit ? "border-[color:var(--pn-pink)] focus-visible:ring-[color:var(--pn-pink)]" : ""
                   }`}
                   required
                 />
 
                 {selectedText && (
-                  <div className="border border-primary/20 rounded-lg bg-primary/5 p-3 space-y-2">
+                  <div className="hairline rounded-lg bg-[color:var(--pn-pink)]/8 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-sm font-medium text-foreground">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MessageSquare className="h-4 w-4 text-[color:var(--pn-pink)] shrink-0" />
+                        <p className="text-sm text-foreground font-serif italic truncate">
                           "{selectedText.length > 60 ? selectedText.slice(0, 60) + "…" : selectedText}"
                         </p>
                       </div>
@@ -546,10 +584,10 @@ const PersonalEssay = () => {
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
+                          variant="ghost"
                           onClick={handleGetCoaching}
                           disabled={isCoaching}
-                          className="gap-1.5 h-7 text-xs"
+                          className="gap-1.5 h-7 text-xs hairline bg-white/[0.03] hover:bg-white/[0.06] text-foreground"
                         >
                           {isCoaching ? (
                             <>
@@ -573,7 +611,7 @@ const PersonalEssay = () => {
                       </div>
                     </div>
                     {selectionFeedback && (
-                      <div className="pt-1 border-t border-primary/10">
+                      <div className="pt-2 hairline-t">
                         <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
                           {selectionFeedback}
                         </p>
@@ -581,18 +619,21 @@ const PersonalEssay = () => {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </HairlineCard>
+          </motion.div>
 
-            {/* Recipient */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Send className="h-5 w-5 text-primary" />
-                  Send To
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+          {/* Recipient */}
+          <motion.div variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center gap-3 mb-6">
+                <Send className="h-5 w-5 text-foreground/60" />
+                <div>
+                  <h2 className="font-serif text-xl text-foreground leading-tight">Who reads it.</h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Choose your reader</p>
+                </div>
+              </div>
+              <div className="space-y-3">
                 <div className="flex gap-2">
                   {([
                     { value: 'counselor', label: 'My Counselor', icon: GraduationCap },
@@ -603,10 +644,10 @@ const PersonalEssay = () => {
                       key={value}
                       type="button"
                       onClick={() => setRecipient(value)}
-                      className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-sm font-medium transition-all ${
+                      className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg text-sm transition-all hairline ${
                         recipient === value
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                          ? "bg-white/[0.08] text-foreground"
+                          : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -617,9 +658,9 @@ const PersonalEssay = () => {
 
                 {(recipient === 'teacher' || recipient === 'both') && (
                   <div className="space-y-2 pt-1">
-                    <p className="text-xs text-muted-foreground font-medium">Select teacher</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Select teacher</p>
                     {teachers.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic font-serif">
                         No teachers found at your school. Ask your counselor to add one.
                       </p>
                     ) : (
@@ -629,10 +670,10 @@ const PersonalEssay = () => {
                             key={t.user_id}
                             type="button"
                             onClick={() => setSelectedTeacherId(t.user_id)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm text-left transition-all ${
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all hairline ${
                               selectedTeacherId === t.user_id
-                                ? "border-primary bg-primary/5 text-primary"
-                                : "border-border hover:bg-muted/50"
+                                ? "bg-white/[0.08] text-foreground"
+                                : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
                             }`}
                           >
                             <Users className="h-3.5 w-3.5 shrink-0" />
@@ -643,149 +684,165 @@ const PersonalEssay = () => {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </HairlineCard>
+          </motion.div>
 
-            <div className="flex gap-3 pb-6">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => navigate(-1)}>
-                Cancel
-              </Button>
+          {/* Actions */}
+          <motion.div variants={sectionVariants} className="flex gap-3 pb-6">
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex-1 hairline hover:bg-white/[0.03] text-muted-foreground"
+              onClick={() => navigate(-1)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex-1 hairline bg-transparent hover:bg-white/[0.04] text-foreground"
+              disabled={isSavingDraft || isSubmitting}
+              onClick={handleSaveDraft}
+            >
+              {isSavingDraft ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Save & Continue Later
+                </>
+              )}
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-[color:var(--pn-pink)]/15 hairline text-[color:var(--pn-pink)] hover:bg-[color:var(--pn-pink)]/25 shadow-none"
+              disabled={isSubmitting || isSavingDraft || isOverLimit}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Submit Essay
+                </>
+              )}
+            </Button>
+          </motion.div>
+
+        </motion.form>
+
+        {/* ── Right: AI panel (always visible) ── */}
+        <div className="sticky top-6 space-y-3">
+          <HairlineCard variant="hero">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                <h3 className="font-serif text-lg text-foreground leading-tight">
+                  {isAnalysisMode ? "What the reader sees." : "Where to begin."}
+                </h3>
+              </div>
               <Button
                 type="button"
-                variant="outline"
-                className="flex-1 border-primary/30 text-primary hover:bg-primary/5"
-                disabled={isSavingDraft || isSubmitting}
-                onClick={handleSaveDraft}
+                size="sm"
+                variant="ghost"
+                onClick={() => fetchSuggestions(isAnalysisMode)}
+                disabled={isLoadingSuggestions}
+                className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
               >
-                {isSavingDraft ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
+                {isLoadingSuggestions ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <>
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Save & Continue Later
-                  </>
+                  <RefreshCw className="h-3.5 w-3.5" />
                 )}
-              </Button>
-              <Button type="submit" className="flex-1" disabled={isSubmitting || isSavingDraft || isOverLimit}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Submit Essay
-                  </>
-                )}
+                {hasFetchedOnce && !isLoadingSuggestions ? "Refresh" : ""}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground font-serif italic leading-relaxed mb-4">
+              {isAnalysisMode
+                ? "Feedback on your current draft, shaped by your profile."
+                : "Personalised opening ideas from your profile. Add a prompt above for sharper suggestions."}
+            </p>
 
-          </form>
-
-          {/* Right: AI assistant panel (always visible) */}
-          <div className="sticky top-6 space-y-3">
-            <Card className="border-primary/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    {isAnalysisMode ? "Essay Analysis" : "AI Essay Coach - Initial Suggestions"}
-                  </CardTitle>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => fetchSuggestions(isAnalysisMode)}
-                    disabled={isLoadingSuggestions}
-                    className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {isLoadingSuggestions ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                    {hasFetchedOnce && !isLoadingSuggestions ? "Refresh" : ""}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {isAnalysisMode
-                    ? "Feedback on your current draft based on your profile."
-                    : "Personalised opening ideas based on your profile. Add your essay prompt above for more targeted suggestions."}
+            {isLoadingSuggestions && (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground text-center font-serif italic">
+                  {isAnalysisMode ? "Reading it now." : "Crafting your suggestions."}
                 </p>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {isLoadingSuggestions && (
-                  <div className="flex flex-col items-center justify-center py-10 gap-3">
-                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      {isAnalysisMode ? "Bear with us, analysing your essay…" : "Bear with us, crafting your suggestions…"}
+              </div>
+            )}
+
+            {!isLoadingSuggestions && suggestions && (() => {
+              const blocks = parseSuggestions(suggestions);
+              const hasSuggestionFormat = blocks.some(b => /^\*\*/.test(b));
+
+              if (!hasSuggestionFormat) {
+                return (
+                  <div className="rounded-lg hairline bg-[color:var(--pn-sage)]/10 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-[color:var(--pn-sage)] shrink-0" />
+                      <p className="text-sm font-serif text-[color:var(--pn-sage)]">Looking great.</p>
+                    </div>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-line">
+                      {suggestions}
                     </p>
                   </div>
-                )}
+                );
+              }
 
-                {!isLoadingSuggestions && suggestions && (() => {
-                  const blocks = parseSuggestions(suggestions);
-                  const hasSuggestionFormat = blocks.some(b => /^\*\*/.test(b));
-
-                  if (!hasSuggestionFormat) {
-                    // Freeform "great job" response
+              return (
+                <div className="space-y-3">
+                  {blocks.map((block, i) => {
+                    const titleMatch = block.match(/^\*\*(.+?)\*\*/);
+                    const blockTitle = titleMatch ? titleMatch[1] : null;
+                    const body = block.replace(/^\*\*(.+?)\*\*\n?/, "").trim();
                     return (
-                      <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 p-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                          <p className="text-sm font-semibold text-green-700 dark:text-green-400">Looking great!</p>
-                        </div>
-                        <p className="text-xs text-foreground leading-relaxed whitespace-pre-line">
-                          {suggestions}
-                        </p>
+                      <div key={i} className="rounded-lg hairline bg-white/[0.02] p-3 space-y-1.5">
+                        {blockTitle && (
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-gold)]">
+                            {blockTitle}
+                          </p>
+                        )}
+                        <p className="text-xs text-foreground leading-relaxed">{body}</p>
                       </div>
                     );
-                  }
+                  })}
+                </div>
+              );
+            })()}
 
-                  return (
-                    <div className="space-y-3">
-                      {blocks.map((block, i) => {
-                        const titleMatch = block.match(/^\*\*(.+?)\*\*/);
-                        const blockTitle = titleMatch ? titleMatch[1] : null;
-                        const body = block.replace(/^\*\*(.+?)\*\*\n?/, "").trim();
-                        return (
-                          <div key={i} className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5">
-                            {blockTitle && (
-                              <p className="text-sm font-semibold text-primary">{blockTitle}</p>
-                            )}
-                            <p className="text-xs text-foreground leading-relaxed">{body}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-
-                {!isLoadingSuggestions && !suggestions && hasFetchedOnce && (
-                  <div className="text-center py-8 space-y-3">
-                    <p className="text-sm text-muted-foreground">Couldn't load suggestions right now.</p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => fetchSuggestions(false)}>
-                      Try again
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {content.trim().length > 50 && (
-              <p className="text-xs text-muted-foreground text-center px-2">
-                Click "Refresh" to get updated suggestions based on what you've written so far.
-              </p>
+            {!isLoadingSuggestions && !suggestions && hasFetchedOnce && (
+              <div className="text-center py-8 space-y-3">
+                <p className="text-sm text-muted-foreground font-serif italic">Couldn't load suggestions right now.</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => fetchSuggestions(false)}
+                  className="hairline hover:bg-white/[0.03] text-foreground"
+                >
+                  Try again
+                </Button>
+              </div>
             )}
-          </div>
+          </HairlineCard>
 
+          {content.trim().length > 50 && (
+            <p className="text-xs text-muted-foreground font-serif italic text-center px-2">
+              Click "Refresh" for updated suggestions based on what you've written so far.
+            </p>
+          )}
         </div>
+
       </div>
-    </div>
+    </PageShell>
   );
 };
 

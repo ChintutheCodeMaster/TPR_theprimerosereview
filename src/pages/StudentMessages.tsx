@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -20,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  PageShell,
+  PageHeader,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { Search, Send, MessageSquare, AlertCircle, Paperclip, CheckCheck, Check, Plus } from "lucide-react";
 
 type DBConversation = {
@@ -53,14 +57,12 @@ const StudentMessages = () => {
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // New conversation
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [assignedCounselors, setAssignedCounselors] = useState<any[]>([]);
   const [selectedCounselorId, setSelectedCounselorId] = useState("");
   const [firstMessage, setFirstMessage] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // ── Load data ──────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -82,7 +84,6 @@ const StudentMessages = () => {
       setConversations(convData);
       setSelected(convData[0]);
 
-      // Fetch counselor profiles
       const counselorIds = [...new Set(convData.map((c) => c.counselor_id).filter(Boolean))];
       if (counselorIds.length > 0) {
         const { data: prof } = await supabase
@@ -94,7 +95,6 @@ const StudentMessages = () => {
         setProfiles(map);
       }
 
-      // Fetch messages
       const { data: msgs } = await supabase
         .from("messages")
         .select("*")
@@ -113,7 +113,6 @@ const StudentMessages = () => {
     load();
   }, []);
 
-  // ── Real-time subscription ─────────────────────────────────────
   useEffect(() => {
     if (conversations.length === 0) return;
 
@@ -154,12 +153,10 @@ const StudentMessages = () => {
     };
   }, [conversations]);
 
-  // ── Auto-scroll to bottom ──────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selected]);
 
-  // ── Select conversation & mark as read ────────────────────────
   const selectConversation = async (conv: DBConversation) => {
     setSelected(conv);
 
@@ -181,7 +178,6 @@ const StudentMessages = () => {
     }));
   };
 
-  // ── New conversation ───────────────────────────────────────────
   const openNewConversationDialog = async () => {
     if (!userId) return;
 
@@ -269,7 +265,6 @@ const StudentMessages = () => {
     setCreating(false);
   };
 
-  // ── Send message ───────────────────────────────────────────────
   const handleSend = async () => {
     if (isPreviewMode) {
       toast.info("Preview mode — sending messages is disabled");
@@ -291,7 +286,6 @@ const StudentMessages = () => {
     setNewMessage("");
   };
 
-  // ── Derived ────────────────────────────────────────────────────
   const totalUnread = Object.values(messages)
     .flat()
     .filter((m) => !m.read && m.sender_id !== userId).length;
@@ -331,36 +325,45 @@ const StudentMessages = () => {
       minute: "2-digit",
     });
 
-  // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">My Messages</h1>
-          <p className="text-muted-foreground">Stay in touch with your counselor</p>
-        </div>
-        {totalUnread > 0 && (
-          <div className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 rounded-lg px-4 py-2">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {totalUnread} unread message{totalUnread > 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
-      </div>
+    <PageShell maxWidth="wide">
+      <BlurOrb tone="sage" className="top-[-100px] left-[-100px] w-[480px] h-[480px]" />
+
+      <PageHeader
+        eyebrow="Threads"
+        title={<>Every conversation.</>}
+        subtitle={<>Where you and your counselor stay in sync.</>}
+        actions={
+          totalUnread > 0 ? (
+            <div className="flex items-center gap-2 hairline bg-[color:var(--pn-pink)]/12 text-[color:var(--pn-pink)] rounded-full px-3 py-1.5">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span className="text-xs uppercase tracking-[0.18em]">
+                <span className="num-display">{totalUnread}</span> unread
+              </span>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 h-[680px] rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 h-[680px] rounded-2xl hairline overflow-hidden bg-white/[0.015]">
+
         {/* Conversation List */}
-        <div className="lg:col-span-1 flex flex-col border-r border-border bg-card">
-          <div className="p-4 border-b border-border">
+        <div className="lg:col-span-1 flex flex-col hairline-r">
+          <div className="p-4 hairline-b">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-foreground flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
+              <h2 className="font-serif text-lg text-foreground leading-tight flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 Conversations
               </h2>
-              <Button size="sm" onClick={openNewConversationDialog} title="New conversation">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={openNewConversationDialog}
+                title="New conversation"
+                className="hairline hover:bg-white/[0.04] text-foreground"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -370,18 +373,18 @@ const StudentMessages = () => {
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white/[0.02] hairline"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">Loading...</div>
+              <div className="p-4 text-center text-muted-foreground text-sm font-serif italic">Loading…</div>
             ) : filteredConversations.length === 0 ? (
               <div className="p-6 text-center">
-                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No conversations yet</p>
+                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+                <p className="text-sm font-serif italic text-muted-foreground">No threads yet.</p>
               </div>
             ) : (
               filteredConversations.map((conv) => {
@@ -396,32 +399,35 @@ const StudentMessages = () => {
                   .map((n: string) => n[0])
                   .join("");
 
+                const accentBorder =
+                  selected?.id === conv.id
+                    ? "border-l-[color:var(--pn-sage)]"
+                    : conv.status === "urgent"
+                    ? "border-l-[color:var(--pn-pink)]"
+                    : "border-l-transparent";
+
                 return (
                   <div
                     key={conv.id}
                     onClick={() => selectConversation(conv)}
-                    className={`p-4 cursor-pointer border-l-4 transition-colors hover:bg-muted/50 ${
-                      selected?.id === conv.id
-                        ? "bg-muted border-l-primary"
-                        : conv.status === "urgent"
-                        ? "border-l-destructive"
-                        : "border-l-transparent"
-                    }`}
+                    className={`p-4 cursor-pointer border-l-2 transition-colors hover:bg-white/[0.02] ${
+                      selected?.id === conv.id ? "bg-white/[0.04]" : ""
+                    } ${accentBorder}`}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar className="h-10 w-10 shrink-0">
+                      <Avatar className="h-10 w-10 shrink-0 hairline">
                         <AvatarImage src={counselor?.avatar_url} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-primary font-semibold">
+                        <AvatarFallback className="bg-white/[0.05] text-foreground">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-foreground text-sm truncate">
+                          <p className="text-sm text-foreground truncate">
                             {counselor?.full_name || "Your Counselor"}
                           </p>
-                          <span className="text-xs text-muted-foreground shrink-0">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground shrink-0">
                             {lastMsg ? formatTime(lastMsg.created_at) : ""}
                           </span>
                         </div>
@@ -430,18 +436,15 @@ const StudentMessages = () => {
                             {lastMsg?.content || "No messages yet"}
                           </p>
                           {unreadCount > 0 && (
-                            <Badge
-                              variant="destructive"
-                              className="h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs shrink-0"
-                            >
-                              {unreadCount}
-                            </Badge>
+                            <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-[10px] hairline bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] shrink-0">
+                              <span className="num-display">{unreadCount}</span>
+                            </span>
                           )}
                         </div>
                         {conv.status === "urgent" && (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 mt-1">
+                          <span className="inline-flex items-center px-1.5 py-0 mt-1 rounded-full text-[10px] uppercase tracking-[0.14em] hairline bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]">
                             Urgent
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </div>
@@ -453,14 +456,14 @@ const StudentMessages = () => {
         </div>
 
         {/* Message Thread */}
-        <div className="lg:col-span-2 flex flex-col bg-card">
+        <div className="lg:col-span-2 flex flex-col">
           {selected ? (
             <>
               {/* Thread Header */}
-              <div className="flex items-center gap-3 p-4 border-b border-border">
-                <Avatar className="h-10 w-10">
+              <div className="flex items-center gap-3 p-4 hairline-b">
+                <Avatar className="h-10 w-10 hairline">
                   <AvatarImage src={profiles[selected.counselor_id]?.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-primary font-semibold">
+                  <AvatarFallback className="bg-white/[0.05] text-foreground">
                     {(profiles[selected.counselor_id]?.full_name || "C")
                       .split(" ")
                       .map((n: string) => n[0])
@@ -468,17 +471,28 @@ const StudentMessages = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-semibold text-foreground">
+                  <h3 className="font-serif text-lg text-foreground leading-tight">
                     {profiles[selected.counselor_id]?.full_name || "Your Counselor"}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selected.status === "urgent" ? "🔴 Urgent" : "● Active"}
+                  <p className="text-[10px] uppercase tracking-[0.18em] mt-0.5 flex items-center gap-1.5">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{
+                        background:
+                          selected.status === "urgent"
+                            ? "var(--pn-pink)"
+                            : "var(--pn-sage)",
+                      }}
+                    />
+                    <span className={selected.status === "urgent" ? "text-[color:var(--pn-pink)]" : "text-[color:var(--pn-sage)]"}>
+                      {selected.status === "urgent" ? "Urgent" : "Active"}
+                    </span>
                   </p>
                 </div>
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-muted/20">
+              <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-white/[0.01]">
                 {(messages[selected.id] || []).map((msg) => {
                   const isMe = msg.sender_id === userId;
                   return (
@@ -493,36 +507,36 @@ const StudentMessages = () => {
                       >
                         {!isMe && (
                           <div className="flex items-center gap-1.5 mb-1">
-                            <Avatar className="h-5 w-5">
+                            <Avatar className="h-5 w-5 hairline">
                               <AvatarImage src={profiles[msg.sender_id]?.avatar_url} />
-                              <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                              <AvatarFallback className="text-[9px] bg-white/[0.05] text-foreground">
                                 {(profiles[msg.sender_id]?.full_name || "C")
                                   .split(" ")
                                   .map((n: string) => n[0])
                                   .join("")}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                               {profiles[msg.sender_id]?.full_name || "Counselor"}
                             </span>
                           </div>
                         )}
                         <div
-                          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed hairline ${
                             isMe
-                              ? "bg-primary text-primary-foreground rounded-tr-sm"
-                              : "bg-card text-foreground rounded-tl-sm border border-border"
+                              ? "bg-[color:var(--pn-pink)]/15 text-foreground rounded-tr-sm"
+                              : "bg-white/[0.04] text-foreground rounded-tl-sm"
                           }`}
                         >
                           {msg.content}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                             {formatFullTime(msg.created_at)}
                           </span>
                           {isMe && (
                             msg.read
-                              ? <CheckCheck className="h-3 w-3 text-primary" />
+                              ? <CheckCheck className="h-3 w-3 text-[color:var(--pn-sage)]" />
                               : <Check className="h-3 w-3 text-muted-foreground" />
                           )}
                         </div>
@@ -534,14 +548,14 @@ const StudentMessages = () => {
               </div>
 
               {/* Composer */}
-              <div className="border-t border-border p-4 bg-card">
+              <div className="hairline-t p-4">
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <Textarea
-                      placeholder="Type a message..."
+                      placeholder="Write a note…"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      className="min-h-[52px] max-h-[120px] resize-none"
+                      className="min-h-[52px] max-h-[120px] resize-none bg-white/[0.02] hairline font-serif text-base"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -551,61 +565,73 @@ const StudentMessages = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hairline hover:bg-white/[0.03]"
+                    >
                       <Paperclip className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" onClick={handleSend} disabled={!newMessage.trim()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSend}
+                      disabled={!newMessage.trim()}
+                      className="bg-[color:var(--pn-pink)]/15 hairline text-[color:var(--pn-pink)] hover:bg-[color:var(--pn-pink)]/25 shadow-none disabled:opacity-40"
+                    >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to send ·{" "}
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Shift+Enter</kbd> for new line
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">
+                  <kbd className="px-1.5 py-0.5 hairline bg-white/[0.03] rounded text-[10px]">Enter</kbd> to send ·{" "}
+                  <kbd className="px-1.5 py-0.5 hairline bg-white/[0.03] rounded text-[10px]">Shift+Enter</kbd> new line
                 </p>
               </div>
             </>
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-1">No conversation selected</h3>
-                <p className="text-muted-foreground text-sm">Choose a conversation from the left</p>
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-30" />
+                <h3 className="font-serif text-xl text-foreground leading-tight mb-1">Pick a thread.</h3>
+                <p className="font-serif italic text-muted-foreground text-sm">Choose a conversation from the left.</p>
               </div>
             </div>
           )}
         </div>
       </div>
+
       {/* New Conversation Dialog */}
       <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-pn-card">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Message Your Counselor
+            <DialogTitle className="flex items-center gap-2 font-serif text-xl text-foreground leading-tight">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              Message your counselor.
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {assignedCounselors.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm font-serif italic text-muted-foreground text-center py-4">
                 No assigned counselor found. Please contact your school to get assigned.
               </p>
             ) : (
               <>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Counselor</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2 block">Counselor</label>
                   <Select value={selectedCounselorId} onValueChange={setSelectedCounselorId}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white/[0.02] hairline">
                       <SelectValue placeholder="Choose a counselor..." />
                     </SelectTrigger>
                     <SelectContent>
                       {assignedCounselors.map((c) => (
                         <SelectItem key={c.user_id} value={c.user_id}>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
+                            <Avatar className="h-5 w-5 hairline">
                               <AvatarImage src={c.avatar_url} />
-                              <AvatarFallback className="text-[10px]">
+                              <AvatarFallback className="text-[10px] bg-white/[0.05] text-foreground">
                                 {(c.full_name || "C").split(" ").map((n: string) => n[0]).join("")}
                               </AvatarFallback>
                             </Avatar>
@@ -618,12 +644,12 @@ const StudentMessages = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Message</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2 block">Message</label>
                   <Textarea
                     placeholder="Type your message..."
                     value={firstMessage}
                     onChange={(e) => setFirstMessage(e.target.value)}
-                    className="min-h-[100px]"
+                    className="min-h-[100px] bg-white/[0.02] hairline font-serif text-base"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -635,14 +661,20 @@ const StudentMessages = () => {
 
                 <div className="flex gap-2">
                   <Button
-                    className="flex-1"
+                    type="button"
+                    className="flex-1 bg-[color:var(--pn-pink)]/15 hairline text-[color:var(--pn-pink)] hover:bg-[color:var(--pn-pink)]/25 shadow-none"
                     disabled={!selectedCounselorId || !firstMessage.trim() || creating}
                     onClick={startConversation}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {creating ? "Sending..." : "Send Message"}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowNewConversation(false)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowNewConversation(false)}
+                    className="hairline hover:bg-white/[0.04] text-muted-foreground"
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -651,7 +683,7 @@ const StudentMessages = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 

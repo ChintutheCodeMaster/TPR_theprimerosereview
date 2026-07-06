@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -53,6 +58,17 @@ const emptySlot = (): CollegeSlot => ({
   open: false,
   search: "",
 });
+
+// Underline input style — transparent w/ hairline bottom border, pink focus
+const underlineInput =
+  "bg-transparent border-0 border-b border-white/[0.12] rounded-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-[color:var(--pn-pink)] transition-colors";
+
+const eyebrowLabel = "text-[10px] uppercase tracking-[0.22em] text-muted-foreground";
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] as const } },
+};
 
 const StudentEditProfile = () => {
   const { toast } = useToast();
@@ -163,7 +179,6 @@ const StudentEditProfile = () => {
       if (profileResult.error) throw profileResult.error;
       if (studentProfileResult.error) throw studentProfileResult.error;
 
-      // Colleges: delete then re-insert non-empty slots
       const { error: deleteError } = await (supabase as any)
         .from("student_target_colleges")
         .delete()
@@ -195,295 +210,335 @@ const StudentEditProfile = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div className="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4 flex items-start gap-3">
-        <div className="mt-0.5 rounded-full bg-primary/10 p-1.5 shrink-0">
-          <User className="h-4 w-4 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">Edit Your Profile</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Keep your details up to date — your counselor uses this information to support your application journey. Fill in your GPA, test scores, and the colleges you're targeting.
-          </p>
-        </div>
-      </div>
+    <PageShell>
+      <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[440px] h-[440px]" />
 
-      {/* Personal Info */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="h-4 w-4 text-primary" />
-            Personal Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Full Name</Label>
-            <Input
-              value={form.full_name}
-              onChange={e => handleChange("full_name", e.target.value)}
-              placeholder="Your full name"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input value={email} disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
-            <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Phone</Label>
-            <Input
-              value={form.phone}
-              onChange={e => handleChange("phone", e.target.value)}
-              placeholder="+1 (555) 000-0000"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <PageHeader
+        eyebrow="Your Profile"
+        title={<>The details of you.</>}
+        subtitle={<>Kept up to date, so your counselor knows where to help.</>}
+      />
 
-      {/* Academic Info */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <GraduationCap className="h-4 w-4 text-primary" />
-            Academic Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Grade</Label>
-              <Select value={form.grade} onValueChange={v => handleChange("grade", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Graduation Year</Label>
-              <Input
-                type="number"
-                value={form.graduation_year}
-                onChange={e => handleChange("graduation_year", e.target.value)}
-                placeholder="e.g. 2026"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label>GPA</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                max="4"
-                value={form.gpa}
-                onChange={e => handleChange("gpa", e.target.value)}
-                placeholder="3.8"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>SAT Score</Label>
-              <Input
-                type="number"
-                value={form.sat_score}
-                onChange={e => handleChange("sat_score", e.target.value)}
-                placeholder="1500"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>ACT Score</Label>
-              <Input
-                type="number"
-                value={form.act_score}
-                onChange={e => handleChange("act_score", e.target.value)}
-                placeholder="34"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+        className="space-y-6 max-w-2xl mx-auto"
+      >
 
-      {/* Target Colleges */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            Target Colleges
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {colleges.map((slot, index) => {
-            const filtered = slot.search.trim()
-              ? universityOptions.filter(u => u.toLowerCase().includes(slot.search.toLowerCase()))
-              : universityOptions;
+        {/* Personal Info */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <div className="flex items-center gap-3 mb-6">
+              <User className="h-5 w-5 text-foreground/60" />
+              <div>
+                <h2 className="font-serif text-xl text-foreground leading-tight">Who you are.</h2>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Name, email, phone</p>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className={eyebrowLabel}>Full Name</Label>
+                <Input
+                  value={form.full_name}
+                  onChange={e => handleChange("full_name", e.target.value)}
+                  placeholder="Your full name"
+                  className={underlineInput}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={eyebrowLabel}>Email</Label>
+                <Input
+                  value={email}
+                  disabled
+                  className={cn(underlineInput, "text-muted-foreground cursor-not-allowed")}
+                />
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Email cannot be changed here.</p>
+              </div>
+              <div className="space-y-2">
+                <Label className={eyebrowLabel}>Phone</Label>
+                <Input
+                  value={form.phone}
+                  onChange={e => handleChange("phone", e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                  className={underlineInput}
+                />
+              </div>
+            </div>
+          </HairlineCard>
+        </motion.div>
 
-            return (
-              <div key={index} className="space-y-3 p-3 border rounded-lg bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">University {index + 1}</span>
-                  {colleges.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeCollege(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+        {/* Academic Info */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <div className="flex items-center gap-3 mb-6">
+              <GraduationCap className="h-5 w-5 text-foreground/60" />
+              <div>
+                <h2 className="font-serif text-xl text-foreground leading-tight">The academics.</h2>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Grade, scores, GPA</p>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>Grade</Label>
+                  <Select value={form.grade} onValueChange={v => handleChange("grade", v)}>
+                    <SelectTrigger className={cn(underlineInput, "h-9")}>
+                      <SelectValue placeholder="Select grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>Graduation Year</Label>
+                  <Input
+                    type="number"
+                    value={form.graduation_year}
+                    onChange={e => handleChange("graduation_year", e.target.value)}
+                    placeholder="2026"
+                    className={cn(underlineInput, "num-display")}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>GPA</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="4"
+                    value={form.gpa}
+                    onChange={e => handleChange("gpa", e.target.value)}
+                    placeholder="3.8"
+                    className={cn(underlineInput, "num-display")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>SAT Score</Label>
+                  <Input
+                    type="number"
+                    value={form.sat_score}
+                    onChange={e => handleChange("sat_score", e.target.value)}
+                    placeholder="1500"
+                    className={cn(underlineInput, "num-display")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>ACT Score</Label>
+                  <Input
+                    type="number"
+                    value={form.act_score}
+                    onChange={e => handleChange("act_score", e.target.value)}
+                    placeholder="34"
+                    className={cn(underlineInput, "num-display")}
+                  />
+                </div>
+              </div>
+            </div>
+          </HairlineCard>
+        </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Country</Label>
-                    <select
-                      value={slot.country}
-                      onChange={e => updateCollege(index, { country: e.target.value })}
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                    >
-                      <option value="">Select country...</option>
-                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
+        {/* Target Colleges */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <div className="flex items-center gap-3 mb-6">
+              <Building2 className="h-5 w-5 text-foreground/60" />
+              <div>
+                <h2 className="font-serif text-xl text-foreground leading-tight">Where you're aiming.</h2>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Countries and colleges</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {colleges.map((slot, index) => {
+                const filtered = slot.search.trim()
+                  ? universityOptions.filter(u => u.toLowerCase().includes(slot.search.toLowerCase()))
+                  : universityOptions;
 
-                  <div>
-                    <Label>University</Label>
-                    <Popover
-                      open={slot.open}
-                      onOpenChange={open => updateCollege(index, { open })}
-                    >
-                      <PopoverTrigger asChild>
+                return (
+                  <div key={index} className="space-y-4 p-4 hairline rounded-lg bg-white/[0.02]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                        University <span className="num-display">{index + 1}</span>
+                      </span>
+                      {colleges.length > 1 && (
                         <Button
                           type="button"
-                          variant="outline"
-                          role="combobox"
-                          className="w-full h-10 justify-between font-normal"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-[color:var(--pn-pink)] hover:bg-white/[0.03]"
+                          onClick={() => removeCollege(index)}
                         >
-                          <span className={cn(!slot.university && "text-muted-foreground")}>
-                            {slot.university || "Select university..."}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          <X className="h-4 w-4" />
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <div className="flex items-center border-b px-3">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                          <input
-                            className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                            placeholder="Search universities..."
-                            value={slot.search}
-                            onChange={e => updateCollege(index, { search: e.target.value })}
-                          />
-                        </div>
-                        <div className="max-h-72 overflow-y-auto">
-                          {filtered.length === 0 ? (
-                            <p className="py-6 text-center text-sm text-muted-foreground">No university found.</p>
-                          ) : (
-                            filtered.map(u => (
-                              <button
-                                key={u}
-                                type="button"
-                                onClick={() => updateCollege(index, { university: u, universityOther: "", open: false, search: "" })}
-                                className="relative flex w-full cursor-pointer select-none items-center px-4 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground text-left"
-                              >
-                                <Check className={cn("mr-2 h-4 w-4 shrink-0", slot.university === u ? "opacity-100" : "opacity-0")} />
-                                {u}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
+                      )}
+                    </div>
 
-                {slot.university === "Other" && (
-                  <div>
-                    <Label>University Name</Label>
-                    <Input
-                      value={slot.universityOther}
-                      onChange={e => updateCollege(index, { universityOther: e.target.value })}
-                      placeholder="Enter university name"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className={eyebrowLabel}>Country</Label>
+                        <select
+                          value={slot.country}
+                          onChange={e => updateCollege(index, { country: e.target.value })}
+                          className={cn(underlineInput, "w-full h-9 text-sm text-foreground")}
+                        >
+                          <option value="">Select country...</option>
+                          {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className={eyebrowLabel}>University</Label>
+                        <Popover
+                          open={slot.open}
+                          onOpenChange={open => updateCollege(index, { open })}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              role="combobox"
+                              className={cn(underlineInput, "w-full h-9 justify-between font-normal text-sm hover:bg-transparent")}
+                            >
+                              <span className={cn(!slot.university && "text-muted-foreground")}>
+                                {slot.university || "Select university..."}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-pn-card" align="start">
+                            <div className="flex items-center hairline-b px-3">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                              <input
+                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                                placeholder="Search universities..."
+                                value={slot.search}
+                                onChange={e => updateCollege(index, { search: e.target.value })}
+                              />
+                            </div>
+                            <div className="max-h-72 overflow-y-auto">
+                              {filtered.length === 0 ? (
+                                <p className="py-6 text-center text-sm font-serif italic text-muted-foreground">No university found.</p>
+                              ) : (
+                                filtered.map(u => (
+                                  <button
+                                    key={u}
+                                    type="button"
+                                    onClick={() => updateCollege(index, { university: u, universityOther: "", open: false, search: "" })}
+                                    className="relative flex w-full cursor-pointer select-none items-center px-4 py-2.5 text-sm hover:bg-white/[0.04] text-foreground text-left"
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4 shrink-0", slot.university === u ? "opacity-100 text-[color:var(--pn-pink)]" : "opacity-0")} />
+                                    {u}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    {slot.university === "Other" && (
+                      <div className="space-y-2">
+                        <Label className={eyebrowLabel}>University Name</Label>
+                        <Input
+                          value={slot.universityOther}
+                          onChange={e => updateCollege(index, { universityOther: e.target.value })}
+                          placeholder="Enter university name"
+                          className={underlineInput}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                );
+              })}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={addCollege}
+                className="w-full border border-dashed border-white/[0.12] hover:bg-white/[0.03] hover:border-white/[0.2] text-muted-foreground hover:text-foreground rounded-lg"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add another university
+              </Button>
+            </div>
+          </HairlineCard>
+        </motion.div>
+
+        {/* Parent / Guardian */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <div className="flex items-center gap-3 mb-6">
+              <Phone className="h-5 w-5 text-foreground/60" />
+              <div>
+                <h2 className="font-serif text-xl text-foreground leading-tight">Parent or guardian.</h2>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Kept for your counselor's reference</p>
               </div>
-            );
-          })}
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className={eyebrowLabel}>Parent Name</Label>
+                <Input
+                  value={form.parent_name}
+                  onChange={e => handleChange("parent_name", e.target.value)}
+                  placeholder="Parent's full name"
+                  className={underlineInput}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>Parent Phone</Label>
+                  <Input
+                    value={form.parent_phone}
+                    onChange={e => handleChange("parent_phone", e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className={underlineInput}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={eyebrowLabel}>Parent Email</Label>
+                  <Input
+                    value={form.parent_email}
+                    disabled
+                    className={cn(underlineInput, "text-muted-foreground cursor-not-allowed")}
+                  />
+                </div>
+              </div>
+              <div className="hairline rounded-lg bg-white/[0.02] px-3 py-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                  Parent email is managed by your counselor and cannot be changed here.
+                </p>
+              </div>
+            </div>
+          </HairlineCard>
+        </motion.div>
 
+        <motion.div variants={sectionVariants} className="flex justify-end pt-2">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={addCollege}
-            className="w-full border-dashed"
+            onClick={handleSave}
+            disabled={saving}
+            className="min-w-[140px] bg-[color:var(--pn-pink)]/15 hairline text-[color:var(--pn-pink)] hover:bg-[color:var(--pn-pink)]/25 shadow-none disabled:opacity-40"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add another university
+            {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</> : "Save Changes"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Parent / Guardian */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Phone className="h-4 w-4 text-primary" />
-            Parent / Guardian
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Parent Name</Label>
-            <Input
-              value={form.parent_name}
-              onChange={e => handleChange("parent_name", e.target.value)}
-              placeholder="Parent's full name"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Parent Phone</Label>
-              <Input
-                value={form.parent_phone}
-                onChange={e => handleChange("parent_phone", e.target.value)}
-                placeholder="+1 (555) 000-0000"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Parent Email</Label>
-              <Input value={form.parent_email} disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
-            </div>
-          </div>
-          <div className="rounded-md bg-muted px-3 py-2">
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <BookOpen className="h-3.5 w-3.5 shrink-0" />
-              Parent email is managed by your counselor and cannot be changed here.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} className="min-w-[120px]">
-          {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</> : "Save Changes"}
-        </Button>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </PageShell>
   );
 };
 

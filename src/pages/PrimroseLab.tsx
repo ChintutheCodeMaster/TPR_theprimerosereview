@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  PageShell,
+  PageHeader,
+  HairlineCard,
+  BlurOrb,
+} from "@/components/primrose-night";
 import {
   FlaskConical, Sparkles, Loader2, RefreshCw, Save,
   AlertCircle, ArrowLeftRight, BookOpen, Fingerprint,
@@ -15,119 +21,78 @@ import { useStudentPersonalArea } from "@/hooks/useStudentPersonalArea";
 // ── Config ────────────────────────────────────────────────────
 
 type DimKey = 'authenticity' | 'specificity' | 'voice' | 'narrativeStrength' | 'memorability';
+type Tone = "sage" | "gold" | "pink";
 
-const DIM_CONFIG: Record<DimKey, {
-  label: string;
-  Icon: React.ElementType;
-  gradient: string;
-  bg: string;
-  border: string;
-  textColor: string;
-  bar: string;
-}> = {
-  authenticity: {
-    label: "Authenticity",
-    Icon: Fingerprint,
-    gradient: "from-sky-500 to-cyan-400",
-    bg: "bg-sky-50",
-    border: "border-sky-200",
-    textColor: "text-sky-700",
-    bar: "bg-sky-500",
-  },
-  specificity: {
-    label: "Specificity",
-    Icon: Target,
-    gradient: "from-violet-500 to-purple-400",
-    bg: "bg-violet-50",
-    border: "border-violet-200",
-    textColor: "text-violet-700",
-    bar: "bg-violet-500",
-  },
-  voice: {
-    label: "Voice",
-    Icon: Mic,
-    gradient: "from-rose-500 to-pink-400",
-    bg: "bg-rose-50",
-    border: "border-rose-200",
-    textColor: "text-rose-700",
-    bar: "bg-rose-500",
-  },
-  narrativeStrength: {
-    label: "Narrative Strength",
-    Icon: TrendingUp,
-    gradient: "from-amber-500 to-orange-400",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    textColor: "text-amber-700",
-    bar: "bg-amber-500",
-  },
-  memorability: {
-    label: "Memorability",
-    Icon: Star,
-    gradient: "from-emerald-500 to-teal-400",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    textColor: "text-emerald-700",
-    bar: "bg-emerald-500",
-  },
+const DIM_CONFIG: Record<DimKey, { label: string; Icon: React.ElementType }> = {
+  authenticity:      { label: "Authenticity",       Icon: Fingerprint },
+  specificity:       { label: "Specificity",        Icon: Target      },
+  voice:             { label: "Voice",              Icon: Mic         },
+  narrativeStrength: { label: "Narrative Strength", Icon: TrendingUp  },
+  memorability:      { label: "Memorability",       Icon: Star        },
 };
 
-const LABEL_CONFIG = {
-  "Strong Hook": {
-    container: "bg-emerald-50 border-2 border-emerald-200",
-    textColor: "text-emerald-700",
-    scoreColor: "text-emerald-600",
-    dot: "bg-emerald-500",
-    tagline: "This hook lands.",
-  },
-  "Promising": {
-    container: "bg-blue-50 border-2 border-blue-200",
-    textColor: "text-blue-700",
-    scoreColor: "text-blue-600",
-    dot: "bg-blue-500",
-    tagline: "Getting there.",
-  },
-  "Needs Work": {
-    container: "bg-slate-50 border-2 border-slate-200",
-    textColor: "text-slate-600",
-    scoreColor: "text-slate-500",
-    dot: "bg-slate-400",
-    tagline: "Room to improve.",
-  },
-  "Blends In": {
-    container: "bg-red-50 border-2 border-red-200",
-    textColor: "text-red-600",
-    scoreColor: "text-red-500",
-    dot: "bg-red-400",
-    tagline: "Too familiar.",
-  },
-} as const;
+const scoreTone = (n: number): Tone => {
+  if (n >= 80) return 'sage';
+  if (n >= 60) return 'gold';
+  return 'pink';
+};
+
+const toneVar = (t: Tone) => `var(--pn-${t})`;
+
+const LABEL_CONFIG: Record<string, { tone: Tone; tagline: string }> = {
+  "Strong Hook": { tone: 'sage', tagline: "This hook lands." },
+  "Promising":   { tone: 'gold', tagline: "Getting there." },
+  "Needs Work":  { tone: 'pink', tagline: "Room to improve." },
+  "Blends In":   { tone: 'pink', tagline: "Too familiar." },
+};
 
 const DIMS: DimKey[] = ["authenticity", "specificity", "voice", "narrativeStrength", "memorability"];
+
+const wordCountTone = (n: number): Tone | 'neutral' => {
+  if (n === 0) return 'neutral';
+  if (n < 5) return 'gold';
+  if (n <= 120) return 'sage';
+  return 'pink';
+};
+
+const wordCountClass = (n: number) => {
+  const t = wordCountTone(n);
+  if (t === 'neutral') return 'bg-white/[0.03] text-muted-foreground hairline';
+  return `bg-[color:var(--pn-${t})]/15 text-[color:var(--pn-${t})] hairline`;
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.2, 0.6, 0.2, 1] as const } },
+};
 
 // ── Sub-components ────────────────────────────────────────────
 
 const DimensionCard = ({ dimKey, data }: { dimKey: DimKey; data: { score: number; insight: string } }) => {
   const cfg = DIM_CONFIG[dimKey];
   const { Icon } = cfg;
+  const tone = scoreTone(data.score);
   return (
-    <div className={`rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-5 flex flex-col gap-3`}>
+    <div className="hairline rounded-2xl bg-white/[0.02] p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className={`flex items-center gap-2 font-semibold ${cfg.textColor}`}>
-          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shrink-0`}>
-            <Icon className="h-4 w-4 text-white" />
+        <div className="flex items-center gap-2 text-foreground">
+          <div className="w-8 h-8 rounded-xl hairline flex items-center justify-center shrink-0" style={{ background: `color-mix(in oklch, ${toneVar(tone)} 15%, transparent)` }}>
+            <Icon className="h-4 w-4" style={{ color: toneVar(tone) }} />
           </div>
-          {cfg.label}
+          <span className="font-serif text-base">{cfg.label}</span>
         </div>
-        <span className={`text-3xl font-black ${cfg.textColor}`}>{data.score}</span>
+        <span className="num-display text-2xl" style={{ color: toneVar(tone) }}>{data.score}</span>
       </div>
-      <div className="relative h-2 rounded-full bg-white/70 overflow-hidden">
-        <div
-          className={`absolute inset-y-0 left-0 rounded-full ${cfg.bar} transition-all duration-700`}
-          style={{ width: `${data.score}%` }}
+      <div className="relative h-1 rounded-full bg-white/[0.05] overflow-hidden">
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ background: toneVar(tone) }}
+          initial={{ width: 0 }}
+          animate={{ width: `${data.score}%` }}
+          transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1] }}
         />
       </div>
-      <p className={`text-sm ${cfg.textColor} opacity-90 leading-snug`}>{data.insight}</p>
+      <p className="text-sm text-muted-foreground leading-snug">{data.insight}</p>
     </div>
   );
 };
@@ -141,24 +106,25 @@ const OverallBadge = ({
   overall: number;
   scoreDelta: number | null;
 }) => {
-  const cfg = LABEL_CONFIG[label as keyof typeof LABEL_CONFIG] ?? LABEL_CONFIG["Needs Work"];
+  const cfg = LABEL_CONFIG[label] ?? LABEL_CONFIG["Needs Work"];
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <div className={`inline-flex items-center gap-4 rounded-2xl px-5 py-3 ${cfg.container} shadow-sm`}>
-        <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot} shrink-0`} />
+      <div className="inline-flex items-center gap-4 rounded-2xl px-5 py-3 hairline" style={{ background: `color-mix(in oklch, ${toneVar(cfg.tone)} 10%, transparent)` }}>
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: toneVar(cfg.tone) }} />
         <div>
-          <p className={`text-base font-bold leading-none ${cfg.textColor}`}>{label}</p>
-          <p className={`text-xs mt-0.5 ${cfg.textColor} opacity-70`}>{cfg.tagline}</p>
+          <p className="font-serif text-base leading-tight" style={{ color: toneVar(cfg.tone) }}>{label}</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] mt-1" style={{ color: toneVar(cfg.tone), opacity: 0.7 }}>{cfg.tagline}</p>
         </div>
-        <div className={`ml-1 text-4xl font-black leading-none ${cfg.scoreColor}`}>{overall}</div>
+        <div className="num-display ml-1 text-4xl leading-none" style={{ color: toneVar(cfg.tone) }}>{overall}</div>
       </div>
       {scoreDelta !== null && scoreDelta !== 0 && (
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm hairline ${
           scoreDelta > 0
-            ? "bg-emerald-100 text-emerald-700"
-            : "bg-red-100 text-red-600"
+            ? "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)]"
+            : "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)]"
         }`}>
-          {scoreDelta > 0 ? "+" : ""}{scoreDelta} from your rewrite
+          <span className="num-display">{scoreDelta > 0 ? "+" : ""}{scoreDelta}</span>
+          <span className="text-xs">from your rewrite</span>
         </div>
       )}
     </div>
@@ -177,15 +143,14 @@ const ActionBtn = ({
   onClick: () => void;
 }) => (
   <button
+    type="button"
     onClick={onClick}
     disabled={isLoading && !isActive}
-    className={`
-      px-4 py-2 rounded-full text-sm font-medium border-2 transition-all duration-200
-      ${isActive
-        ? "bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-200"
-        : "bg-white text-violet-700 border-violet-200 hover:border-violet-400 hover:bg-violet-50"
-      }
-    `}
+    className={`px-4 py-2 rounded-full text-sm transition-all hairline ${
+      isActive
+        ? "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)]"
+        : "bg-white/[0.02] text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+    }`}
   >
     {isLoading && isActive ? (
       <span className="flex items-center gap-1.5">
@@ -207,19 +172,26 @@ const VersionPill = ({
   onClick: () => void;
 }) => {
   const overall = Math.round(DIMS.reduce((s, k) => s + version.feedback[k].score, 0) / DIMS.length);
-  const cfg = LABEL_CONFIG[version.feedback.overallLabel as keyof typeof LABEL_CONFIG] ?? LABEL_CONFIG["Needs Work"];
+  const tone = scoreTone(overall);
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`
-        flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all
-        ${isActive ? "border-violet-500 bg-violet-50 text-violet-700" : ""}
-        ${isCompareSelected ? "border-blue-500 bg-blue-50 text-blue-700" : ""}
-        ${!isActive && !isCompareSelected ? "border-gray-200 bg-white text-gray-600 hover:border-gray-300" : ""}
-      `}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all hairline ${
+        isActive
+          ? "bg-white/[0.08] text-foreground"
+          : isCompareSelected
+          ? "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)]"
+          : "bg-white/[0.02] text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+      }`}
     >
-      <span className="font-bold">{version.label}</span>
-      <span className={`text-xs px-1.5 py-0.5 rounded-full ${cfg.dot} text-white`}>{overall}</span>
+      <span>{version.label}</span>
+      <span
+        className="num-display text-xs px-1.5 py-0.5 rounded-full text-foreground"
+        style={{ background: `color-mix(in oklch, ${toneVar(tone)} 20%, transparent)` }}
+      >
+        {overall}
+      </span>
     </button>
   );
 };
@@ -231,68 +203,78 @@ const CompareView = ({ vA, vB }: { vA: LabVersion; vB: LabVersion }) => {
 
   return (
     <div className="grid grid-cols-2 gap-4 mt-4">
-      {([{ v: vA, overall: overallA }, { v: vB, overall: overallB }] as const).map(({ v, overall }, i) => (
-        <div key={v.id} className="border-2 border-gray-200 rounded-2xl p-5 space-y-4 bg-white">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-gray-700 text-lg">{v.label}</span>
-            <div className="flex items-center gap-2">
-              {i === 1 && delta !== 0 && (
-                <span className={`text-sm font-bold ${delta > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                  {delta > 0 ? "+" : ""}{delta}
-                </span>
-              )}
-              <span className="text-2xl font-black text-gray-800">{overall}</span>
+      {([{ v: vA, overall: overallA }, { v: vB, overall: overallB }] as const).map(({ v, overall }, i) => {
+        const tone = scoreTone(overall);
+        return (
+          <div key={v.id} className="hairline rounded-2xl p-5 space-y-4 bg-white/[0.02]">
+            <div className="flex items-center justify-between">
+              <span className="font-serif text-lg text-foreground">{v.label}</span>
+              <div className="flex items-center gap-2">
+                {i === 1 && delta !== 0 && (
+                  <span className={`num-display text-sm ${delta > 0 ? "text-[color:var(--pn-sage)]" : "text-[color:var(--pn-pink)]"}`}>
+                    {delta > 0 ? "+" : ""}{delta}
+                  </span>
+                )}
+                <span className="num-display text-2xl" style={{ color: toneVar(tone) }}>{overall}</span>
+              </div>
+            </div>
+            <p className="text-sm font-serif italic text-muted-foreground bg-white/[0.02] hairline rounded-xl p-3 leading-relaxed line-clamp-4">
+              "{v.text.slice(0, 200)}{v.text.length > 200 ? "…" : ""}"
+            </p>
+            <div className="space-y-2">
+              {DIMS.map(k => {
+                const cfg = DIM_CONFIG[k];
+                const scoreA = vA.feedback[k].score;
+                const scoreB = vB.feedback[k].score;
+                const d = scoreB - scoreA;
+                const dimTone = scoreTone(v.feedback[k].score);
+                return (
+                  <div key={k} className="flex items-center gap-2">
+                    <span className="text-xs w-28 shrink-0 text-muted-foreground">{cfg.label}</span>
+                    <div className="flex-1 h-1 rounded-full bg-white/[0.05] overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: toneVar(dimTone) }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${v.feedback[k].score}%` }}
+                        transition={{ duration: 0.7, ease: [0.2, 0.6, 0.2, 1] }}
+                      />
+                    </div>
+                    <span className="num-display text-xs text-foreground w-8 text-right">{v.feedback[k].score}</span>
+                    {i === 1 && d !== 0 && (
+                      <span className={`num-display text-xs w-8 ${d > 0 ? "text-[color:var(--pn-sage)]" : "text-[color:var(--pn-pink)]"}`}>
+                        {d > 0 ? "+" : ""}{d}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <p className="text-sm text-gray-500 bg-gray-50 rounded-xl p-3 leading-relaxed line-clamp-4 italic">
-            "{v.text.slice(0, 200)}{v.text.length > 200 ? "…" : ""}"
-          </p>
-          <div className="space-y-2">
-            {DIMS.map(k => {
-              const cfg = DIM_CONFIG[k];
-              const scoreA = vA.feedback[k].score;
-              const scoreB = vB.feedback[k].score;
-              const d = scoreB - scoreA;
-              return (
-                <div key={k} className="flex items-center gap-2">
-                  <span className={`text-xs font-medium w-28 shrink-0 ${cfg.textColor}`}>{cfg.label}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div className={`h-full rounded-full ${cfg.bar} transition-all`} style={{ width: `${v.feedback[k].score}%` }} />
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 w-8 text-right">{v.feedback[k].score}</span>
-                  {i === 1 && d !== 0 && (
-                    <span className={`text-xs font-bold w-8 ${d > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                      {d > 0 ? "+" : ""}{d}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
 const DirectionCard = ({ direction }: { direction: Direction }) => (
-  <div className="rounded-2xl border-2 border-indigo-100 bg-white p-5 space-y-3">
+  <div className="hairline rounded-2xl bg-white/[0.02] p-5 space-y-3">
     <div>
-      <p className="font-bold text-indigo-800 text-base">{direction.title}</p>
-      <p className="text-xs text-indigo-500 mt-0.5">{direction.angle}</p>
+      <p className="font-serif text-lg text-foreground leading-tight">{direction.title}</p>
+      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">{direction.angle}</p>
     </div>
-    <div className="bg-indigo-50/60 rounded-xl px-4 py-3 border border-indigo-100">
-      <p className="text-sm text-gray-700 leading-relaxed italic select-none">
+    <div className="bg-white/[0.02] hairline rounded-xl px-4 py-3">
+      <p className="text-sm font-serif italic text-foreground/85 leading-relaxed select-none">
         "{direction.example}"
       </p>
     </div>
     <div className="space-y-1.5 pt-1">
-      <p className="text-xs text-gray-600 leading-snug">
-        <span className="font-semibold text-emerald-700">Why it works: </span>
+      <p className="text-xs text-muted-foreground leading-snug">
+        <span className="text-[color:var(--pn-sage)]">Why it works: </span>
         {direction.explanation.why}
       </p>
-      <p className="text-xs text-gray-600 leading-snug">
-        <span className="font-semibold text-violet-700">What changed: </span>
+      <p className="text-xs text-muted-foreground leading-snug">
+        <span className="text-[color:var(--pn-gold)]">What changed: </span>
         {direction.explanation.what}
       </p>
     </div>
@@ -316,19 +298,19 @@ const ExplorePanel = ({
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <div className="relative">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-200">
-            <Compass className="h-6 w-6 text-white" />
+          <div className="w-14 h-14 rounded-full hairline bg-[color:var(--pn-sage)]/12 flex items-center justify-center">
+            <Compass className="h-6 w-6 text-[color:var(--pn-sage)]" />
           </div>
-          <div className="absolute inset-0 rounded-full border-4 border-indigo-300 animate-ping opacity-60" />
+          <div className="absolute inset-0 rounded-full border border-[color:var(--pn-sage)]/40 animate-ping opacity-60" />
         </div>
-        <p className="text-base font-semibold text-gray-700">Exploring directions...</p>
+        <p className="text-base font-serif italic text-muted-foreground">Exploring directions.</p>
       </div>
     );
   }
 
   if (exploreState.status === 'error') {
     return (
-      <Alert variant="destructive">
+      <Alert className="hairline bg-[color:var(--pn-pink)]/10 text-[color:var(--pn-pink)] border-transparent">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{exploreState.message}</AlertDescription>
       </Alert>
@@ -340,15 +322,15 @@ const ExplorePanel = ({
   return (
     <div className="space-y-4">
       {/* Ethical guardrail */}
-      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-        <p className="text-sm text-amber-800 leading-snug">
-          <span className="font-semibold">These are examples to spark your thinking — not to copy.</span>{" "}
+      <div className="flex items-start gap-2.5 hairline bg-[color:var(--pn-gold)]/8 rounded-xl px-4 py-3">
+        <AlertCircle className="h-4 w-4 text-[color:var(--pn-gold)] mt-0.5 shrink-0" />
+        <p className="text-sm text-foreground/85 leading-snug">
+          <span className="text-[color:var(--pn-gold)]">Examples to spark your thinking — not to copy.</span>{" "}
           Your voice matters. Read them, find what resonates, then write your own version below.
         </p>
       </div>
 
-      {/* 3 direction cards */}
+      {/* Direction cards */}
       <div className="grid grid-cols-1 gap-3">
         {exploreState.directions.map((dir, i) => (
           <DirectionCard key={i} direction={dir} />
@@ -356,36 +338,35 @@ const ExplorePanel = ({
       </div>
 
       {/* Write your version */}
-      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl border-2 border-indigo-100 p-5 space-y-3">
-        <div>
-          <p className="text-sm font-bold text-indigo-800">Now write your version based on what you liked</p>
-          <p className="text-xs text-indigo-500 mt-0.5">Don't copy — use what inspired you and make it yours.</p>
+      <HairlineCard variant="sage">
+        <div className="space-y-3">
+          <div>
+            <p className="font-serif text-lg text-foreground leading-tight">Now, your version.</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Use what inspired you, make it yours</p>
+          </div>
+          <Textarea
+            value={text}
+            onChange={e => onTextChange(e.target.value)}
+            placeholder="Write your version here..."
+            className="min-h-[120px] font-serif text-base leading-relaxed bg-white/[0.02] hairline resize-none"
+          />
+          <div className="flex items-center justify-between">
+            <span className={`text-xs px-2.5 py-1 rounded-full ${wordCountClass(wordCount)}`}>
+              <span className="num-display">{wordCount}</span> {wordCount === 1 ? "word" : "words"}
+            </span>
+            <Button
+              type="button"
+              onClick={onReanalyze}
+              disabled={wordCount < 3}
+              size="sm"
+              className="bg-[color:var(--pn-sage)]/15 hairline text-[color:var(--pn-sage)] hover:bg-[color:var(--pn-sage)]/25 shadow-none"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Re-analyze my version
+            </Button>
+          </div>
         </div>
-        <Textarea
-          value={text}
-          onChange={e => onTextChange(e.target.value)}
-          placeholder="Write your version here..."
-          className="min-h-[120px] bg-white border-indigo-100 focus:border-indigo-300 text-sm resize-none"
-        />
-        <div className="flex items-center justify-between">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-            wordCount === 0 ? "bg-gray-100 text-gray-400" :
-            wordCount <= 120 ? "bg-emerald-100 text-emerald-700" :
-            "bg-orange-100 text-orange-700"
-          }`}>
-            {wordCount} {wordCount === 1 ? "word" : "words"}
-          </span>
-          <Button
-            onClick={onReanalyze}
-            disabled={wordCount < 3}
-            size="sm"
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold"
-          >
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            Re-analyze my version
-          </Button>
-        </div>
-      </div>
+      </HairlineCard>
     </div>
   );
 };
@@ -488,39 +469,39 @@ export default function PrimroseLab() {
   const compareVersionB = versions.find(v => v.id === compareVersionIds[1]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-indigo-50/50">
+    <PageShell>
+      <BlurOrb tone="sage" className="top-[-100px] left-[-100px] w-[520px] h-[520px]" />
+      <BlurOrb tone="pink" className="bottom-[-80px] right-[-100px] w-[380px] h-[380px]" />
 
-      {/* ── Hero Header ── */}
-      <div className="bg-gradient-to-br from-violet-50 via-white to-indigo-50 border-b border-violet-100 px-6 py-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center">
-              <FlaskConical className="h-5 w-5 text-violet-600" />
-            </div>
-            <span className="text-violet-400 text-sm font-medium uppercase tracking-widest">Primrose Lab</span>
+      <PageHeader
+        eyebrow="Primrose Lab"
+        title={<>Your essay workshop.</>}
+        subtitle={<>Test a hook. Get honest feedback. Iterate fast.</>}
+        actions={
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full hairline bg-white/[0.03]">
+            <FlaskConical className="h-3.5 w-3.5 text-[color:var(--pn-sage)]" />
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Lab</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-tight">Your essay workshop.</h1>
-          <p className="text-gray-500 mt-1 text-lg">
-            No pressure. Just progress. Test a hook, get honest feedback, iterate fast.
-          </p>
+        }
+      />
 
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <div className="space-y-6">
 
         {/* ── Input Phase ── */}
         {!hasResult && !isAnalyzing && (
-          <Card className="border-2 border-violet-100 shadow-lg shadow-violet-50/50 bg-white">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-violet-500" />
-                  Paste your text
-                </CardTitle>
+          <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
+            <HairlineCard>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="h-5 w-5 text-foreground/60" />
+                  <div>
+                    <h2 className="font-serif text-xl text-foreground leading-tight">Bring in some text.</h2>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">A hook, an opening, a paragraph</p>
+                  </div>
+                </div>
                 {essays && essays.length > 0 && (
                   <Select onValueChange={handleLoadEssay}>
-                    <SelectTrigger className="w-52 h-8 text-xs border-violet-200">
+                    <SelectTrigger className="w-52 h-8 text-xs bg-white/[0.02] hairline">
                       <SelectValue placeholder="Load from my essays" />
                     </SelectTrigger>
                     <SelectContent>
@@ -533,136 +514,142 @@ export default function PrimroseLab() {
                   </Select>
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                id="lab-textarea"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder="Paste 1–5 sentences here. A hook, an opening, a paragraph you're not sure about. The shorter the better to start."
-                className="min-h-[200px] text-base leading-relaxed border-violet-100 focus:border-violet-300 resize-none"
-              />
-              <div className="flex items-center justify-between">
-                <span className={`text-sm px-3 py-1 rounded-full font-medium ${
-                  wordCount === 0 ? "bg-gray-100 text-gray-400" :
-                  wordCount < 5 ? "bg-amber-100 text-amber-700" :
-                  wordCount <= 120 ? "bg-emerald-100 text-emerald-700" :
-                  "bg-orange-100 text-orange-700"
-                }`}>
-                  {wordCount} {wordCount === 1 ? "word" : "words"}
-                  {wordCount > 120 && " — try a shorter excerpt"}
-                </span>
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={!canAnalyze}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold px-7 shadow-lg shadow-violet-200 disabled:opacity-40 disabled:shadow-none"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Analyze
-                </Button>
+              <div className="space-y-4">
+                <Textarea
+                  id="lab-textarea"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  placeholder="Paste 1–5 sentences here. A hook, an opening, a paragraph you're not sure about. The shorter the better to start."
+                  className="min-h-[200px] font-serif text-base leading-relaxed bg-white/[0.02] hairline resize-none"
+                />
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs px-3 py-1 rounded-full ${wordCountClass(wordCount)}`}>
+                    <span className="num-display">{wordCount}</span> {wordCount === 1 ? "word" : "words"}
+                    {wordCount > 120 && " — try a shorter excerpt"}
+                  </span>
+                  <Button
+                    type="button"
+                    onClick={handleAnalyze}
+                    disabled={!canAnalyze}
+                    className="bg-[color:var(--pn-sage)]/15 hairline text-[color:var(--pn-sage)] hover:bg-[color:var(--pn-sage)]/25 shadow-none px-7 disabled:opacity-40"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Analyze
+                  </Button>
+                </div>
+                {analyzeState.status === 'error' && (
+                  <Alert className="hairline bg-[color:var(--pn-pink)]/10 text-[color:var(--pn-pink)] border-transparent">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{analyzeState.message}</AlertDescription>
+                  </Alert>
+                )}
               </div>
-              {analyzeState.status === 'error' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{analyzeState.message}</AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+            </HairlineCard>
+          </motion.div>
         )}
 
         {/* ── Loading Phase ── */}
         {isAnalyzing && (
-          <div className="flex flex-col items-center justify-center py-24 gap-6">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-xl shadow-violet-300">
-                <FlaskConical className="h-8 w-8 text-white" />
+          <HairlineCard>
+            <div className="flex flex-col items-center justify-center py-16 gap-6">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full hairline bg-[color:var(--pn-sage)]/12 flex items-center justify-center">
+                  <FlaskConical className="h-8 w-8 text-[color:var(--pn-sage)]" />
+                </div>
+                <div className="absolute inset-0 rounded-full border border-[color:var(--pn-sage)]/40 animate-ping opacity-60" />
               </div>
-              <div className="absolute inset-0 rounded-full border-4 border-violet-300 animate-ping opacity-60" />
+              <div className="text-center">
+                <p className="font-serif text-2xl text-foreground leading-tight">Reading it now.</p>
+                <p className="font-serif italic text-muted-foreground mt-1">Being honest takes a moment.</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-xl font-bold text-gray-800">Reading your text...</p>
-              <p className="text-gray-500 mt-1">Being honest takes a moment.</p>
-            </div>
-          </div>
+          </HairlineCard>
         )}
 
         {/* ── Results Phase ── */}
         {hasResult && feedback && (
-          <div className="space-y-5">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+            className="space-y-6"
+          >
 
             {/* Overall badge + controls */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <motion.div variants={sectionVariants} className="flex flex-wrap items-center justify-between gap-3">
               <OverallBadge label={feedback.overallLabel} overall={overall} scoreDelta={scoreDelta} />
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
+                  type="button"
+                  variant="ghost"
                   size="sm"
                   onClick={handleSave}
-                  className="border-violet-200 text-violet-700 hover:bg-violet-50"
+                  className="hairline hover:bg-white/[0.04] text-foreground"
                 >
                   <Save className="h-3.5 w-3.5 mr-1.5" />
                   Save as {versions.length > 0 ? `V${versions.length + 1}` : "V1"}
                 </Button>
                 <Button
-                  variant="outline"
+                  type="button"
+                  variant="ghost"
                   size="sm"
                   onClick={handleReset}
-                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                  className="hairline hover:bg-white/[0.03] text-muted-foreground"
                 >
                   <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                   Start over
                 </Button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Overall summary */}
-            <div className="bg-white rounded-2xl border-2 border-gray-100 px-6 py-4 shadow-sm">
-              <p className="text-gray-700 text-base leading-relaxed italic">
-                "{feedback.overallSummary}"
-              </p>
-            </div>
+            <motion.div variants={sectionVariants}>
+              <HairlineCard>
+                <p className="text-base font-serif italic text-foreground leading-relaxed">
+                  "{feedback.overallSummary}"
+                </p>
+              </HairlineCard>
+            </motion.div>
 
             {/* 5 dimension cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <motion.div variants={sectionVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {DIMS.map(k => (
                 <DimensionCard key={k} dimKey={k} data={feedback[k]} />
               ))}
-            </div>
+            </motion.div>
 
             {/* Edit + re-analyze */}
-            <Card className="border-2 border-dashed border-violet-200 bg-violet-50/40">
-              <CardContent className="pt-5 space-y-3">
-                <p className="text-sm font-semibold text-violet-700">
-                  Make changes then re-analyze to see your score move
-                </p>
-                <Textarea
-                  value={text}
-                  onChange={e => setText(e.target.value)}
-                  className="min-h-[120px] bg-white border-violet-200 text-sm resize-none focus:border-violet-400"
-                />
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                    wordCount <= 120 ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
-                  }`}>
-                    {wordCount} words
-                  </span>
-                  <Button
-                    onClick={handleAnalyze}
-                    disabled={!canAnalyze}
-                    size="sm"
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    Re-analyze
-                  </Button>
+            <motion.div variants={sectionVariants}>
+              <HairlineCard variant="sage">
+                <div className="space-y-3">
+                  <p className="font-serif text-lg text-foreground leading-tight">Change it, and see what moves.</p>
+                  <Textarea
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    className="min-h-[120px] font-serif text-base leading-relaxed bg-white/[0.02] hairline resize-none"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs px-2.5 py-1 rounded-full ${wordCountClass(wordCount)}`}>
+                      <span className="num-display">{wordCount}</span> words
+                    </span>
+                    <Button
+                      type="button"
+                      onClick={handleAnalyze}
+                      disabled={!canAnalyze}
+                      size="sm"
+                      className="bg-[color:var(--pn-sage)]/15 hairline text-[color:var(--pn-sage)] hover:bg-[color:var(--pn-sage)]/25 shadow-none"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      Re-analyze
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </HairlineCard>
+            </motion.div>
 
             {/* Action layer */}
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-gray-600">What do you want to work on?</p>
+            <motion.div variants={sectionVariants} className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">What do you want to work on?</p>
               <div className="flex flex-wrap gap-2">
                 {feedback.suggestedActions.map(action => (
                   <ActionBtn
@@ -677,37 +664,42 @@ export default function PrimroseLab() {
 
               {/* Suggestion panel */}
               {(suggestState.status === 'loading' || suggestState.status === 'success') && !showExplore && (
-                <div className="bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border-2 border-violet-100 p-5 space-y-3">
-                  <div className="flex items-center gap-2 font-semibold text-violet-700">
-                    <Sparkles className="h-4 w-4" />
-                    {suggestState.status === 'loading' ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Loading suggestions...
+                <HairlineCard variant="sage">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-[color:var(--pn-sage)]">
+                      <Sparkles className="h-4 w-4" />
+                      <span className="font-serif text-base">
+                        {suggestState.status === 'loading' ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Loading suggestions...
+                          </span>
+                        ) : (
+                          `How to: ${(suggestState as any).action}`
+                        )}
                       </span>
-                    ) : (
-                      `How to: ${(suggestState as any).action}`
+                    </div>
+                    {suggestState.status === 'success' && (
+                      <ul className="space-y-2.5">
+                        {(suggestState as any).suggestions.map((s: string, i: number) => (
+                          <li key={i} className="flex gap-3 text-sm text-foreground leading-relaxed">
+                            <span className="text-[color:var(--pn-sage)] mt-0.5 shrink-0">•</span>
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
-                  {suggestState.status === 'success' && (
-                    <ul className="space-y-2.5">
-                      {(suggestState as any).suggestions.map((s: string, i: number) => (
-                        <li key={i} className="flex gap-3 text-sm text-gray-700 leading-relaxed">
-                          <span className="text-violet-400 font-bold mt-0.5 shrink-0 text-base">•</span>
-                          <span>{s}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                </HairlineCard>
               )}
 
               {/* Explore directions — temporarily disabled pending review */}
               {/* <div className="pt-1">
                 <button
+                  type="button"
                   onClick={handleExploreDirections}
                   disabled={exploreState.status === 'loading'}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold text-sm shadow-md shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl hairline bg-[color:var(--pn-sage)]/15 hover:bg-[color:var(--pn-sage)]/25 text-[color:var(--pn-sage)] text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exploreState.status === 'loading' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -717,7 +709,7 @@ export default function PrimroseLab() {
                   Explore directions
                 </button>
               </div> */}
-            </div>
+            </motion.div>
 
             {/* Explore panel — temporarily disabled pending review */}
             {/* {showExplore && (
@@ -731,18 +723,22 @@ export default function PrimroseLab() {
 
             {/* Version history */}
             {versions.length > 0 && (
-              <div className="space-y-3 border-t border-gray-100 pt-5">
+              <motion.div variants={sectionVariants} className="space-y-3 hairline-t pt-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-600 flex items-center gap-1.5">
-                    <BookOpen className="h-4 w-4" />
-                    Saved versions ({versions.length})
+                  <p className="font-serif text-lg text-foreground leading-tight flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    Every version, kept.
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                      (<span className="num-display">{versions.length}</span>)
+                    </span>
                   </p>
                   {versions.length >= 2 && (
                     <Button
-                      variant="outline"
+                      type="button"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setCompareMode(m => !m)}
-                      className="border-blue-200 text-blue-600 hover:bg-blue-50 text-xs"
+                      className="hairline hover:bg-white/[0.04] text-[color:var(--pn-gold)] text-xs"
                     >
                       <ArrowLeftRight className="h-3 w-3 mr-1" />
                       {compareMode ? "Hide compare" : "Compare versions"}
@@ -774,17 +770,17 @@ export default function PrimroseLab() {
                 )}
 
                 {compareMode && (!compareVersionA || !compareVersionB) && (
-                  <p className="text-sm text-blue-600 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+                  <p className="text-sm font-serif italic text-[color:var(--pn-gold)] hairline bg-[color:var(--pn-gold)]/8 rounded-xl px-4 py-3">
                     Select two versions above to compare them side by side.
                   </p>
                 )}
-              </div>
+              </motion.div>
             )}
 
-          </div>
+          </motion.div>
         )}
 
       </div>
-    </div>
+    </PageShell>
   );
 }
