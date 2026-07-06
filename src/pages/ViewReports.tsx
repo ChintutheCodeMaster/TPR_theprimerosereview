@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -48,11 +46,35 @@ import {
   School,
   Loader2,
 } from "lucide-react";
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
-const CHART_COLORS = [
-  "#3b82f6","#ef4444","#10b981","#f59e0b",
-  "#8b5cf6","#06b6d4","#ec4899","#84cc16",
+const PN_CHART_COLORS = [
+  "oklch(0.78 0.07 155)", // sage
+  "oklch(0.80 0.10 85)",  // gold
+  "oklch(0.72 0.10 15)",  // pink
+  "rgba(255,255,255,0.5)",
+  "oklch(0.78 0.07 155 / 0.7)",
+  "oklch(0.80 0.10 85 / 0.7)",
+  "oklch(0.72 0.10 15 / 0.7)",
+  "rgba(255,255,255,0.35)",
 ];
+
+const chartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: "8px",
+  color: "hsl(var(--foreground))",
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
+};
 
 interface StudentReport {
   id: string;
@@ -67,6 +89,39 @@ interface StudentReport {
   totalRecs: number;
   riskLevel: "low" | "medium" | "high";
 }
+
+const riskPillClass = (level: string) => {
+  switch (level) {
+    case "high":   return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+    case "medium": return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "low":    return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+    default:       return "bg-white/[0.03] text-muted-foreground hairline";
+  }
+};
+
+const progressTone = (pct: number) => {
+  if (pct < 50) return "var(--pn-pink)";
+  if (pct < 80) return "var(--pn-gold)";
+  return "var(--pn-sage)";
+};
+
+const progressToneText = (pct: number) => {
+  if (pct < 50) return "text-[color:var(--pn-pink)]";
+  if (pct < 80) return "text-[color:var(--pn-gold)]";
+  return "text-[color:var(--pn-sage)]";
+};
+
+const AnimatedBar = ({ pct, tone, className = "w-full" }: { pct: number; tone: string; className?: string }) => (
+  <div className={`h-1.5 rounded-full bg-white/[0.05] overflow-hidden ${className}`}>
+    <motion.div
+      className="h-full"
+      style={{ background: tone }}
+      initial={{ width: 0 }}
+      animate={{ width: `${pct}%` }}
+      transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1], delay: 0.15 }}
+    />
+  </div>
+);
 
 const ViewReports = () => {
   const [selectedStudent, setSelectedStudent] = useState("all");
@@ -111,9 +166,6 @@ const ViewReports = () => {
     load();
   }, []);
 
-  // ── Student reports ──────────────────────────────────────────────────────
-  // Mirrors useIndexDashboard exactly: essays (60%) + recs (40%), at-risk only
-  // when completionPercentage < 40 AND a deadline is within 30 days.
   const studentReports = useMemo<StudentReport[]>(() => {
     const now = new Date();
     const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -130,7 +182,6 @@ const ViewReports = () => {
 
       const overallProgress = computeCompletion(essaysCompleted, totalEssays, recsCompleted, totalRecs, criteria);
 
-      // Near-deadline flag — any unsubmitted app due within 30 days
       const hasNearDeadline = apps.some((a) => {
         const d = new Date(a.deadline_date);
         return a.status !== "submitted" && d >= now && d <= in30Days;
@@ -140,7 +191,6 @@ const ViewReports = () => {
       const riskLevel: "low" | "medium" | "high" =
         risk === "on-track" ? "low" : risk === "at-risk" ? "high" : "medium";
 
-      // For display cards still use applications table counts
       const applicationsSubmitted = apps.filter((a) => a.status === "submitted").length;
       const totalApplications     = apps.length;
       const recsReceived = apps.reduce((sum, a) => sum + (a.recommendations_submitted ?? 0), 0);
@@ -162,7 +212,6 @@ const ViewReports = () => {
     });
   }, [rawStudents, rawEssays, rawRecs, rawApplications, criteria]);
 
-  // ── Overview metrics ─────────────────────────────────────────────────────
   const metrics = useMemo(() => {
     const submittedEssays = rawEssays.filter((e) =>
       ["pending", "sent", "read"].includes(e.status)
@@ -178,19 +227,17 @@ const ViewReports = () => {
     return { totalStudents: rawStudents.length, submittedEssays, upcomingDeadlines, avgProgress, atRisk };
   }, [rawStudents, rawEssays, rawApplications, studentReports]);
 
-  // ── Application distribution ─────────────────────────────────────────────
   const applicationDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     rawApplications.forEach((a) => {
       counts[a.school_name] = (counts[a.school_name] || 0) + 1;
     });
     return Object.entries(counts)
-      .map(([school, count], i) => ({ school, applications: count, color: CHART_COLORS[i % CHART_COLORS.length] }))
+      .map(([school, count], i) => ({ school, applications: count, color: PN_CHART_COLORS[i % PN_CHART_COLORS.length] }))
       .sort((a, b) => b.applications - a.applications)
       .slice(0, 8);
   }, [rawApplications]);
 
-  // ── Deadlines by week (next 6 weeks) ─────────────────────────────────────
   const deadlinesByWeek = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -214,7 +261,6 @@ const ViewReports = () => {
     });
   }, [rawApplications]);
 
-  // ── Essay submission trend (past 6 weeks) ────────────────────────────────
   const submissionTrend = useMemo(() => {
     const now = new Date();
     now.setHours(23, 59, 59, 999);
@@ -231,7 +277,6 @@ const ViewReports = () => {
     });
   }, [rawEssays]);
 
-  // ── Aggregate stats ──────────────────────────────────────────────────────
   const aggregateStats = useMemo(() => {
     const submitted  = rawApplications.filter((a) => a.status === "submitted").length;
     const inProgress = rawApplications.filter((a) => a.status === "in_progress").length;
@@ -248,7 +293,6 @@ const ViewReports = () => {
     };
   }, [rawApplications, rawRecs, rawEssays]);
 
-  // ── Key insights ─────────────────────────────────────────────────────────
   const keyInsights = useMemo(() => {
     const insights: string[] = [];
     const highRisk = studentReports.filter((s) => s.riskLevel === "high").length;
@@ -279,9 +323,6 @@ const ViewReports = () => {
     return insights.slice(0, 4);
   }, [studentReports, rawRecs, rawApplications, rawEssays, applicationDistribution]);
 
-  const getRiskBadge = (level: string): "destructive" | "secondary" | "default" =>
-    level === "high" ? "destructive" : level === "medium" ? "secondary" : "default";
-
   const handleExport = (format: string, type: string) => {
     toast({ title: `Exporting ${type}`, description: `Your ${type} report is being prepared in ${format.toUpperCase()} format.` });
   };
@@ -296,127 +337,167 @@ const ViewReports = () => {
 
   const atRiskStudents = studentReports.filter((s) => s.riskLevel !== "low");
 
-  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     );
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  const overviewTiles: Array<{ icon: any; label: string; value: number | string; tone: string }> = [
+    { icon: Users,         label: "Students",           value: metrics.totalStudents,     tone: "var(--pn-sage)" },
+    { icon: FileText,      label: "Essays submitted",   value: metrics.submittedEssays,   tone: "var(--pn-sage)" },
+    { icon: AlertTriangle, label: "At risk",            value: metrics.atRisk,            tone: "var(--pn-pink)" },
+    { icon: Calendar,      label: "Upcoming deadlines", value: metrics.upcomingDeadlines, tone: "var(--pn-gold)" },
+    { icon: Target,        label: "Avg completion",     value: `${metrics.avgProgress}%`, tone: "var(--pn-sage)" },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">View Reports</h1>
-          <p className="text-muted-foreground">Analytics and insights for your students</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleExport("pdf", "Full Report")}>
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-          <Button variant="outline" onClick={() => handleExport("excel", "Data Export")}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <BlurOrb tone="gold" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-      {/* Overview Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {[
-          { icon: Users,       label: "Total Students",      value: metrics.totalStudents,   color: "text-primary" },
-          { icon: FileText,    label: "Essays Submitted",    value: metrics.submittedEssays, color: "text-blue-600" },
-          { icon: AlertTriangle, label: "At Risk Students",  value: metrics.atRisk,          color: "text-destructive" },
-          { icon: Calendar,    label: "Upcoming Deadlines",  value: metrics.upcomingDeadlines, color: "text-orange-600" },
-          { icon: Target,      label: "Avg Completion",      value: `${metrics.avgProgress}%`, color: "text-green-600" },
-        ].map(({ icon: Icon, label, value, color }) => (
-          <Card key={label}>
-            <CardContent className="p-4">
+      <PageHeader
+        eyebrow="Reports"
+        title={<>The numbers, in your hand.</>}
+        subtitle={<>Analytics and insight — the whole roster, one view.</>}
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+              onClick={() => handleExport("pdf", "Full Report")}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+              onClick={() => handleExport("excel", "Data Export")}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Excel
+            </Button>
+          </div>
+        }
+      />
+
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Overview Metrics */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {overviewTiles.map(({ icon: Icon, label, value, tone }) => (
+            <HairlineCard key={label}>
               <div className="flex items-center gap-2 mb-2">
-                <Icon className={`h-4 w-4 ${color}`} />
-                <span className="text-sm text-muted-foreground">{label}</span>
-              </div>
-              <div className={`text-2xl font-bold ${color}`}>{value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Key Insights */}
-      <Card className="bg-gradient-subtle border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-primary" />
-            Key Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {keyInsights.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No data available yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {keyInsights.map((insight, i) => (
-                <div key={i} className="p-3 bg-background/50 rounded-lg border">
-                  <p className="text-sm">{insight}</p>
+                <div className="hairline rounded-lg p-1.5" style={{ background: `${tone}20` }}>
+                  <Icon className="h-4 w-4" style={{ color: tone }} />
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+              </div>
+              <div className="num-display text-2xl text-foreground">{value}</div>
+            </HairlineCard>
+          ))}
+        </motion.div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="individual">Individual Reports</TabsTrigger>
-          <TabsTrigger value="aggregate">Aggregate Analytics</TabsTrigger>
-          <TabsTrigger value="risk">Risk Analysis</TabsTrigger>
-        </TabsList>
+        {/* Key Insights */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard variant="hero">
+            <h3 className="font-serif text-2xl text-foreground leading-tight flex items-center gap-2 mb-4">
+              <Lightbulb className="h-5 w-5 text-[color:var(--pn-gold)]" />
+              What stands out.
+            </h3>
+            {keyInsights.length === 0 ? (
+              <p className="text-sm font-serif italic text-muted-foreground">Nothing to report yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {keyInsights.map((insight, i) => (
+                  <div key={i} className="p-3 hairline rounded-lg bg-white/[0.02]">
+                    <p className="text-sm text-foreground">{insight}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </HairlineCard>
+        </motion.div>
 
-        {/* ── Overview Tab ── */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Essay Submission Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LineChartIcon className="h-5 w-5" />
-                  Essay Submission Activity (Last 6 Weeks)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <motion.div variants={sectionVariants}>
+            <TabsList className="grid w-full grid-cols-4 bg-white/[0.02] hairline p-1 h-auto">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="individual"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                By student
+              </TabsTrigger>
+              <TabsTrigger
+                value="aggregate"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                Aggregate
+              </TabsTrigger>
+              <TabsTrigger
+                value="risk"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                Risk
+              </TabsTrigger>
+            </TabsList>
+          </motion.div>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+                  <LineChartIcon className="h-4 w-4 text-[color:var(--pn-sage)]" />
+                  Essay submissions, last 6 weeks
+                </h3>
                 {rawEssays.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-16">No essays submitted yet.</p>
+                  <p className="text-sm font-serif italic text-muted-foreground text-center py-16">
+                    No essays submitted yet.
+                  </p>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={submissionTrend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="submissions" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Submissions" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                      <XAxis dataKey="week" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                      <Tooltip contentStyle={chartTooltipStyle} />
+                      <Area
+                        type="monotone"
+                        dataKey="submissions"
+                        stroke="oklch(0.78 0.07 155)"
+                        fill="oklch(0.78 0.07 155)"
+                        fillOpacity={0.25}
+                        name="Submissions"
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
-              </CardContent>
-            </Card>
+              </HairlineCard>
 
-            {/* Popular Schools */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  Popular Schools
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+                  <PieChartIcon className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                  Popular schools
+                </h3>
                 {applicationDistribution.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-16">No applications yet.</p>
+                  <p className="text-sm font-serif italic text-muted-foreground text-center py-16">
+                    No applications yet.
+                  </p>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -427,351 +508,351 @@ const ViewReports = () => {
                         outerRadius={80}
                         dataKey="applications"
                         label={({ school, applications }) => `${school}: ${applications}`}
+                        stroke="rgba(255,255,255,0.08)"
                       >
                         {applicationDistribution.slice(0, 6).map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={chartTooltipStyle} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </HairlineCard>
+            </div>
 
-          {/* Deadlines by Week */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Upcoming Deadlines by Week (Next 6 Weeks)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            <HairlineCard>
+              <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+                <BarChart3 className="h-4 w-4 text-[color:var(--pn-pink)]" />
+                Deadlines by week — next 6 weeks
+              </h3>
               {rawApplications.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-16">No applications yet.</p>
+                <p className="text-sm font-serif italic text-muted-foreground text-center py-16">
+                  No applications yet.
+                </p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={deadlinesByWeek}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" name="Total Deadlines" />
-                    <Bar dataKey="urgent" fill="#ef4444" name="Urgent (≤3 days)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <XAxis dataKey="week" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip contentStyle={chartTooltipStyle} />
+                    <Bar dataKey="count" fill="oklch(0.78 0.07 155)" name="Total" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="urgent" fill="oklch(0.72 0.10 15)" name="Urgent (≤3 days)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </HairlineCard>
+          </TabsContent>
 
-        {/* ── Individual Reports Tab ── */}
-        <TabsContent value="individual" className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Select a student" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Students</SelectItem>
-                {studentReports.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* By Student Tab */}
+          <TabsContent value="individual" className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                <SelectTrigger className="w-64 bg-white/[0.02] hairline">
+                  <SelectValue placeholder="Select a student" />
+                </SelectTrigger>
+                <SelectContent className="bg-pn-card hairline">
+                  <SelectItem value="all">All students</SelectItem>
+                  {studentReports.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {displayedStudents.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-muted-foreground">
-                No students assigned yet.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {displayedStudents.map((student) => (
-                <Card key={student.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+            {displayedStudents.length === 0 ? (
+              <HairlineCard variant="sage" className="text-center py-12">
+                <p className="font-serif italic text-muted-foreground">No students on your roster yet.</p>
+              </HairlineCard>
+            ) : (
+              <div className="grid gap-4">
+                {displayedStudents.map((student) => (
+                  <HairlineCard key={student.id}>
+                    <div className="flex items-start justify-between mb-4 gap-4">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-16 w-16">
+                        <Avatar className="h-16 w-16 hairline">
                           <AvatarImage src={student.avatar ?? undefined} alt={student.name} />
-                          <AvatarFallback className="text-lg">
+                          <AvatarFallback className="text-lg bg-white/[0.04] text-foreground">
                             {student.name.split(" ").map((n) => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="text-xl font-semibold">{student.name}</h3>
+                          <h3 className="font-serif text-xl text-foreground">{student.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-muted-foreground">Overall Progress:</span>
-                            <Progress value={student.overallProgress} className="w-32 h-2" />
-                            <span className="font-medium">{student.overallProgress}%</span>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Progress</span>
+                            <AnimatedBar pct={student.overallProgress} tone={progressTone(student.overallProgress)} className="w-32" />
+                            <span className={`num-display ${progressToneText(student.overallProgress)}`}>{student.overallProgress}%</span>
                           </div>
-                          <Badge variant={getRiskBadge(student.riskLevel)} className="mt-2">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {student.riskLevel.toUpperCase()} Risk
-                          </Badge>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs mt-2 ${riskPillClass(student.riskLevel)}`}>
+                            <AlertTriangle className="h-3 w-3" />
+                            {student.riskLevel.toUpperCase()} risk
+                          </span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleShareReport(student.name)}>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                          onClick={() => handleShareReport(student.name)}
+                        >
                           <Share className="h-4 w-4 mr-2" />
-                          Share with Parents
+                          Share
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleExport("pdf", `${student.name} Report`)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                          onClick={() => handleExport("pdf", `${student.name} Report`)}
+                        >
                           <Download className="h-4 w-4 mr-2" />
                           Export
                         </Button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 bg-muted/30 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="p-4 hairline rounded-lg bg-white/[0.02]">
                         <div className="flex items-center gap-2 mb-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium">Essays</span>
+                          <FileText className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Essays</span>
                         </div>
-                        <div className="text-lg font-semibold">{student.essaysCompleted}/{student.totalEssays}</div>
-                        <Progress value={(student.essaysCompleted / student.totalEssays) * 100} className="h-2 mt-2" />
+                        <div className="num-display text-lg text-foreground mb-2">
+                          {student.essaysCompleted}/{student.totalEssays}
+                        </div>
+                        <AnimatedBar pct={(student.essaysCompleted / student.totalEssays) * 100} tone="var(--pn-gold)" />
                       </div>
 
-                      <div className="p-4 bg-muted/30 rounded-lg">
+                      <div className="p-4 hairline rounded-lg bg-white/[0.02]">
                         <div className="flex items-center gap-2 mb-2">
-                          <School className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium">Applications</span>
+                          <School className="h-4 w-4 text-[color:var(--pn-sage)]" />
+                          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Applications</span>
                         </div>
-                        <div className="text-lg font-semibold">{student.applicationsSubmitted}/{student.totalApplications}</div>
-                        <Progress value={(student.applicationsSubmitted / student.totalApplications) * 100} className="h-2 mt-2" />
+                        <div className="num-display text-lg text-foreground mb-2">
+                          {student.applicationsSubmitted}/{student.totalApplications}
+                        </div>
+                        <AnimatedBar pct={(student.applicationsSubmitted / student.totalApplications) * 100} tone="var(--pn-sage)" />
                       </div>
 
-                      <div className="p-4 bg-muted/30 rounded-lg">
+                      <div className="p-4 hairline rounded-lg bg-white/[0.02]">
                         <div className="flex items-center gap-2 mb-2">
-                          <GraduationCap className="h-4 w-4 text-purple-600" />
-                          <span className="text-sm font-medium">Recommendations</span>
+                          <GraduationCap className="h-4 w-4 text-[color:var(--pn-pink)]" />
+                          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Recommendations</span>
                         </div>
-                        <div className="text-lg font-semibold">{student.recsReceived}/{student.totalRecs}</div>
-                        <Progress value={(student.recsReceived / student.totalRecs) * 100} className="h-2 mt-2" />
+                        <div className="num-display text-lg text-foreground mb-2">
+                          {student.recsReceived}/{student.totalRecs}
+                        </div>
+                        <AnimatedBar pct={(student.recsReceived / student.totalRecs) * 100} tone="var(--pn-pink)" />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                  </HairlineCard>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-        {/* ── Aggregate Analytics Tab ── */}
-        <TabsContent value="aggregate" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* School distribution bar chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Complete Application Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
+          {/* Aggregate Tab */}
+          <TabsContent value="aggregate" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground mb-4">Complete application distribution</h3>
                 {applicationDistribution.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-20">No applications yet.</p>
+                  <p className="text-sm font-serif italic text-muted-foreground text-center py-20">No applications yet.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
                     <BarChart data={applicationDistribution} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" allowDecimals={false} />
-                      <YAxis dataKey="school" type="category" width={90} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="applications" fill="#3b82f6" name="Applications" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis dataKey="school" type="category" width={90} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                      <Tooltip contentStyle={chartTooltipStyle} />
+                      <Bar dataKey="applications" fill="oklch(0.78 0.07 155)" name="Applications" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
-              </CardContent>
-            </Card>
+              </HairlineCard>
 
-            {/* Essay Submission Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Essay Submissions Over Time</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground mb-4">Essay submissions over time</h3>
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={submissionTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <XAxis dataKey="week" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip contentStyle={chartTooltipStyle} />
                     <Line
                       type="monotone"
                       dataKey="submissions"
-                      stroke="#10b981"
+                      stroke="oklch(0.78 0.07 155)"
                       strokeWidth={3}
-                      dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+                      dot={{ fill: "oklch(0.78 0.07 155)", strokeWidth: 2, r: 4 }}
                       name="Submissions"
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+              </HairlineCard>
+            </div>
 
-          {/* Summary stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Application Status</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Submitted</span>
-                  <span className="font-medium text-green-600">{aggregateStats.apps.submitted}</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <HairlineCard>
+                <h4 className="font-serif text-lg text-foreground mb-3">Application status</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Submitted</span>
+                    <span className="num-display text-[color:var(--pn-sage)]">{aggregateStats.apps.submitted}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">In progress</span>
+                    <span className="num-display text-[color:var(--pn-gold)]">{aggregateStats.apps.inProgress}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Planning</span>
+                    <span className="num-display text-muted-foreground">{aggregateStats.apps.other}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">In Progress</span>
-                  <span className="font-medium text-yellow-600">{aggregateStats.apps.inProgress}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Planning</span>
-                  <span className="font-medium text-muted-foreground">{aggregateStats.apps.other}</span>
-                </div>
-              </CardContent>
-            </Card>
+              </HairlineCard>
 
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Essay Review Pipeline</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Awaiting Review</span>
-                  <span className="font-medium text-orange-600">{aggregateStats.essays.pending}</span>
+              <HairlineCard>
+                <h4 className="font-serif text-lg text-foreground mb-3">Essay pipeline</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Awaiting review</span>
+                    <span className="num-display text-[color:var(--pn-pink)]">{aggregateStats.essays.pending}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Feedback sent</span>
+                    <span className="num-display text-[color:var(--pn-gold)]">{aggregateStats.essays.sent}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Read by student</span>
+                    <span className="num-display text-[color:var(--pn-sage)]">{aggregateStats.essays.read}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Feedback Sent</span>
-                  <span className="font-medium text-blue-600">{aggregateStats.essays.sent}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Read by Student</span>
-                  <span className="font-medium text-green-600">{aggregateStats.essays.read}</span>
-                </div>
-              </CardContent>
-            </Card>
+              </HairlineCard>
 
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Recommendation Status</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Completed</span>
-                  <span className="font-medium text-green-600">{aggregateStats.recs.completed}</span>
+              <HairlineCard>
+                <h4 className="font-serif text-lg text-foreground mb-3">Recommendations</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Completed</span>
+                    <span className="num-display text-[color:var(--pn-sage)]">{aggregateStats.recs.completed}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Pending / in progress</span>
+                    <span className="num-display text-[color:var(--pn-gold)]">{aggregateStats.recs.pending}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Pending / In Progress</span>
-                  <span className="font-medium text-yellow-600">{aggregateStats.recs.pending}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              </HairlineCard>
+            </div>
+          </TabsContent>
 
-        {/* ── Risk Analysis Tab ── */}
-        <TabsContent value="risk" className="space-y-6">
-          <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                <AlertTriangle className="h-5 w-5" />
-                Students at Risk ({atRiskStudents.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Risk Tab */}
+          <TabsContent value="risk" className="space-y-6">
+            <HairlineCard variant="pink">
+              <h3 className="font-serif text-2xl text-foreground leading-tight flex items-center gap-2 mb-4">
+                <AlertTriangle className="h-5 w-5 text-[color:var(--pn-pink)]" />
+                Students at risk — <span className="num-display">{atRiskStudents.length}</span>
+              </h3>
               {atRiskStudents.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  All students are on track — no at-risk students right now.
+                <p className="font-serif italic text-muted-foreground py-4">
+                  All students are on track — no one at risk right now.
                 </p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {atRiskStudents.map((student) => (
-                    <div key={student.id} className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
+                    <div key={student.id} className="flex items-center justify-between p-4 hairline rounded-lg bg-white/[0.02] gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <Avatar className="h-12 w-12 hairline">
                           <AvatarImage src={student.avatar ?? undefined} alt={student.name} />
-                          <AvatarFallback>
+                          <AvatarFallback className="bg-white/[0.04] text-foreground">
                             {student.name.split(" ").map((n) => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h3 className="font-medium">{student.name}</h3>
+                        <div className="min-w-0">
+                          <h3 className="font-serif text-lg text-foreground">{student.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-muted-foreground">Progress:</span>
-                            <Progress value={student.overallProgress} className="w-24 h-2" />
-                            <span className="text-sm font-medium">{student.overallProgress}%</span>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Progress</span>
+                            <AnimatedBar pct={student.overallProgress} tone={progressTone(student.overallProgress)} className="w-24" />
+                            <span className={`text-sm num-display ${progressToneText(student.overallProgress)}`}>
+                              {student.overallProgress}%
+                            </span>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge variant={getRiskBadge(student.riskLevel)}>
-                          {student.riskLevel.toUpperCase()} Risk
-                        </Badge>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {student.essaysCompleted}/{student.totalEssays} essays · {student.applicationsSubmitted}/{student.totalApplications} apps
+                      <div className="text-right shrink-0">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${riskPillClass(student.riskLevel)}`}>
+                          {student.riskLevel.toUpperCase()} risk
+                        </span>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          <span className="num-display">{student.essaysCompleted}</span>/<span className="num-display">{student.totalEssays}</span> essays · <span className="num-display">{student.applicationsSubmitted}</span>/<span className="num-display">{student.totalApplications}</span> apps
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </HairlineCard>
 
-          {/* Risk breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader><CardTitle>Risk Breakdown</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { label: "High Risk", count: studentReports.filter(s => s.riskLevel === "high").length, variant: "destructive" as const },
-                  { label: "Medium Risk", count: studentReports.filter(s => s.riskLevel === "medium").length, variant: "secondary" as const },
-                  { label: "On Track",   count: studentReports.filter(s => s.riskLevel === "low").length,    variant: "default" as const },
-                ].map(({ label, count, variant }) => (
-                  <div key={label} className="flex items-center justify-between">
-                    <span className="text-sm">{label}</span>
-                    <Badge variant={variant}>{count} student{count !== 1 ? "s" : ""}</Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground mb-3">Risk breakdown</h3>
+                <div className="space-y-2">
+                  {[
+                    { label: "High risk", count: studentReports.filter(s => s.riskLevel === "high").length, level: "high" },
+                    { label: "Medium risk", count: studentReports.filter(s => s.riskLevel === "medium").length, level: "medium" },
+                    { label: "On track", count: studentReports.filter(s => s.riskLevel === "low").length, level: "low" },
+                  ].map(({ label, count, level }) => (
+                    <div key={label} className="flex items-center justify-between p-2 hairline rounded-md">
+                      <span className="text-sm text-foreground">{label}</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${riskPillClass(level)}`}>
+                        <span className="num-display mr-1">{count}</span> student{count !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </HairlineCard>
 
-            <Card>
-              <CardHeader><CardTitle>Recommended Actions</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {studentReports.filter(s => s.riskLevel === "high").length > 0 && (
-                  <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                    <h4 className="font-medium text-red-700 dark:text-red-400 mb-1">Immediate Attention</h4>
-                    <p className="text-sm text-red-600 dark:text-red-300">
-                      Schedule urgent meetings with {studentReports.filter(s => s.riskLevel === "high").map(s => s.name.split(" ")[0]).join(", ")}.
+              <HairlineCard>
+                <h3 className="font-serif text-xl text-foreground mb-3">Recommended actions</h3>
+                <div className="space-y-3">
+                  {studentReports.filter(s => s.riskLevel === "high").length > 0 && (
+                    <div className="p-3 rounded-lg hairline bg-[color:var(--pn-pink)]/10">
+                      <h4 className="font-serif text-[color:var(--pn-pink)] mb-1">Immediate attention</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Schedule urgent meetings with {studentReports.filter(s => s.riskLevel === "high").map(s => s.name.split(" ")[0]).join(", ")}.
+                      </p>
+                    </div>
+                  )}
+                  {aggregateStats.recs.pending > 0 && (
+                    <div className="p-3 rounded-lg hairline bg-[color:var(--pn-gold)]/10">
+                      <h4 className="font-serif text-[color:var(--pn-gold)] mb-1">Follow up required</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="num-display">{aggregateStats.recs.pending}</span> recommendation letter{aggregateStats.recs.pending > 1 ? "s are" : " is"} still pending from teachers.
+                      </p>
+                    </div>
+                  )}
+                  {aggregateStats.essays.pending > 0 && (
+                    <div className="p-3 rounded-lg hairline bg-[color:var(--pn-sage)]/10">
+                      <h4 className="font-serif text-[color:var(--pn-sage)] mb-1">Essay reviews pending</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="num-display">{aggregateStats.essays.pending}</span> essay{aggregateStats.essays.pending > 1 ? "s are" : " is"} waiting for your feedback.
+                      </p>
+                    </div>
+                  )}
+                  {studentReports.filter(s => s.riskLevel === "high").length === 0 &&
+                   aggregateStats.recs.pending === 0 &&
+                   aggregateStats.essays.pending === 0 && (
+                    <p className="text-sm font-serif italic text-muted-foreground">
+                      You're clear. No actions required right now.
                     </p>
-                  </div>
-                )}
-                {aggregateStats.recs.pending > 0 && (
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Follow Up Required</h4>
-                    <p className="text-sm text-yellow-600 dark:text-yellow-300">
-                      {aggregateStats.recs.pending} recommendation letter{aggregateStats.recs.pending > 1 ? "s are" : " is"} still pending from teachers.
-                    </p>
-                  </div>
-                )}
-                {aggregateStats.essays.pending > 0 && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-1">Essay Reviews Pending</h4>
-                    <p className="text-sm text-blue-600 dark:text-blue-300">
-                      {aggregateStats.essays.pending} essay{aggregateStats.essays.pending > 1 ? "s are" : " is"} waiting for your feedback.
-                    </p>
-                  </div>
-                )}
-                {studentReports.filter(s => s.riskLevel === "high").length === 0 &&
-                 aggregateStats.recs.pending === 0 &&
-                 aggregateStats.essays.pending === 0 && (
-                  <p className="text-sm text-muted-foreground">No actions required right now — all looks good!</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+                  )}
+                </div>
+              </HairlineCard>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    </PageShell>
   );
 };
 

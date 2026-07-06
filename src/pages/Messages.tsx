@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -36,6 +35,7 @@ import {
   Check,
   Plus,
 } from "lucide-react";
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
 type DBConversation = {
   id: string;
@@ -56,6 +56,16 @@ type DBMessage = {
   created_at: string;
 };
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
+};
+
 const Messages = () => {
   const [conversations, setConversations] = useState<DBConversation[]>([]);
   const [messages, setMessages] = useState<Record<string, DBMessage[]>>({});
@@ -73,7 +83,6 @@ const Messages = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // New conversation dialog
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
@@ -88,7 +97,6 @@ const Messages = () => {
       const uid = userData.user.id;
       setUserId(uid);
 
-      // Get conversations where user is involved
       const { data } = await supabase
         .from("conversations")
         .select("*")
@@ -99,7 +107,6 @@ const Messages = () => {
 
       setConversations(data);
 
-      // Fetch profiles
       const userIds = [
         ...new Set(
           data.flatMap((c) => [c.student_id, c.counselor_id, c.parent_id]).filter(Boolean)
@@ -115,7 +122,6 @@ const Messages = () => {
       prof?.forEach((p) => (profileMap[p.user_id] = p));
       setProfiles(profileMap);
 
-      // Fetch messages
       const { data: msgs } = await supabase
         .from("messages")
         .select("*")
@@ -137,7 +143,6 @@ const Messages = () => {
     load();
   }, []);
 
-  // ── Real-time subscription ─────────────────────────────────────
   useEffect(() => {
     if (conversations.length === 0) return;
 
@@ -178,12 +183,10 @@ const Messages = () => {
     };
   }, [conversations]);
 
-  // ── Auto-scroll ────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedConversation]);
 
-  // ── Select conversation & mark as read ─────────────────────────
   const selectConversation = async (conv: DBConversation) => {
     setSelectedConversation(conv);
 
@@ -205,11 +208,9 @@ const Messages = () => {
     }));
   };
 
-  // ── New Conversation ───────────────────────────────────────────
   const openNewConversationDialog = async () => {
     if (!userId) return;
 
-    // Load assigned students
     const { data: assignments } = await supabase
       .from("student_counselor_assignments")
       .select("student_id")
@@ -237,14 +238,12 @@ const Messages = () => {
     if (!selectedStudentId || !firstMessage.trim() || !userId) return;
     setCreating(true);
 
-    // Check if conversation already exists
     const existing = conversations.find(
       (c) => c.student_id === selectedStudentId && c.counselor_id === userId
     );
 
     if (existing) {
-      // Just send the message in the existing conversation
-      const { data: msg } = await supabase
+      await supabase
         .from("messages")
         .insert({ conversation_id: existing.id, sender_id: userId, content: firstMessage.trim() })
         .select()
@@ -255,7 +254,6 @@ const Messages = () => {
       return;
     }
 
-    // Create new conversation
     const { data: conv } = await supabase
       .from("conversations")
       .insert({ student_id: selectedStudentId, counselor_id: userId, status: "active" })
@@ -264,14 +262,12 @@ const Messages = () => {
 
     if (!conv) { setCreating(false); return; }
 
-    // Send first message
     const { data: msg } = await supabase
       .from("messages")
       .insert({ conversation_id: conv.id, sender_id: userId, content: firstMessage.trim() })
       .select()
       .single();
 
-    // Load the student profile if not already in map
     if (!profiles[selectedStudentId]) {
       const { data: prof } = await supabase
         .from("profiles")
@@ -309,9 +305,6 @@ const Messages = () => {
     setNewMessage("");
   };
 
-  // ─────────────────────────────────────────
-  // Derived Stats
-  // ─────────────────────────────────────────
   const totalUnread = useMemo(() => {
     return Object.values(messages)
       .flat()
@@ -347,158 +340,149 @@ const Messages = () => {
     }
   });
 
-  const getRoleColor = (role: string) => {
+  const roleClass = (role: string) => {
     switch (role) {
-      case "counselor": return "bg-primary/10 text-primary border-primary/20";
-      case "student": return "bg-secondary/10 text-secondary-foreground border-secondary/20";
-      case "parent": return "bg-accent/10 text-accent-foreground border-accent/20";
-      default: return "bg-muted text-muted-foreground";
+      case "counselor": return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+      case "student":   return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+      case "parent":    return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+      default:          return "bg-white/[0.03] text-muted-foreground hairline";
     }
   };
 
-  // ─────────────────────────────────────────
-  // UI
-  // ─────────────────────────────────────────
+  const statTiles = [
+    { label: "Conversations", value: conversations.length, icon: MessageSquare, tone: "var(--pn-sage)" },
+    { label: "Unread", value: totalUnread, icon: AlertCircle, tone: "var(--pn-pink)" },
+    { label: "Urgent", value: urgentCount, icon: AlertTriangle, tone: "var(--pn-gold)" },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Messages</h1>
-          <p className="text-muted-foreground">Communicate with students and parents</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowBulkMessage(true)}>
+    <PageShell>
+      <BlurOrb tone="sage" className="top-[-100px] left-[-100px] w-[500px] h-[500px]" />
+
+      <PageHeader
+        eyebrow="Messages"
+        title={<>The threads.</>}
+        subtitle={<>Students and parents — in your own hand.</>}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+            onClick={() => setShowBulkMessage(true)}
+          >
             <Users className="h-4 w-4 mr-2" />
-            Bulk Message
+            Bulk message
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <MessageSquare className="h-5 w-5 text-primary" />
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Stats */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {statTiles.map(({ label, value, icon: Icon, tone }) => (
+            <HairlineCard key={label}>
+              <div className="flex items-center gap-3">
+                <div className="hairline rounded-lg p-2" style={{ background: `${tone}20` }}>
+                  <Icon className="h-4 w-4" style={{ color: tone }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                  <p className="num-display text-2xl text-foreground">{value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Conversations</p>
-                <p className="text-2xl font-bold text-foreground">{conversations.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </HairlineCard>
+          ))}
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-warning/10 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Unread Messages</p>
-                <p className="text-2xl font-bold text-foreground">{totalUnread}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Urgent</p>
-                <p className="text-2xl font-bold text-foreground">{urgentCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[700px]">
-        {/* Conversations List */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <div className="space-y-4">
+        {/* Main Chat Layout */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[700px]">
+          {/* Conversations List */}
+          <div className="lg:col-span-1 hairline rounded-2xl overflow-hidden flex flex-col bg-pn-card/40">
+            <div className="p-4 space-y-3 hairline-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Conversations
-                </CardTitle>
-                <Button size="sm" onClick={openNewConversationDialog} title="New conversation">
+                <h3 className="font-serif text-xl text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-[color:var(--pn-sage)]" />
+                  Threads
+                </h3>
+                <Button
+                  size="sm"
+                  className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
+                  onClick={openNewConversationDialog}
+                  title="New conversation"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search conversations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                <Select value={filter} onValueChange={setFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter conversations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Messages</SelectItem>
-                    <SelectItem value="students">Students Only</SelectItem>
-                    <SelectItem value="parents">Parents Only</SelectItem>
-                    <SelectItem value="unread">Unread</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
               </div>
-            </div>
-          </CardHeader>
 
-          <CardContent className="p-0">
-            <div className="space-y-1 max-h-[500px] overflow-y-auto">
-              {filteredConversations.map((conv) => {
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="bg-white/[0.02] hairline">
+                  <SelectValue placeholder="Filter conversations" />
+                </SelectTrigger>
+                <SelectContent className="bg-pn-card hairline">
+                  <SelectItem value="all">All messages</SelectItem>
+                  <SelectItem value="students">Students only</SelectItem>
+                  <SelectItem value="parents">Parents only</SelectItem>
+                  <SelectItem value="unread">Unread</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {filteredConversations.length === 0 ? (
+                <p className="p-8 text-center font-serif italic text-muted-foreground">
+                  Nothing here yet.
+                </p>
+              ) : filteredConversations.map((conv) => {
                 const student = profiles[conv.student_id];
                 const parent = conv.parent_id ? profiles[conv.parent_id] : null;
                 const convMessages = messages[conv.id] || [];
                 const lastMsg = convMessages[convMessages.length - 1];
-                const unreadCount = convMessages.filter((m) => !m.read).length;
+                const unreadCount = convMessages.filter((m) => !m.read && m.sender_id !== userId).length;
                 const initials = (student?.full_name || "?")
                   .split(" ")
                   .map((n: string) => n[0])
                   .join("");
 
+                const isSelected = selectedConversation?.id === conv.id;
+                const accent =
+                  isSelected
+                    ? "border-l-[color:var(--pn-sage)] bg-white/[0.06]"
+                    : conv.status === "urgent"
+                    ? "border-l-[color:var(--pn-pink)]"
+                    : "border-l-transparent";
+
                 return (
                   <div
                     key={conv.id}
-                    className={`p-4 hover:bg-muted/50 cursor-pointer border-l-4 transition-colors ${
-                      selectedConversation?.id === conv.id
-                        ? "bg-muted border-l-primary"
-                        : conv.status === "urgent"
-                        ? "border-l-destructive"
-                        : "border-l-transparent"
-                    }`}
+                    className={`p-4 hover:bg-white/[0.02] cursor-pointer border-l-2 border-b border-white/[0.04] transition-colors ${accent}`}
                     onClick={() => selectConversation(conv)}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-10 w-10 hairline">
                         <AvatarImage src={student?.avatar_url} alt={student?.full_name} />
-                        <AvatarFallback>{initials}</AvatarFallback>
+                        <AvatarFallback className="bg-white/[0.04] text-foreground">{initials}</AvatarFallback>
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-foreground truncate">
+                          <div className="min-w-0">
+                            <p className="text-foreground truncate">
                               {student?.full_name || "Student"}
                             </p>
                             {parent && (
@@ -507,20 +491,20 @@ const Messages = () => {
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 shrink-0">
                             {unreadCount > 0 && (
-                              <Badge variant="destructive" className="h-5 w-5 flex items-center justify-center p-0 text-xs">
+                              <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-[10px] num-display bg-[color:var(--pn-pink)]/20 text-[color:var(--pn-pink)] hairline">
                                 {unreadCount}
-                              </Badge>
+                              </span>
                             )}
                             {conv.status === "urgent" && (
-                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <AlertTriangle className="h-4 w-4 text-[color:var(--pn-pink)]" />
                             )}
                           </div>
                         </div>
 
                         {lastMsg && (
-                          <p className="text-sm text-muted-foreground truncate mt-1">
+                          <p className="text-sm text-muted-foreground truncate mt-1 font-serif italic">
                             {lastMsg.content}
                           </p>
                         )}
@@ -533,9 +517,9 @@ const Messages = () => {
                           )}
                           <div className="flex gap-1">
                             {conv.tags?.map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
+                              <span key={tag} className="hairline rounded-full px-1.5 py-0.5 text-[10px] text-muted-foreground">
                                 {tag}
-                              </Badge>
+                              </span>
                             ))}
                           </div>
                         </div>
@@ -545,33 +529,31 @@ const Messages = () => {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Messages Panel */}
-        <Card className="lg:col-span-2">
-          {selectedConversation ? (
-            <>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+          {/* Messages Panel */}
+          <div className="lg:col-span-2 hairline rounded-2xl overflow-hidden flex flex-col bg-pn-card/40">
+            {selectedConversation ? (
+              <>
+                <div className="p-4 hairline-b flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar className="h-10 w-10 hairline">
                       <AvatarImage
                         src={profiles[selectedConversation.student_id]?.avatar_url}
                         alt={profiles[selectedConversation.student_id]?.full_name}
                       />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-white/[0.04] text-foreground">
                         {(profiles[selectedConversation.student_id]?.full_name || "?")
                           .split(" ")
                           .map((n: string) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-foreground">
+                    <div className="min-w-0">
+                      <h3 className="font-serif text-lg text-foreground truncate">
                         {profiles[selectedConversation.student_id]?.full_name || "Conversation"}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate">
                         {[
                           profiles[selectedConversation.student_id]?.full_name,
                           selectedConversation.parent_id &&
@@ -583,22 +565,19 @@ const Messages = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]">
                       <Pin className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]">
                       <Archive className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
 
-              <CardContent className="p-0 flex flex-col h-[550px]">
-                {/* Messages Area */}
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                   {(messages[selectedConversation.id] || []).map((msg) => {
                     const isCounselor = msg.sender_id === selectedConversation.counselor_id;
@@ -619,34 +598,34 @@ const Messages = () => {
                         <div className={`max-w-[80%] ${isCounselor ? "order-2" : "order-1"}`}>
                           <div className="flex items-center gap-2 mb-1">
                             {!isCounselor && (
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback className="text-xs">
+                              <Avatar className="h-6 w-6 hairline">
+                                <AvatarFallback className="text-xs bg-white/[0.04] text-foreground">
                                   {senderName.split(" ").map((n: string) => n[0]).join("")}
                                 </AvatarFallback>
                               </Avatar>
                             )}
-                            <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] uppercase tracking-[0.14em] ${roleClass(role)}`}>
                               {role}
-                            </Badge>
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(msg.created_at).toLocaleString()}
                             </span>
                           </div>
 
                           <div
-                            className={`p-3 rounded-lg ${
+                            className={`p-3 rounded-lg text-sm ${
                               isCounselor
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
+                                ? "bg-[color:var(--pn-pink)]/15 hairline text-foreground"
+                                : "bg-white/[0.04] hairline text-foreground"
                             }`}
                           >
-                            <p className="text-sm">{msg.content}</p>
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
                           </div>
 
                           {isCounselor && (
                             <div className="flex items-center gap-1 mt-1 justify-end">
                               {msg.read ? (
-                                <CheckCheck className="h-3 w-3 text-primary" />
+                                <CheckCheck className="h-3 w-3 text-[color:var(--pn-sage)]" />
                               ) : (
                                 <Check className="h-3 w-3 text-muted-foreground" />
                               )}
@@ -659,41 +638,49 @@ const Messages = () => {
                       </div>
                     );
                   })}
+                  <div ref={bottomRef} />
                 </div>
 
-                <div ref={bottomRef} />
-                {/* Message Composer */}
-                <div className="border-t border-border p-4 space-y-3">
+                {/* Composer */}
+                <div className="hairline-t p-4 space-y-3">
                   {showAITemplates && (
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4 text-primary" />
-                            Message Templates
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={() => setShowAITemplates(false)}>
-                            ×
+                    <div className="hairline rounded-lg p-3 bg-white/[0.02]">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm text-foreground flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                          Templates
+                        </h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowAITemplates(false)}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Deadline Reminder", "Essay Feedback", "Recommendation Status", "Meeting Reminder"].map((title) => (
+                          <Button
+                            key={title}
+                            variant="outline"
+                            size="sm"
+                            className="text-left h-auto p-2 bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                          >
+                            <p className="text-xs">{title}</p>
                           </Button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {["Deadline Reminder", "Essay Feedback", "Recommendation Status", "Meeting Reminder"].map((title) => (
-                            <Button key={title} variant="outline" size="sm" className="text-left h-auto p-2">
-                              <p className="font-medium text-xs">{title}</p>
-                            </Button>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
                       <Textarea
-                        placeholder="Type your message..."
+                        placeholder="Type your message…"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        className="min-h-[60px] resize-none pr-12"
+                        className="min-h-[60px] resize-none pr-12 bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -704,7 +691,7 @@ const Messages = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute top-2 right-2"
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-[color:var(--pn-gold)] hover:bg-white/[0.03]"
                         onClick={() => setShowAITemplates(!showAITemplates)}
                       >
                         <Lightbulb className="h-4 w-4" />
@@ -712,59 +699,72 @@ const Messages = () => {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                      >
                         <Paperclip className="h-4 w-4" />
                       </Button>
-                      <Button onClick={sendMessage} disabled={!newMessage.trim()} size="sm">
+                      <Button
+                        onClick={sendMessage}
+                        disabled={!newMessage.trim()}
+                        size="sm"
+                        className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
+                      >
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </>
-          ) : (
-            <CardContent className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Select a conversation</h3>
-                <p className="text-muted-foreground">Choose a conversation from the left to start messaging</p>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center px-8">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+                  <h3 className="font-serif text-xl text-foreground mb-2">Choose a thread.</h3>
+                  <p className="font-serif italic text-muted-foreground">
+                    Pick a conversation to begin.
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          )}
-        </Card>
-      </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
 
       {/* New Conversation Dialog */}
       <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-pn-card hairline">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              New Conversation
+            <DialogTitle className="flex items-center gap-2 font-serif text-2xl text-foreground">
+              <MessageSquare className="h-5 w-5 text-[color:var(--pn-sage)]" />
+              New conversation
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {assignedStudents.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No assigned students found. Assign students first from the Students page.
+              <p className="font-serif italic text-center py-4 text-muted-foreground">
+                No assigned students yet. Assign them first from the Students page.
               </p>
             ) : (
               <>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Select Student</label>
+                  <label className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-2 block">
+                    Student
+                  </label>
                   <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a student..." />
+                    <SelectTrigger className="bg-white/[0.02] hairline">
+                      <SelectValue placeholder="Choose a student…" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-pn-card hairline">
                       {assignedStudents.map((s) => (
                         <SelectItem key={s.user_id} value={s.user_id}>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
+                            <Avatar className="h-5 w-5 hairline">
                               <AvatarImage src={s.avatar_url} />
-                              <AvatarFallback className="text-[10px]">
+                              <AvatarFallback className="text-[10px] bg-white/[0.04] text-foreground">
                                 {(s.full_name || "S").split(" ").map((n: string) => n[0]).join("")}
                               </AvatarFallback>
                             </Avatar>
@@ -777,12 +777,14 @@ const Messages = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Message</label>
+                  <label className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-2 block">
+                    Message
+                  </label>
                   <Textarea
-                    placeholder="Type your first message..."
+                    placeholder="Your first note…"
                     value={firstMessage}
                     onChange={(e) => setFirstMessage(e.target.value)}
-                    className="min-h-[100px]"
+                    className="min-h-[100px] bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -794,14 +796,18 @@ const Messages = () => {
 
                 <div className="flex gap-2">
                   <Button
-                    className="flex-1"
+                    className="flex-1 bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
                     disabled={!selectedStudentId || !firstMessage.trim() || creating}
                     onClick={startConversation}
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    {creating ? "Starting..." : "Start Conversation"}
+                    {creating ? "Starting…" : "Start conversation"}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowNewConversation(false)}>
+                  <Button
+                    variant="outline"
+                    className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                    onClick={() => setShowNewConversation(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -813,18 +819,20 @@ const Messages = () => {
 
       {/* Bulk Message Dialog */}
       <Dialog open={showBulkMessage} onOpenChange={setShowBulkMessage}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-pn-card hairline">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Send Bulk Message
+            <DialogTitle className="flex items-center gap-2 font-serif text-2xl text-foreground">
+              <Users className="h-5 w-5 text-[color:var(--pn-gold)]" />
+              Send bulk message
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Select Recipients</label>
-              <div className="space-y-2 max-h-40 overflow-y-auto border border-border rounded p-2">
+              <label className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-2 block">
+                Recipients
+              </label>
+              <div className="space-y-2 max-h-40 overflow-y-auto hairline rounded-md p-2 bg-white/[0.02]">
                 {conversations.map((conv) => {
                   const student = profiles[conv.student_id];
                   const parent = conv.parent_id ? profiles[conv.parent_id] : null;
@@ -840,13 +848,13 @@ const Messages = () => {
                           }
                         }}
                       />
-                      <Avatar className="h-6 w-6">
+                      <Avatar className="h-6 w-6 hairline">
                         <AvatarImage src={student?.avatar_url} alt={student?.full_name} />
-                        <AvatarFallback className="text-xs">
+                        <AvatarFallback className="text-xs bg-white/[0.04] text-foreground">
                           {(student?.full_name || "?").split(" ").map((n: string) => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{student?.full_name || "Student"}</span>
+                      <span className="text-sm text-foreground">{student?.full_name || "Student"}</span>
                       {parent && (
                         <span className="text-xs text-muted-foreground">& {parent.full_name}</span>
                       )}
@@ -857,31 +865,37 @@ const Messages = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Message</label>
+              <label className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-2 block">
+                Message
+              </label>
               <Textarea
-                placeholder="Type your bulk message here..."
+                placeholder="Your bulk note…"
                 value={bulkMessage}
                 onChange={(e) => setBulkMessage(e.target.value)}
-                className="min-h-[120px]"
+                className="min-h-[120px] bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
 
             <div className="flex gap-2">
               <Button
-                className="flex-1"
+                className="flex-1 bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
                 disabled={selectedStudents.length === 0 || !bulkMessage.trim()}
               >
                 <Send className="h-4 w-4 mr-2" />
-                Send to {selectedStudents.length} recipient(s)
+                Send to <span className="num-display mx-1">{selectedStudents.length}</span> recipient(s)
               </Button>
-              <Button variant="outline" onClick={() => setShowBulkMessage(false)}>
+              <Button
+                variant="outline"
+                className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                onClick={() => setShowBulkMessage(false)}
+              >
                 Cancel
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 

@@ -1,11 +1,9 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,10 +31,19 @@ import {
   User,
 } from "lucide-react";
 import { useApplications, type ApplicationWithProfile } from "@/hooks/useApplications";
-
-// ── Helpers ───────────────────────────────────────────────────
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
 const safeDivide = (num: number, den: number) => (den > 0 ? (num / den) * 100 : 0);
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
+};
 
 const getDeadlineStatus = (deadline: string) => {
   const daysUntil = Math.ceil(
@@ -48,28 +55,26 @@ const getDeadlineStatus = (deadline: string) => {
   return "future";
 };
 
-const getDeadlineColor = (deadline: string) => {
+const deadlineTone = (deadline: string) => {
   switch (getDeadlineStatus(deadline)) {
-    case "overdue": return "text-destructive";
-    case "urgent":  return "text-yellow-500";
+    case "overdue": return "text-[color:var(--pn-pink)]";
+    case "urgent":  return "text-[color:var(--pn-gold)]";
     case "upcoming": return "text-foreground";
     default:        return "text-muted-foreground";
   }
 };
 
-const getStatusColor = (status: string) => {
+const statusPillClass = (status: string) => {
   switch (status) {
-    case "submitted":  return "default";
-    case "accepted":   return "default";   // consider a green variant if your theme has one
-    case "in-progress": return "secondary";
-    case "waitlisted": return "secondary";
-    case "rejected":   return "destructive";
-    case "not-started": return "outline";
-    default:           return "outline";
+    case "submitted":   return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+    case "accepted":    return "bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline";
+    case "in-progress": return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "waitlisted":  return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+    case "rejected":    return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+    case "not-started": return "bg-white/[0.03] text-muted-foreground hairline";
+    default:            return "bg-white/[0.03] text-muted-foreground hairline";
   }
 };
-
-
 
 const getApplicationTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
@@ -84,6 +89,18 @@ const getApplicationTypeLabel = (type: string) => {
 
 const getInitials = (name: string | null | undefined) =>
   name ? name.split(" ").map((n) => n[0]).join("") : "?";
+
+const AnimatedBar = ({ pct, tone = "var(--pn-sage)", className = "w-16" }: { pct: number; tone?: string; className?: string }) => (
+  <div className={`h-1.5 rounded-full bg-white/[0.05] overflow-hidden ${className}`}>
+    <motion.div
+      className="h-full"
+      style={{ background: tone }}
+      initial={{ width: 0 }}
+      animate={{ width: `${pct}%` }}
+      transition={{ duration: 0.9, ease: [0.2, 0.6, 0.2, 1], delay: 0.15 }}
+    />
+  </div>
+);
 
 const buildRecipients = (appsToSend: ApplicationWithProfile[]) => {
   const byStudent = new Map<string, { name: string; list: ApplicationWithProfile[] }>();
@@ -109,8 +126,6 @@ const buildRecipients = (appsToSend: ApplicationWithProfile[]) => {
   }));
 };
 
-// ── Component ─────────────────────────────────────────────────
-
 const Applications = () => {
   const { applications, isLoading, error } = useApplications();
   const { toast } = useToast();
@@ -123,25 +138,27 @@ const Applications = () => {
   const [sendingReminders, setSendingReminders]     = useState(false);
   const [sendingReminderFor, setSendingReminderFor] = useState<string | null>(null);
 
-  // ── Loading / Error states ────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96 gap-3 text-destructive">
-        <AlertCircle className="h-6 w-6" />
-        <p>Failed to load applications. Please refresh and try again.</p>
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96 gap-3 text-[color:var(--pn-pink)]">
+          <AlertCircle className="h-6 w-6" />
+          <p className="font-serif italic">Applications wouldn't load. Please refresh and try again.</p>
+        </div>
+      </PageShell>
     );
   }
 
-  // ── Filter + sort ─────────────────────────────────────────
   const filtered = applications
     .filter((app) => {
       const name = app.profiles?.full_name ?? "";
@@ -161,7 +178,6 @@ const Applications = () => {
       }
     });
 
-  // ── Analytics ─────────────────────────────────────────────
   const totalApplications  = applications.length;
   const uniqueSchools      = new Set(applications.map((a) => a.school_name)).size;
   const urgentCount        = applications.filter(
@@ -183,7 +199,6 @@ const Applications = () => {
     };
   });
 
-  // ── Selection helpers ─────────────────────────────────────
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -194,7 +209,6 @@ const Applications = () => {
       selectedIds.length === filtered.length ? [] : filtered.map((a) => a.id)
     );
 
-  // ── Reminder helpers ──────────────────────────────────────
   const invokeReminders = async (appsToSend: ApplicationWithProfile[]) => {
     const recipients = buildRecipients(appsToSend);
     if (recipients.length === 0) {
@@ -213,7 +227,6 @@ const Applications = () => {
 
   const sendBulkReminders = async () => {
     setSendingReminders(true);
-    // Smart filter: not yet submitted, and has an upcoming deadline (≤30 days) or is behind (<60%)
     const urgentApps = applications.filter((app) => {
       if (app.status === "submitted") return false;
       const status = getDeadlineStatus(app.deadline_date);
@@ -236,185 +249,228 @@ const Applications = () => {
   };
 
   const handleExportPDF = () => {
-  const doc = new jsPDF();
+    const doc = new jsPDF();
 
-  const tableData = filtered.map((app) => [
-    app.profiles?.full_name || "—",
-    app.school_name,
-    app.program || "-",
-    app.application_type,
-    app.deadline_date,
-    `${app.completed_essays}/${app.required_essays}`,
-    `${app.recommendations_submitted}/${app.recommendations_requested}`,
-    app.status,
-    `${app.completion_percentage}%`,
-  ]);
+    const tableData = filtered.map((app) => [
+      app.profiles?.full_name || "—",
+      app.school_name,
+      app.program || "-",
+      app.application_type,
+      app.deadline_date,
+      `${app.completed_essays}/${app.required_essays}`,
+      `${app.recommendations_submitted}/${app.recommendations_requested}`,
+      app.status,
+      `${app.completion_percentage}%`,
+    ]);
 
-  autoTable(doc, {
-    head: [[
-      "Student",
-      "School",
-      "Program",
-      "Type",
-      "Deadline",
-      "Essays",
-      "Recs",
-      "Status",
-      "Progress"
-    ]],
-    body: tableData,
-  });
+    autoTable(doc, {
+      head: [[
+        "Student",
+        "School",
+        "Program",
+        "Type",
+        "Deadline",
+        "Essays",
+        "Recs",
+        "Status",
+        "Progress"
+      ]],
+      body: tableData,
+    });
 
-  doc.save("applications.pdf");
-};
+    doc.save("applications.pdf");
+  };
 
-  // ── Render ────────────────────────────────────────────────
+  const statTiles = [
+    { label: "Total applications", value: totalApplications, icon: FileText, tone: "var(--pn-sage)" },
+    { label: "Schools", value: uniqueSchools, icon: School, tone: "var(--pn-sage)" },
+    { label: "Urgent", value: urgentCount, icon: AlertTriangle, tone: "var(--pn-gold)" },
+    { label: "Avg completion", value: `${avgCompletion}%`, icon: TrendingUp, tone: "var(--pn-sage)" },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Applications</h1>
-          <p className="text-muted-foreground">Track and manage all student college applications</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={sendBulkReminders} disabled={sendingReminders}>
-            {sendingReminders
-              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              : <Send className="h-4 w-4 mr-2" />}
-            Send Reminders
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <BlurOrb tone="gold" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Applications", value: totalApplications, icon: FileText, color: "primary" },
-          { label: "Schools",            value: uniqueSchools,      icon: School,   color: "secondary" },
-          { label: "Urgent",             value: urgentCount,        icon: AlertTriangle, color: "yellow-500" },
-          { label: "Avg Completion",     value: `${avgCompletion}%`, icon: TrendingUp, color: "primary" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <Card key={label}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 bg-${color}/10 rounded-lg`}>
-                  <Icon className={`h-5 w-5 text-${color}`} />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className="text-2xl font-bold text-foreground">{value}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "student" | "school")}>
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="student">Student View</TabsTrigger>
-            <TabsTrigger value="school">School View</TabsTrigger>
-          </TabsList>
-
+      <PageHeader
+        eyebrow="Applications"
+        title={<>Your list.</>}
+        subtitle={<>Every application, weighted by deadline.</>}
+        actions={
           <div className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search applications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-[250px]"
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="not-started">Not Started</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="waitlisted">Waitlisted</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="deadline">Deadline</SelectItem>
-                <SelectItem value="completion">Completion</SelectItem>
-                <SelectItem value="school">School</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" size="sm" onClick={handleExportPDF}>
-              <Filter className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+              onClick={handleExportPDF}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
+              onClick={sendBulkReminders}
+              disabled={sendingReminders}
+            >
+              {sendingReminders
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <Send className="h-4 w-4 mr-2" />}
+              Send reminders
             </Button>
           </div>
-        </div>
+        }
+      />
 
-        {/* ── Student View ── */}
-        <TabsContent value="student" className="space-y-4">
-          {selectedIds.length > 0 && (
-            <Card>
-              <CardContent className="p-4 flex items-center justify-between">
-                <span className="text-sm font-medium">{selectedIds.length} selected</span>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Analytics Cards */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {statTiles.map(({ label, value, icon: Icon, tone }) => (
+            <HairlineCard key={label}>
+              <div className="flex items-center gap-3">
+                <div className="hairline rounded-lg p-2" style={{ background: `${tone}20` }}>
+                  <Icon className="h-4 w-4" style={{ color: tone }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                  <p className="num-display text-2xl text-foreground">{value}</p>
+                </div>
+              </div>
+            </HairlineCard>
+          ))}
+        </motion.div>
+
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "student" | "school")}>
+          <motion.div variants={sectionVariants} className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+            <TabsList className="bg-white/[0.02] hairline p-1 h-auto">
+              <TabsTrigger
+                value="student"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                By student
+              </TabsTrigger>
+              <TabsTrigger
+                value="school"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground"
+              >
+                By school
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex gap-2 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-[250px] bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] bg-white/[0.02] hairline">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-pn-card hairline">
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="not-started">Not started</SelectItem>
+                  <SelectItem value="in-progress">In progress</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[120px] bg-white/[0.02] hairline">
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent className="bg-pn-card hairline">
+                  <SelectItem value="deadline">Deadline</SelectItem>
+                  <SelectItem value="completion">Completion</SelectItem>
+                  <SelectItem value="school">School</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                onClick={handleExportPDF}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* ── Student View ── */}
+          <TabsContent value="student" className="space-y-4 mt-4">
+            {selectedIds.length > 0 && (
+              <HairlineCard variant="pink" className="flex items-center justify-between">
+                <span className="text-sm text-foreground">
+                  <span className="num-display">{selectedIds.length}</span> selected
+                </span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={sendSelectedReminders} disabled={sendingReminders}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
+                    onClick={sendSelectedReminders}
+                    disabled={sendingReminders}
+                  >
                     {sendingReminders
                       ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       : <Send className="h-4 w-4 mr-2" />}
-                    Send Reminders
+                    Send reminders
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                    onClick={handleExportPDF}
+                  >
                     <Download className="h-4 w-4 mr-2" />
-                    Export Selected
+                    Export selected
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </HairlineCard>
+            )}
 
-          <Card>
-            <CardContent className="p-0">
+            <HairlineCard className="p-0 overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-background">
-                    <TableRow>
+                  <TableHeader className="sticky top-0 bg-pn-card">
+                    <TableRow className="hover:bg-transparent border-b border-white/[0.06]">
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedIds.length === filtered.length && filtered.length > 0}
                           onCheckedChange={toggleSelectAll}
                         />
                       </TableHead>
-                      <TableHead>Student</TableHead>
-                      <TableHead>School / Program</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Deadline</TableHead>
-                      <TableHead>Essays</TableHead>
-                      <TableHead>Recs</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Student</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">School / Program</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Type</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Deadline</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Essays</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Recs</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Progress</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.map((app) => (
                       <TableRow
                         key={app.id}
-                        className={`hover:bg-muted/50 ${app.urgent ? "border-l-4 border-l-yellow-500" : ""}`}
+                        className={`hover:bg-white/[0.02] border-b border-white/[0.04] ${app.urgent ? "border-l-2 border-l-[color:var(--pn-gold)]" : ""}`}
                       >
                         <TableCell>
                           <Checkbox
@@ -425,38 +481,38 @@ const Applications = () => {
 
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-8 w-8 hairline">
                               <AvatarImage src={app.profiles?.avatar_url ?? undefined} />
-                              <AvatarFallback className="text-xs">
+                              <AvatarFallback className="text-xs bg-white/[0.04] text-foreground">
                                 {getInitials(app.profiles?.full_name)}
                               </AvatarFallback>
                             </Avatar>
-                            <p className="font-medium text-foreground">
+                            <p className="text-foreground">
                               {app.profiles?.full_name ?? "—"}
                             </p>
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <p className="font-medium text-foreground">{app.school_name}</p>
+                          <p className="text-foreground">{app.school_name}</p>
                           {app.program && (
                             <p className="text-sm text-muted-foreground">{app.program}</p>
                           )}
                         </TableCell>
 
                         <TableCell>
-                          <Badge variant="outline">
+                          <span className="hairline rounded-full px-2 py-0.5 text-xs text-muted-foreground">
                             {getApplicationTypeLabel(app.application_type)}
-                          </Badge>
+                          </span>
                         </TableCell>
 
                         <TableCell>
-                          <div className={getDeadlineColor(app.deadline_date)}>
-                            <p className="font-medium">{app.deadline_date}</p>
+                          <div className={deadlineTone(app.deadline_date)}>
+                            <p className="text-sm">{app.deadline_date}</p>
                             {app.urgent && (
                               <div className="flex items-center gap-1 mt-1">
-                                <AlertCircle className="h-3 w-3 text-yellow-500" />
-                                <span className="text-xs text-yellow-500">Urgent</span>
+                                <AlertCircle className="h-3 w-3 text-[color:var(--pn-gold)]" />
+                                <span className="text-xs text-[color:var(--pn-gold)]">Urgent</span>
                               </div>
                             )}
                           </div>
@@ -464,177 +520,68 @@ const Applications = () => {
 
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm num-display text-foreground">
                               {app.completed_essays}/{app.required_essays}
                             </span>
-                            <Progress
-                              value={safeDivide(app.completed_essays, app.required_essays)}
-                              className="w-16 h-2"
+                            <AnimatedBar
+                              pct={safeDivide(app.completed_essays, app.required_essays)}
+                              tone="var(--pn-gold)"
+                              className="w-16"
                             />
                           </div>
                         </TableCell>
 
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm num-display text-foreground">
                               {app.recommendations_submitted}/{app.recommendations_requested}
                             </span>
-                            <Progress
-                              value={safeDivide(app.recommendations_submitted, app.recommendations_requested)}
-                              className="w-16 h-2"
+                            <AnimatedBar
+                              pct={safeDivide(app.recommendations_submitted, app.recommendations_requested)}
+                              tone="var(--pn-sage)"
+                              className="w-16"
                             />
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <Badge variant={getStatusColor(app.status) as any}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${statusPillClass(app.status)}`}>
                             {app.status.replace("-", " ")}
-                          </Badge>
+                          </span>
                         </TableCell>
 
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Progress value={app.completion_percentage} className="w-16 h-2" />
-                            <span className="text-sm font-medium">{app.completion_percentage}%</span>
+                            <AnimatedBar pct={app.completion_percentage} tone="var(--pn-sage)" className="w-16" />
+                            <span className="text-sm num-display text-foreground">{app.completion_percentage}%</span>
                           </div>
                         </TableCell>
 
-                        {/* <TableCell>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="flex items-center gap-3">
-                                  <Avatar className="h-10 w-10">
-                                    <AvatarImage src={app.profiles?.avatar_url ?? undefined} />
-                                    <AvatarFallback>
-                                      {getInitials(app.profiles?.full_name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h2 className="text-xl font-bold">{app.school_name}</h2>
-                                    <p className="text-sm text-muted-foreground">
-                                      {app.profiles?.full_name ?? "Student"} {app.program ? `— ${app.program}` : ""}
-                                    </p>
-                                  </div>
-                                </DialogTitle>
-                              </DialogHeader>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                      <Target className="h-5 w-5" />
-                                      Overview
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">Type</p>
-                                        <p className="font-medium">{getApplicationTypeLabel(app.application_type)}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">Deadline</p>
-                                        <p className={`font-medium ${getDeadlineColor(app.deadline_date)}`}>
-                                          {app.deadline_date}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">Status</p>
-                                        <Badge variant={getStatusColor(app.status) as any}>
-                                          {app.status.replace("-", " ")}
-                                        </Badge>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">Progress</p>
-                                        <p className="font-medium">{app.completion_percentage}%</p>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                      <BarChart3 className="h-5 w-5" />
-                                      Requirements
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent className="space-y-4">
-                                    <div>
-                                      <div className="flex justify-between mb-2">
-                                        <span className="text-sm">Essays</span>
-                                        <span className="text-sm">{app.completed_essays}/{app.required_essays}</span>
-                                      </div>
-                                      <Progress value={safeDivide(app.completed_essays, app.required_essays)} className="h-2" />
-                                    </div>
-                                    <div>
-                                      <div className="flex justify-between mb-2">
-                                        <span className="text-sm">Recommendations</span>
-                                        <span className="text-sm">{app.recommendations_submitted}/{app.recommendations_requested}</span>
-                                      </div>
-                                      <Progress value={safeDivide(app.recommendations_submitted, app.recommendations_requested)} className="h-2" />
-                                    </div>
-                                    {app.ai_score_avg !== null && app.ai_score_avg > 0 && (
-                                      <div>
-                                        <div className="flex justify-between mb-2">
-                                          <span className="text-sm">Avg AI Score</span>
-                                          <span className="text-sm">{app.ai_score_avg}/100</span>
-                                        </div>
-                                        <Progress value={app.ai_score_avg} className="h-2" />
-                                      </div>
-                                    )}
-                                  </CardContent>
-                                </Card>
-                              </div>
-
-                              <div className="flex gap-2 pt-4 border-t border-border">
-                                <Button className="flex-1">
-                                  <User className="h-4 w-4 mr-2" />
-                                  View Student Profile
-                                </Button>
-                                <Button variant="outline" className="flex-1">
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  View Essays
-                                </Button>
-                                <Button variant="outline">
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Reminder
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell> */}
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {app.completion_percentage === 100 && app.status !== 'submitted' && (
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
-                                <CheckCircle className="h-3 w-3 mr-1" />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[color:var(--pn-sage)]/15 text-[color:var(--pn-sage)] hairline">
+                                <CheckCircle className="h-3 w-3" />
                                 Ready
-                              </Badge>
+                              </span>
                             )}
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]">
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-pn-card hairline">
                                 <DialogHeader>
                                   <DialogTitle className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10">
+                                    <Avatar className="h-10 w-10 hairline">
                                       <AvatarImage src={app.profiles?.avatar_url ?? undefined} />
-                                      <AvatarFallback>
+                                      <AvatarFallback className="bg-white/[0.04] text-foreground">
                                         {getInitials(app.profiles?.full_name)}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <h2 className="text-xl font-bold">{app.school_name}</h2>
+                                      <h2 className="font-serif text-2xl text-foreground leading-tight">{app.school_name}</h2>
                                       <p className="text-sm text-muted-foreground">
                                         {app.profiles?.full_name ?? "Student"} {app.program ? `— ${app.program}` : ""}
                                       </p>
@@ -643,105 +590,115 @@ const Applications = () => {
                                 </DialogHeader>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center gap-2">
-                                        <Target className="h-5 w-5" />
-                                        Overview
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">Type</p>
-                                          <p className="font-medium">{getApplicationTypeLabel(app.application_type)}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">Deadline</p>
-                                          <p className={`font-medium ${getDeadlineColor(app.deadline_date)}`}>
-                                            {app.deadline_date}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">Status</p>
-                                          <Badge variant={getStatusColor(app.status) as any}>
-                                            {app.status.replace("-", " ")}
-                                          </Badge>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">Progress</p>
-                                          <p className="font-medium">{app.completion_percentage}%</p>
-                                        </div>
+                                  <HairlineCard>
+                                    <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+                                      <Target className="h-4 w-4 text-[color:var(--pn-sage)]" />
+                                      Overview
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Type</p>
+                                        <p className="text-foreground">{getApplicationTypeLabel(app.application_type)}</p>
                                       </div>
-                                      {app.completion_percentage === 100 && app.status !== 'submitted' && (
-                                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                                          <div className="flex items-center gap-2">
-                                            <CheckCircle className="h-4 w-4 text-green-600" />
-                                            <p className="text-sm font-medium text-green-600">
-                                              Ready to submit!
-                                            </p>
-                                          </div>
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            All essays and recommendations are complete.
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Deadline</p>
+                                        <p className={deadlineTone(app.deadline_date)}>
+                                          {app.deadline_date}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Status</p>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${statusPillClass(app.status)}`}>
+                                          {app.status.replace("-", " ")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
+                                        <p className="num-display text-foreground">{app.completion_percentage}%</p>
+                                      </div>
+                                    </div>
+                                    {app.completion_percentage === 100 && app.status !== 'submitted' && (
+                                      <div className="mt-4 p-3 rounded-lg bg-[color:var(--pn-sage)]/10 hairline">
+                                        <div className="flex items-center gap-2">
+                                          <CheckCircle className="h-4 w-4 text-[color:var(--pn-sage)]" />
+                                          <p className="text-sm text-[color:var(--pn-sage)]">
+                                            Ready to submit.
                                           </p>
                                         </div>
-                                      )}
-                                    </CardContent>
-                                  </Card>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          All essays and recommendations are complete.
+                                        </p>
+                                      </div>
+                                    )}
+                                  </HairlineCard>
 
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center gap-2">
-                                        <BarChart3 className="h-5 w-5" />
-                                        Requirements
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
+                                  <HairlineCard>
+                                    <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+                                      <BarChart3 className="h-4 w-4 text-[color:var(--pn-gold)]" />
+                                      Requirements
+                                    </h3>
+                                    <div className="space-y-4">
                                       <div>
                                         <div className="flex justify-between mb-2">
-                                          <span className="text-sm">Essays</span>
-                                          <span className="text-sm">{app.completed_essays}/{app.required_essays}</span>
+                                          <span className="text-sm text-muted-foreground">Essays</span>
+                                          <span className="text-sm num-display text-foreground">{app.completed_essays}/{app.required_essays}</span>
                                         </div>
-                                        <Progress value={safeDivide(app.completed_essays, app.required_essays)} className="h-2" />
+                                        <AnimatedBar
+                                          pct={safeDivide(app.completed_essays, app.required_essays)}
+                                          tone="var(--pn-gold)"
+                                          className="w-full"
+                                        />
                                       </div>
                                       <div>
                                         <div className="flex justify-between mb-2">
-                                          <span className="text-sm">Recommendations</span>
-                                          <span className="text-sm">{app.recommendations_submitted}/{app.recommendations_requested}</span>
+                                          <span className="text-sm text-muted-foreground">Recommendations</span>
+                                          <span className="text-sm num-display text-foreground">{app.recommendations_submitted}/{app.recommendations_requested}</span>
                                         </div>
-                                        <Progress value={safeDivide(app.recommendations_submitted, app.recommendations_requested)} className="h-2" />
+                                        <AnimatedBar
+                                          pct={safeDivide(app.recommendations_submitted, app.recommendations_requested)}
+                                          tone="var(--pn-sage)"
+                                          className="w-full"
+                                        />
                                       </div>
                                       {app.ai_score_avg !== null && app.ai_score_avg > 0 && (
                                         <div>
                                           <div className="flex justify-between mb-2">
-                                            <span className="text-sm">Avg AI Score</span>
-                                            <span className="text-sm">{app.ai_score_avg}/100</span>
+                                            <span className="text-sm text-muted-foreground">Avg AI score</span>
+                                            <span className="text-sm num-display text-foreground">{app.ai_score_avg}/100</span>
                                           </div>
-                                          <Progress value={app.ai_score_avg} className="h-2" />
+                                          <AnimatedBar
+                                            pct={app.ai_score_avg}
+                                            tone="var(--pn-pink)"
+                                            className="w-full"
+                                          />
                                         </div>
                                       )}
-                                    </CardContent>
-                                  </Card>
+                                    </div>
+                                  </HairlineCard>
                                 </div>
 
-                                <div className="flex gap-2 pt-4 border-t border-border">
-                                  <Button className="flex-1">
+                                <div className="flex gap-2 pt-4 hairline-t">
+                                  <Button className="flex-1 bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none">
                                     <User className="h-4 w-4 mr-2" />
-                                    View Student Profile
-                                  </Button>
-                                  <Button variant="outline" className="flex-1">
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    View Essays
+                                    Student profile
                                   </Button>
                                   <Button
                                     variant="outline"
+                                    className="flex-1 bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                                  >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    View essays
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
                                     onClick={() => sendSingleReminder(app)}
                                     disabled={sendingReminderFor === app.id}
                                   >
                                     {sendingReminderFor === app.id
                                       ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                       : <Send className="h-4 w-4 mr-2" />}
-                                    Send Reminder
+                                    Send reminder
                                   </Button>
                                 </div>
                               </DialogContent>
@@ -753,65 +710,63 @@ const Applications = () => {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </HairlineCard>
+          </TabsContent>
 
-        {/* ── School View ── */}
-        <TabsContent value="school" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <School className="h-5 w-5" />
-                School Analytics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          {/* ── School View ── */}
+          <TabsContent value="school" className="space-y-4 mt-4">
+            <HairlineCard>
+              <h3 className="font-serif text-2xl text-foreground leading-tight flex items-center gap-2 mb-5">
+                <School className="h-5 w-5 text-[color:var(--pn-sage)]" />
+                By school.
+              </h3>
+              <div className="space-y-3">
                 {schoolStats.map((stat) => (
                   <div
                     key={stat.school}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg"
+                    className="flex items-center justify-between p-4 hairline rounded-lg hover:bg-white/[0.02] transition-colors"
                   >
                     <div>
-                      <h3 className="font-semibold text-foreground">{stat.school}</h3>
-                      <p className="text-sm text-muted-foreground">{stat.count} application{stat.count !== 1 ? "s" : ""}</p>
+                      <h4 className="font-serif text-lg text-foreground">{stat.school}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="num-display">{stat.count}</span> application{stat.count !== 1 ? "s" : ""}
+                      </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Avg Completion</p>
-                        <p className="font-semibold text-foreground">{stat.avgCompletion}%</p>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Avg completion</p>
+                        <p className="num-display text-foreground">{stat.avgCompletion}%</p>
                       </div>
                       {stat.urgent > 0 && (
-                        <Badge variant="destructive" className="flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline">
                           <AlertTriangle className="h-3 w-3" />
-                          {stat.urgent} urgent
-                        </Badge>
+                          <span className="num-display">{stat.urgent}</span> urgent
+                        </span>
                       )}
-                      <Progress value={stat.avgCompletion} className="w-24 h-2" />
+                      <AnimatedBar pct={stat.avgCompletion} tone="var(--pn-sage)" className="w-24" />
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </HairlineCard>
+          </TabsContent>
+        </Tabs>
 
-      {filtered.length === 0 && !isLoading && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No applications found</h3>
-            <p className="text-muted-foreground">
-              {applications.length === 0
-                ? "No applications have been added yet."
-                : "Try adjusting your search or filters."}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {filtered.length === 0 && !isLoading && (
+          <motion.div variants={sectionVariants}>
+            <HairlineCard variant="gold" className="text-center py-12">
+              <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+              <h3 className="font-serif text-xl text-foreground mb-2">Nothing here yet.</h3>
+              <p className="font-serif italic text-muted-foreground">
+                {applications.length === 0
+                  ? "No applications have been added."
+                  : "Try loosening the filters."}
+              </p>
+            </HairlineCard>
+          </motion.div>
+        )}
+      </motion.div>
+    </PageShell>
   );
 };
 

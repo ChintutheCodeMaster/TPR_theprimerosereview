@@ -1,6 +1,5 @@
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
   TrendingUp,
@@ -29,164 +28,150 @@ import {
   Legend,
 } from "recharts";
 import { useEssayAnalytics } from "@/hooks/useEssayAnalytics";
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
 const PIE_COLORS = [
-  "hsl(142, 76%, 36%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(var(--primary))",
-  "hsl(var(--muted-foreground))",
+  "oklch(0.78 0.07 155)", // sage
+  "oklch(0.80 0.10 85)",  // gold
+  "oklch(0.72 0.10 15)",  // pink
+  "rgba(255,255,255,0.35)",
 ];
+
+const chartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: "8px",
+  color: "hsl(var(--foreground))",
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
+};
 
 const EssayAnalytics = () => {
   const navigate = useNavigate();
   const { data, isLoading, error } = useEssayAnalytics();
 
-  // ── Loading ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────
   if (error || !data) {
     return (
-      <div className="flex items-center justify-center h-96 gap-3 text-destructive">
-        <AlertCircle className="h-6 w-6" />
-        <p>Failed to load analytics. Please refresh and try again.</p>
-      </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-96 gap-3 text-[color:var(--pn-pink)]">
+          <AlertCircle className="h-6 w-6" />
+          <p className="font-serif italic">
+            The numbers wouldn't load. Please refresh and try again.
+          </p>
+        </div>
+      </PageShell>
     );
   }
 
+  const statTiles = [
+    { label: 'Total essays', value: data.totalEssays, icon: FileText, tone: 'var(--pn-sage)' },
+    {
+      label: 'Avg AI score',
+      value: data.avgScore !== null ? data.avgScore : "—",
+      icon: TrendingUp,
+      tone: 'var(--pn-sage)',
+      hint: data.avgScore === null ? 'No scored essays yet' : null,
+    },
+    { label: 'Pending review', value: data.pendingReview, icon: Clock, tone: 'var(--pn-gold)' },
+    { label: 'Active students', value: data.activeStudents, icon: Users, tone: 'var(--pn-pink)' },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/essays")}>
+    <PageShell>
+      <BlurOrb tone="gold" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
+
+      <div className="flex items-center gap-2 mb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hairline hover:bg-white/[0.03] text-muted-foreground hover:text-foreground"
+          onClick={() => navigate("/essays")}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Essays
+          Back to essays
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Essay Analytics</h1>
-          <p className="text-muted-foreground">
-            Performance insights and trends across all essays
-          </p>
-        </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Essays</p>
-                <p className="text-2xl font-bold text-foreground">{data.totalEssays}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <PageHeader
+        eyebrow="Analytics"
+        title={<>The numbers, softly.</>}
+        subtitle={<>Performance and trends across every essay you've read.</>}
+      />
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Summary Stats */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {statTiles.map(({ label, value, icon: Icon, tone, hint }) => (
+            <HairlineCard key={label}>
+              <div className="flex items-center gap-3">
+                <div className="hairline rounded-lg p-2" style={{ background: `${tone}20` }}>
+                  <Icon className="h-4 w-4" style={{ color: tone }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                  <p className="num-display text-2xl text-foreground">{value}</p>
+                  {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Avg AI Score</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {data.avgScore !== null ? data.avgScore : "—"}
-                </p>
-                {data.avgScore === null && (
-                  <p className="text-xs text-muted-foreground">No scored essays yet</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </HairlineCard>
+          ))}
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Review</p>
-                <p className="text-2xl font-bold text-foreground">{data.pendingReview}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Students</p>
-                <p className="text-2xl font-bold text-foreground">{data.activeStudents}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Score Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary" />
-              Score Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Charts Row */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <HairlineCard>
+            <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+              <Star className="h-4 w-4 text-[color:var(--pn-gold)]" />
+              Score distribution
+            </h3>
             {data.scoreDistribution.every((d) => d.count === 0) ? (
-              <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
-                No scored essays yet — AI analysis needed
+              <div className="flex items-center justify-center h-[250px] font-serif italic text-muted-foreground">
+                Nothing scored yet — AI analysis needed.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={data.scoreDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="range" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="range" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                  <Bar dataKey="count" fill="oklch(0.78 0.07 155)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </CardContent>
-        </Card>
+          </HairlineCard>
 
-        {/* Status Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Essay Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <HairlineCard>
+            <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+              <CheckCircle className="h-4 w-4 text-[color:var(--pn-sage)]" />
+              Essay status
+            </h3>
             {data.statusData.length === 0 ? (
-              <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
-                No essays yet
+              <div className="flex items-center justify-center h-[250px] font-serif italic text-muted-foreground">
+                Nothing here yet.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
@@ -199,165 +184,137 @@ const EssayAnalytics = () => {
                     outerRadius={90}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
+                    stroke="rgba(255,255,255,0.08)"
                   >
                     {data.statusData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
+                  <Tooltip contentStyle={chartTooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </HairlineCard>
+        </motion.div>
 
-      {/* Progress Over Time */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Progress Over Time
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.progressOverTime.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm">
-              Not enough data yet
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.progressOverTime}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fontSize: 12 }}
-                  domain={[0, 100]}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="avgScore"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  name="Avg Score"
-                  dot={{ fill: "hsl(var(--primary))" }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="essaysSubmitted"
-                  stroke="hsl(142, 76%, 36%)"
-                  strokeWidth={2}
-                  name="Essays Submitted"
-                  dot={{ fill: "hsl(142, 76%, 36%)" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Performers */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500" />
-              Top Performers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.topPerformers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                No scored essays yet
+        {/* Progress Over Time */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-[color:var(--pn-sage)]" />
+              How the weeks are moving
+            </h3>
+            {data.progressOverTime.length === 0 ? (
+              <div className="flex items-center justify-center h-[300px] font-serif italic text-muted-foreground">
+                Not enough data yet.
               </div>
             ) : (
-              <div className="space-y-4">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={data.progressOverTime}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="week" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    domain={[0, 100]}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                  <Legend wrapperStyle={{ color: "hsl(var(--muted-foreground))" }} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="avgScore"
+                    stroke="oklch(0.78 0.07 155)"
+                    strokeWidth={2}
+                    name="Avg Score"
+                    dot={{ fill: "oklch(0.78 0.07 155)" }}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="essaysSubmitted"
+                    stroke="oklch(0.80 0.10 85)"
+                    strokeWidth={2}
+                    name="Essays Submitted"
+                    dot={{ fill: "oklch(0.80 0.10 85)" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </HairlineCard>
+        </motion.div>
+
+        {/* Bottom Row */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <HairlineCard>
+            <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+              <Star className="h-4 w-4 text-[color:var(--pn-gold)]" />
+              Names to remember
+            </h3>
+            {data.topPerformers.length === 0 ? (
+              <div className="text-center py-8 font-serif italic text-muted-foreground">
+                No scored essays yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
                 {data.topPerformers.map((student, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                  <div key={index} className="flex items-center gap-3 p-3 hairline rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-[color:var(--pn-gold)]/15 hairline flex items-center justify-center text-sm num-display text-[color:var(--pn-gold)]">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{student.name}</p>
+                      <p className="text-sm text-foreground truncate">{student.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {student.essay}
                       </p>
                     </div>
-                    <div className="text-lg font-bold text-green-600">{student.score}</div>
+                    <div className="num-display text-lg text-[color:var(--pn-sage)]">{student.score}</div>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </HairlineCard>
 
-        {/* Needs Attention */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              Needs Attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <HairlineCard>
+            <h3 className="font-serif text-xl text-foreground flex items-center gap-2 mb-4">
+              <AlertCircle className="h-4 w-4 text-[color:var(--pn-pink)]" />
+              Needs your attention
+            </h3>
             {data.needsAttention.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                🎉 All essays have been reviewed!
+              <div className="text-center py-8 font-serif italic text-muted-foreground">
+                You're clear. Every essay has been read.
               </div>
             ) : (
               <div className="space-y-3">
                 {data.needsAttention.map((student, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 p-3 bg-destructive/5 rounded-lg border border-destructive/20"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-[color:var(--pn-pink)]/5 hairline border-[color:var(--pn-pink)]/20"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{student.name}</p>
+                      <p className="text-sm text-foreground truncate">{student.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {student.essay}
                       </p>
                     </div>
-                    <div className="text-lg font-bold text-destructive">
+                    <div className="num-display text-lg text-[color:var(--pn-pink)]">
                       {student.score !== null ? student.score : "—"}
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </HairlineCard>
+        </motion.div>
+      </motion.div>
+    </PageShell>
   );
 };
 

@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +29,7 @@ import {
   MoreHorizontal,
   Pause,
 } from "lucide-react";
+import { PageShell, PageHeader, HairlineCard, BlurOrb } from "@/components/primrose-night";
 
 type AppNotification = {
   id: string;
@@ -48,6 +48,16 @@ type AppNotification = {
   snoozeUntil?: string;
 };
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: [0.2, 0.6, 0.2, 1] as const },
+  },
+};
+
 const Notifications = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -56,9 +66,6 @@ const Notifications = () => {
   const [showRead, setShowRead] = useState(true);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // ─────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────
   const formatTimestamp = (ts: string) => {
     const date = new Date(ts);
     if (isNaN(date.getTime())) return ts;
@@ -72,16 +79,12 @@ const Notifications = () => {
     return date.toLocaleDateString();
   };
 
-  // ─────────────────────────────────────────
-  // Load & Derive Notifications
-  // ─────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
       const userId = userData.user.id;
 
-      // Get assigned student IDs
       const { data: assignments } = await supabase
         .from("student_counselor_assignments")
         .select("student_id")
@@ -90,7 +93,6 @@ const Notifications = () => {
       const studentIds = assignments?.map((a) => a.student_id) ?? [];
       if (studentIds.length === 0) return;
 
-      // Load profiles
       const { data: profileData } = await supabase
         .from("profiles")
         .select("user_id, full_name, avatar_url")
@@ -101,7 +103,6 @@ const Notifications = () => {
 
       const derived: AppNotification[] = [];
 
-      // ── Applications: urgent flags + upcoming deadlines ──
       const { data: apps } = await supabase
         .from("applications")
         .select("*")
@@ -152,7 +153,6 @@ const Notifications = () => {
         }
       });
 
-      // ── Essay feedback: drafts ready to send ──
       const { data: essays } = await supabase
         .from("essay_feedback")
         .select("*")
@@ -179,7 +179,6 @@ const Notifications = () => {
         });
       });
 
-      // ── Recommendation requests: pending / in_progress ──
       const { data: recs } = await supabase
         .from("recommendation_requests")
         .select("*")
@@ -210,7 +209,6 @@ const Notifications = () => {
         });
       });
 
-      // ── Tasks: incomplete ──
       const { data: tasks } = await supabase
         .from("tasks")
         .select("*")
@@ -237,7 +235,6 @@ const Notifications = () => {
         });
       });
 
-      // ── Messages: unread ──
       const { data: convos } = await supabase
         .from("conversations")
         .select("*")
@@ -278,7 +275,6 @@ const Notifications = () => {
         });
       }
 
-      // Sort newest first
       derived.sort(
         (a, b) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -289,9 +285,6 @@ const Notifications = () => {
     load();
   }, []);
 
-  // ─────────────────────────────────────────
-  // Daily Digest (derived)
-  // ─────────────────────────────────────────
   const dailyDigest = useMemo(() => {
     const active = notifications.filter((n) => !n.snoozed);
     const critical = active.filter((n) => n.priority === "critical");
@@ -338,23 +331,29 @@ const Notifications = () => {
     return {
       summary:
         critical.length > 0
-          ? `You have ${critical.length} critical item${critical.length > 1 ? "s" : ""} requiring immediate attention today`
+          ? `You have ${critical.length} critical item${critical.length > 1 ? "s" : ""} requiring immediate attention today.`
           : importantCount > 0
-          ? `You have ${importantCount} important item${importantCount > 1 ? "s" : ""} requiring attention`
-          : "All caught up! No urgent items today.",
+          ? `You have ${importantCount} important item${importantCount > 1 ? "s" : ""} requiring attention.`
+          : "You're clear. Nothing urgent today.",
       priorities: priorities.slice(0, 3),
     };
   }, [notifications]);
 
-  // ─────────────────────────────────────────
-  // UI Helpers
-  // ─────────────────────────────────────────
-  const getPriorityColor = (priority: string) => {
+  const priorityPillClass = (priority: string) => {
     switch (priority) {
-      case "critical": return "destructive";
-      case "important": return "warning";
-      case "informational": return "secondary";
-      default: return "outline";
+      case "critical": return "bg-[color:var(--pn-pink)]/15 text-[color:var(--pn-pink)] hairline";
+      case "important": return "bg-[color:var(--pn-gold)]/15 text-[color:var(--pn-gold)] hairline";
+      case "informational": return "bg-white/[0.06] text-foreground/80 hairline";
+      default: return "bg-white/[0.03] text-muted-foreground hairline";
+    }
+  };
+
+  const priorityAccentBorder = (priority: string) => {
+    switch (priority) {
+      case "critical": return "border-l-[color:var(--pn-pink)]";
+      case "important": return "border-l-[color:var(--pn-gold)]";
+      case "informational": return "border-l-white/[0.08]";
+      default: return "border-l-transparent";
     }
   };
 
@@ -379,21 +378,18 @@ const Notifications = () => {
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const typeTone = (type: string) => {
     switch (type) {
-      case "essay": return "bg-blue-100 text-blue-700";
-      case "application": return "bg-green-100 text-green-700";
-      case "recommendation": return "bg-purple-100 text-purple-700";
-      case "task": return "bg-orange-100 text-orange-700";
-      case "message": return "bg-cyan-100 text-cyan-700";
-      case "deadline": return "bg-red-100 text-red-700";
-      default: return "bg-gray-100 text-gray-700";
+      case "essay": return "var(--pn-sage)";
+      case "application": return "var(--pn-sage)";
+      case "recommendation": return "var(--pn-pink)";
+      case "task": return "var(--pn-gold)";
+      case "message": return "var(--pn-sage)";
+      case "deadline": return "var(--pn-pink)";
+      default: return "rgba(255,255,255,0.35)";
     }
   };
 
-  // ─────────────────────────────────────────
-  // Filtering
-  // ─────────────────────────────────────────
   const filteredNotifications = notifications.filter((notification) => {
     const matchesSearch =
       notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -417,9 +413,6 @@ const Notifications = () => {
     );
   });
 
-  // ─────────────────────────────────────────
-  // Actions (client-side state mutations)
-  // ─────────────────────────────────────────
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -446,9 +439,6 @@ const Notifications = () => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // ─────────────────────────────────────────
-  // Derived counts
-  // ─────────────────────────────────────────
   const unreadCount = notifications.filter((n) => !n.read && !n.snoozed).length;
   const criticalCount = notifications.filter(
     (n) => n.priority === "critical" && !n.read && !n.snoozed
@@ -459,254 +449,220 @@ const Notifications = () => {
     new Set(notifications.map((n) => n.studentName))
   );
 
-  // ─────────────────────────────────────────
-  // UI
-  // ─────────────────────────────────────────
+  const statTiles = [
+    { label: "Total", value: notifications.length, icon: Bell, tone: "var(--pn-sage)" },
+    { label: "Unread", value: unreadCount, icon: BellOff, tone: "var(--pn-gold)" },
+    { label: "Critical", value: criticalCount, icon: AlertTriangle, tone: "var(--pn-pink)" },
+    { label: "Snoozed", value: snoozedCount, icon: Clock, tone: "rgba(255,255,255,0.5)" },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
-          <p className="text-muted-foreground">
-            Stay updated on all student progress and deadlines
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={markAllAsRead}>
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Mark All Read
-          </Button>
-          <Button variant="outline" size="sm">
-            <Archive className="h-4 w-4 mr-2" />
-            Archive Old
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <BlurOrb tone="pink" className="top-[-100px] right-[-100px] w-[500px] h-[500px]" />
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Bell className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Notifications</p>
-                <p className="text-2xl font-bold text-foreground">{notifications.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <PageHeader
+        eyebrow="Notifications"
+        title={<>What's calling for you.</>}
+        subtitle={<>Deadlines, drafts, and threads — sorted by urgency.</>}
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+              onClick={markAllAsRead}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Mark all read
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive old
+            </Button>
+          </div>
+        }
+      />
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-warning/10 rounded-lg">
-                <BellOff className="h-5 w-5 text-warning" />
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+        className="space-y-6"
+      >
+        {/* Stats */}
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {statTiles.map(({ label, value, icon: Icon, tone }) => (
+            <HairlineCard key={label}>
+              <div className="flex items-center gap-3">
+                <div className="hairline rounded-lg p-2" style={{ background: `${tone}20` }}>
+                  <Icon className="h-4 w-4" style={{ color: tone }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                  <p className="num-display text-2xl text-foreground">{value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Unread</p>
-                <p className="text-2xl font-bold text-foreground">{unreadCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </HairlineCard>
+          ))}
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Critical</p>
-                <p className="text-2xl font-bold text-foreground">{criticalCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Daily Digest */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard variant="hero">
+            <h3 className="font-serif text-2xl text-foreground leading-tight flex items-center gap-2 mb-3">
+              <TrendingUp className="h-5 w-5 text-[color:var(--pn-sage)]" />
+              Today, in a sentence.
+            </h3>
+            <p className="text-foreground mb-4 font-serif italic">{dailyDigest.summary}</p>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary/10 rounded-lg">
-                <Clock className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Snoozed</p>
-                <p className="text-2xl font-bold text-foreground">{snoozedCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Daily Digest */}
-      <Card className="border-primary/20 bg-gradient-subtle">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Daily Digest
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-foreground font-medium">{dailyDigest.summary}</p>
-
-          {dailyDigest.priorities.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {dailyDigest.priorities.map((priority, index) => (
-                <Card key={index} className="bg-background/50">
-                  <CardContent className="p-4">
+            {dailyDigest.priorities.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {dailyDigest.priorities.map((priority, index) => (
+                  <div key={index} className="hairline rounded-lg p-4 bg-white/[0.02]">
                     <div className="flex items-start gap-2">
-                      <Badge
-                        variant={priority.type === "critical" ? "destructive" : "secondary"}
-                        className="mt-1"
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.14em] mt-0.5 ${priorityPillClass(priority.type)}`}
                       >
                         {priority.type}
-                      </Badge>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{priority.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {priority.description}
-                        </p>
-                        <p className="text-xs font-medium text-primary mt-2">
-                          {priority.action}
-                        </p>
-                      </div>
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <h4 className="font-serif text-lg text-foreground mt-2">{priority.title}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {priority.description}
+                    </p>
+                    <p className="text-xs text-[color:var(--pn-pink)] mt-2">
+                      {priority.action}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </HairlineCard>
+        </motion.div>
+
+        {/* Filters */}
+        <motion.div variants={sectionVariants}>
+          <HairlineCard>
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search notifications…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/[0.02] hairline focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[120px] bg-white/[0.02] hairline">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-pn-card hairline">
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="essay">Essays</SelectItem>
+                    <SelectItem value="application">Applications</SelectItem>
+                    <SelectItem value="recommendation">Recommendations</SelectItem>
+                    <SelectItem value="task">Tasks</SelectItem>
+                    <SelectItem value="message">Messages</SelectItem>
+                    <SelectItem value="deadline">Deadlines</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="w-[120px] bg-white/[0.02] hairline">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-pn-card hairline">
+                    <SelectItem value="all">All priority</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="important">Important</SelectItem>
+                    <SelectItem value="informational">Informational</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={studentFilter} onValueChange={setStudentFilter}>
+                  <SelectTrigger className="w-[150px] bg-white/[0.02] hairline">
+                    <SelectValue placeholder="Student" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-pn-card hairline">
+                    <SelectItem value="all">All students</SelectItem>
+                    {uniqueStudents.map((student) => (
+                      <SelectItem key={student} value={student}>
+                        {student}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`bg-transparent hairline hover:bg-white/[0.03] shadow-none ${showRead ? 'text-foreground' : 'text-muted-foreground'}`}
+                  onClick={() => setShowRead(!showRead)}
+                >
+                  {showRead ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                >
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </HairlineCard>
+        </motion.div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="essay">Essays</SelectItem>
-                  <SelectItem value="application">Applications</SelectItem>
-                  <SelectItem value="recommendation">Recommendations</SelectItem>
-                  <SelectItem value="task">Tasks</SelectItem>
-                  <SelectItem value="message">Messages</SelectItem>
-                  <SelectItem value="deadline">Deadlines</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="important">Important</SelectItem>
-                  <SelectItem value="informational">Informational</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={studentFilter} onValueChange={setStudentFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Student" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Students</SelectItem>
-                  {uniqueStudents.map((student) => (
-                    <SelectItem key={student} value={student}>
-                      {student}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant={showRead ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowRead(!showRead)}
-              >
-                {showRead ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              </Button>
-
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications Timeline */}
-      <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                No notifications found
-              </h3>
-              <p className="text-muted-foreground">
-                Try adjusting your filters or check back later
+        {/* Timeline */}
+        <motion.div variants={sectionVariants} className="space-y-3">
+          {filteredNotifications.length === 0 ? (
+            <HairlineCard variant="sage" className="text-center py-12">
+              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+              <h3 className="font-serif text-xl text-foreground mb-2">You're clear.</h3>
+              <p className="font-serif italic text-muted-foreground">
+                Try loosening the filters, or check back later.
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredNotifications.map((notification) => {
-            const TypeIcon = getTypeIcon(notification.type);
-            const PriorityIcon = getPriorityIcon(notification.priority);
+            </HairlineCard>
+          ) : (
+            filteredNotifications.map((notification) => {
+              const TypeIcon = getTypeIcon(notification.type);
+              const PriorityIcon = getPriorityIcon(notification.priority);
+              const tone = typeTone(notification.type);
 
-            return (
-              <Card
-                key={notification.id}
-                className={`transition-all duration-200 hover:shadow-md ${
-                  !notification.read ? "border-l-4 border-l-primary bg-primary/5" : ""
-                } ${
-                  notification.priority === "critical" ? "border-destructive/50" : ""
-                }`}
-              >
-                <CardContent className="p-6">
+              return (
+                <HairlineCard
+                  key={notification.id}
+                  className={`border-l-2 transition-colors ${priorityAccentBorder(notification.priority)} ${
+                    !notification.read ? 'bg-white/[0.02]' : ''
+                  }`}
+                >
                   <div className="flex items-start gap-4">
-                    {/* Priority & Type Indicator */}
-                    <div className="flex flex-col items-center gap-2">
-                      <div className={`p-2 rounded-lg ${getTypeColor(notification.type)}`}>
-                        <TypeIcon className="h-5 w-5" />
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <div className="hairline rounded-lg p-2" style={{ background: `${tone}20` }}>
+                        <TypeIcon className="h-4 w-4" style={{ color: tone }} />
                       </div>
-                      <Badge
-                        variant={getPriorityColor(notification.priority) as any}
-                        className="text-xs"
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${priorityPillClass(notification.priority)}`}
                       >
-                        <PriorityIcon className="h-3 w-3 mr-1" />
+                        <PriorityIcon className="h-3 w-3" />
                         {notification.priority}
-                      </Badge>
+                      </span>
                     </div>
 
-                    {/* Content */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3
-                              className={`font-semibold ${
+                              className={`font-serif text-lg ${
                                 !notification.read
                                   ? "text-foreground"
                                   : "text-muted-foreground"
@@ -715,7 +671,7 @@ const Notifications = () => {
                               {notification.title}
                             </h3>
                             {!notification.read && (
-                              <div className="w-2 h-2 bg-primary rounded-full" />
+                              <div className="w-2 h-2 bg-[color:var(--pn-pink)] rounded-full" />
                             )}
                           </div>
 
@@ -723,14 +679,14 @@ const Notifications = () => {
                             {notification.description}
                           </p>
 
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Avatar className="h-4 w-4">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <Avatar className="h-4 w-4 hairline">
                                 <AvatarImage
                                   src={notification.studentAvatar}
                                   alt={notification.studentName}
                                 />
-                                <AvatarFallback className="text-xs">
+                                <AvatarFallback className="text-[9px] bg-white/[0.04] text-foreground">
                                   {notification.studentName
                                     .split(" ")
                                     .map((n) => n[0])
@@ -739,33 +695,44 @@ const Notifications = () => {
                               </Avatar>
                               <span>{notification.studentName}</span>
                             </div>
-                            <span>•</span>
+                            <span>·</span>
                             <span>{formatTimestamp(notification.timestamp)}</span>
-                            <span>•</span>
-                            <Badge variant="outline" className="text-xs capitalize">
+                            <span>·</span>
+                            <span className="hairline rounded-full px-2 py-0.5 text-[10px] capitalize">
                               {notification.type}
-                            </Badge>
+                            </span>
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 ml-4">
+                        <div className="flex items-center gap-1 ml-2 shrink-0">
                           {notification.actionable && (
                             <>
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                              >
                                 <Eye className="h-3 w-3 mr-1" />
                                 View
                               </Button>
 
                               {notification.type === "essay" && (
-                                <Button variant="outline" size="sm">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                                >
                                   <FileText className="h-3 w-3 mr-1" />
                                   Review
                                 </Button>
                               )}
 
                               {notification.type === "message" && (
-                                <Button variant="outline" size="sm">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
+                                >
                                   <MessageSquare className="h-3 w-3 mr-1" />
                                   Reply
                                 </Button>
@@ -773,7 +740,11 @@ const Notifications = () => {
 
                               {(notification.type === "deadline" ||
                                 notification.type === "recommendation") && (
-                                <Button variant="outline" size="sm">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
+                                >
                                   <Send className="h-3 w-3 mr-1" />
                                   Remind
                                 </Button>
@@ -783,29 +754,35 @@ const Notifications = () => {
 
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-sm">
+                            <DialogContent className="max-w-sm bg-pn-card hairline">
                               <DialogHeader>
-                                <DialogTitle>Notification Actions</DialogTitle>
+                                <DialogTitle className="font-serif text-2xl text-foreground">
+                                  What to do with it.
+                                </DialogTitle>
                               </DialogHeader>
                               <div className="space-y-2">
                                 {!notification.read && (
                                   <Button
                                     variant="outline"
-                                    className="w-full justify-start"
+                                    className="w-full justify-start bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
                                     onClick={() => markAsRead(notification.id)}
                                   >
                                     <CheckCircle className="h-4 w-4 mr-2" />
-                                    Mark as Read
+                                    Mark as read
                                   </Button>
                                 )}
 
                                 <Button
                                   variant="outline"
-                                  className="w-full justify-start"
+                                  className="w-full justify-start bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
                                   onClick={() => snoozeNotification(notification.id, 24)}
                                 >
                                   <Clock className="h-4 w-4 mr-2" />
@@ -814,7 +791,7 @@ const Notifications = () => {
 
                                 <Button
                                   variant="outline"
-                                  className="w-full justify-start"
+                                  className="w-full justify-start bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none"
                                   onClick={() => snoozeNotification(notification.id, 168)}
                                 >
                                   <Pause className="h-4 w-4 mr-2" />
@@ -823,7 +800,7 @@ const Notifications = () => {
 
                                 <Button
                                   variant="outline"
-                                  className="w-full justify-start text-destructive hover:text-destructive"
+                                  className="w-full justify-start bg-transparent hairline hover:bg-white/[0.03] text-[color:var(--pn-pink)] shadow-none"
                                   onClick={() => deleteNotification(notification.id)}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
@@ -836,13 +813,13 @@ const Notifications = () => {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
-    </div>
+                </HairlineCard>
+              );
+            })
+          )}
+        </motion.div>
+      </motion.div>
+    </PageShell>
   );
 };
 
