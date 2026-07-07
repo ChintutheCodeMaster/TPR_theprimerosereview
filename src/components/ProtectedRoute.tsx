@@ -51,12 +51,11 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   }
 
   if (status === 'unauthenticated') {
-    const isAdminRoute = location.pathname === '/superadmin';
-    return <Navigate to={isAdminRoute ? '/auth?admin=1' : '/auth'} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (status === 'unauthorized') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

@@ -351,6 +351,18 @@
   --pn-sage: oklch(0.82 0.05 130);
   --pn-pink: oklch(0.88 0.08 350);
   --pn-gold: oklch(0.8 0.11 85);
+
+  /* Lander palette — mirrors elite-guidance-platform styles.css so the
+     ported marketing pages (GatePage, V5Page) render with the same tokens. */
+  --lander-cream: oklch(0.97 0.018 80);
+  --lander-ink: oklch(0.16 0.02 260);
+  --lander-ink-soft: oklch(0.42 0.02 260);
+  --lander-sage: oklch(0.58 0.2 260);
+  --lander-sage-deep: oklch(0.42 0.22 264);
+  --lander-gold: oklch(0.78 0.13 80);
+  --lander-blush: oklch(0.88 0.06 30);
+  --lander-clay: oklch(0.72 0.11 40);
+  --lander-hairline: oklch(0.9 0.012 80);
 }
 
 @layer utilities {

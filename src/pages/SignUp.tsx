@@ -923,7 +923,7 @@ useEffect(() => {
             <button
               type="button"
               className="text-sm text-primary font-medium hover:underline"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/login')}
             >
               Sign in
             </button>

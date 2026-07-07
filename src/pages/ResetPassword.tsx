@@ -63,7 +63,7 @@ const ResetPassword = () => {
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
               <h1 className="text-xl font-bold">Password updated!</h1>
               <p className="text-sm text-muted-foreground">Your password has been changed. You can now sign in with your new password.</p>
-              <Button className="w-full" onClick={() => navigate('/auth')}>
+              <Button className="w-full" onClick={() => navigate('/login')}>
                 Go to Sign In
               </Button>
             </div>
@@ -71,7 +71,7 @@ const ResetPassword = () => {
             <div className="text-center space-y-3">
               <h1 className="text-xl font-bold">Verifying reset link...</h1>
               <p className="text-sm text-muted-foreground">If you arrived here from a password reset email, please wait a moment.</p>
-              <p className="text-sm text-muted-foreground">If nothing happens, the link may have expired. <button className="text-primary hover:underline" onClick={() => navigate('/auth')}>Return to sign in</button>.</p>
+              <p className="text-sm text-muted-foreground">If nothing happens, the link may have expired. <button className="text-primary hover:underline" onClick={() => navigate('/login')}>Return to sign in</button>.</p>
             </div>
           ) : (
             <>

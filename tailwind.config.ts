@@ -35,6 +35,19 @@ export default {
 					pink: 'var(--pn-pink)',
 					gold: 'var(--pn-gold)'
 				},
+				ink: {
+					DEFAULT: 'var(--lander-ink)',
+					soft: 'var(--lander-ink-soft)'
+				},
+				cream: 'var(--lander-cream)',
+				sage: {
+					DEFAULT: 'var(--lander-sage)',
+					deep: 'var(--lander-sage-deep)'
+				},
+				gold: 'var(--lander-gold)',
+				blush: 'var(--lander-blush)',
+				clay: 'var(--lander-clay)',
+				hairline: 'var(--lander-hairline)',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

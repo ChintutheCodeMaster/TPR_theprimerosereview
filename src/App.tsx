@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DemoNavigation } from "@/components/DemoNavigation";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,11 @@ import { toast } from "sonner";
 import PreviewModeContext from "@/contexts/PreviewModeContext";
 import { PreviewBanner } from "@/components/PreviewBanner";
 import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
+// import Landing from "./pages/Landing"; // Deprecated: role-picker landing replaced by unified /login. Kept for possible revert.
+// import Auth from "./pages/Auth"; // Deprecated: role-selector auth replaced by unified /login. Kept for possible revert.
+import Login from "./pages/Login";
+import { GatePage } from "@/components/lander/GatePage";
+import { V5Page } from "@/components/lander/v5/V5Page";
 import Demo from "./pages/Demo";
 import Students from "./pages/Students";
 import Essays from "./pages/Essays";
@@ -98,7 +101,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { data: schoolLogoUrl } = useSchoolLogo();
   const logoSrc = schoolLogoUrl ?? clientLogo;
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const noSidebarRoutes = ['/', '/auth', '/demo', '/product-demo', '/demo-maker', '/reset-password'];
+  const noSidebarRoutes = ['/', '/v5', '/auth', '/login', '/demo', '/product-demo', '/demo-maker', '/reset-password'];
   const isPreviewMode = location.pathname.startsWith('/preview/');
   const isStudentRoute =
   [
@@ -216,8 +219,12 @@ const App = () => {
         <SessionTracker />
         <Routes>
           {/* ── Public routes (no sidebar, no auth) ── */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
+          {/* Landing role-picker deprecated — users enter through marketing gate → /v5 → /login. */}
+          {/* <Route path="/" element={<Landing />} /> */}
+          <Route path="/" element={<GatePage />} />
+          <Route path="/v5" element={<V5Page />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth" element={<Navigate to="/login" replace />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/teacher-rec/:token" element={<TeacherRecommendationPage />} />
