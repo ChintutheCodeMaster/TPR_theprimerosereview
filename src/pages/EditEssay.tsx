@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useEditEssay } from "@/hooks/useeditEssay";
+import { useCompanionPageContext } from "@/hooks/useCompanionPageContext";
 import {
   ArrowLeft,
   Save,
@@ -57,6 +58,7 @@ const EditEssay = () => {
   const essayId = searchParams.get("id");
 
   const { essay, isLoading, saveDraft, resubmit } = useEditEssay(essayId);
+  useCompanionPageContext(essayId ? { essayId } : null);
 
   const [content, setContent] = useState("");
   const [wordCount, setWordCount] = useState(0);

@@ -87,3 +87,91 @@ export async function callAI(options: {
 
   return content;
 }
+
+// ── Tool-use variant ────────────────────────────────────────────────────────
+// Returns the raw Anthropic response so callers can inspect stop_reason and
+// iterate for multi-turn tool loops. No Gemini fallback — Gemini's tool schema
+// differs and would need a separate translation layer.
+
+export type AnthropicTool = {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+};
+
+export type AnthropicMessage = {
+  role: "user" | "assistant";
+  content: string | Array<Record<string, unknown>>;
+};
+
+export type AnthropicResponse = {
+  id: string;
+  type: "message";
+  role: "assistant";
+  model: string;
+  content: Array<
+    | { type: "text"; text: string }
+    | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
+  >;
+  stop_reason: "end_turn" | "tool_use" | "max_tokens" | "stop_sequence" | string;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+};
+
+export async function callAIWithTools(options: {
+  system: string;
+  messages: AnthropicMessage[];
+  tools: AnthropicTool[];
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<AnthropicResponse | null> {
+  const {
+    system,
+    messages,
+    tools,
+    model = DEFAULT_MODEL,
+    maxTokens = 800,
+    temperature = 0.5,
+  } = options;
+
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY2");
+  if (!anthropicKey) {
+    console.error("ANTHROPIC_API_KEY2 not set");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": anthropicKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+        tools,
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.warn(`Anthropic tool-use error ${response.status}: ${err}`);
+      return null;
+    }
+
+    return await response.json() as AnthropicResponse;
+  } catch (err) {
+    console.warn("Anthropic tool-use request failed:", err);
+    return null;
+  }
+}

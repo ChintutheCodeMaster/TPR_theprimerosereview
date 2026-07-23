@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompanionPageContext } from "@/hooks/useCompanionPageContext";
 
 import {
   ArrowLeft,
@@ -72,6 +73,13 @@ const SubmitEssay = () => {
   const urlDraftId    = searchParams.get("draftId");
   const urlSchoolName = searchParams.get("schoolName");
   const isReadonly    = searchParams.get("readonly") === "true";
+
+  useCompanionPageContext({
+    ...(applicationId ? { applicationId } : {}),
+    ...(slotId ? { slotId } : {}),
+    ...(urlDraftId ? { draftId: urlDraftId } : {}),
+    ...(urlSchoolName ? { schoolName: urlSchoolName } : {}),
+  });
 
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
