@@ -79,6 +79,8 @@ import InterviewSimulator from "./pages/InterviewSimulator";
 import AIVoiceChat from "./pages/AIVoiceChat";
 import { useSessionTracking } from "./hooks/useSessionTracking";
 import { AppFooter } from "@/components/AppFooter";
+import { CompanionSessionProvider } from "@/contexts/CompanionSessionContext";
+import { StudentCompanionRail } from "@/components/companion/StudentCompanionRail";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
@@ -149,6 +151,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           {/* Sidebar + Main content row */}
           <div className="flex flex-1 min-h-0">
             <AppSidebar />
+            <StudentCompanionRail />
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
@@ -217,6 +220,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <SessionTracker />
+        <CompanionSessionProvider>
         <Routes>
           {/* ── Public routes (no sidebar, no auth) ── */}
           {/* Landing role-picker deprecated — users enter through marketing gate → /v5 → /login. */}
@@ -691,6 +695,7 @@ const App = () => {
           {/* ── Catch-all ── */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </CompanionSessionProvider>
       </BrowserRouter>
       <Toaster />
       <Sonner />
