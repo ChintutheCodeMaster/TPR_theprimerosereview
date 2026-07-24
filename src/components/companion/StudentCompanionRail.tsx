@@ -177,7 +177,7 @@ export function StudentCompanionRail() {
             opacity: { duration: 0.25, ease, delay: 0.05 },
           }}
         >
-          <div className="w-[340px] lg:w-[360px] h-full flex flex-col">
+          <div className="w-[340px] lg:w-[360px] h-full flex flex-col pb-[132px]">
             <CompanionHeader
               onClose={() => setOpen(false)}
               onReset={resetSession}
