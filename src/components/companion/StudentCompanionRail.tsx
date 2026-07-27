@@ -42,17 +42,13 @@ export function StudentCompanionRail() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const inPreview = location.pathname.startsWith("/preview/");
   const isStudentSurface = useMemo(() => isStudentRoute(location.pathname), [location.pathname]);
 
-  // Show for actual students, and for counselors/principals/admins while previewing.
   const shouldRender = useMemo(() => {
     if (!roleResolved || !role) return false;
     if (!isStudentSurface) return false;
-    if (role === "student") return true;
-    if (inPreview && ["counselor", "principal", "admin"].includes(role)) return true;
-    return false;
-  }, [role, roleResolved, isStudentSurface, inPreview]);
+    return role === "student";
+  }, [role, roleResolved, isStudentSurface]);
 
   // ── Collapse defaults & per-route memory ─────────────────────────────────
   useEffect(() => {

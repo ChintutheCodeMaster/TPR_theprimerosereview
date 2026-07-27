@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { usePreviewMode } from "@/contexts/PreviewModeContext";
 import { useCelebration } from "@/hooks/useCelebration";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -31,9 +30,6 @@ import {
   ScanText,
   MessageSquare,
   X,
-  Send,
-  Users,
-  GraduationCap,
 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -64,7 +60,6 @@ interface AnalysisResult {
 }
 
 const SubmitEssay = () => {
-  const isPreviewMode = usePreviewMode();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,13 +84,7 @@ const SubmitEssay = () => {
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSuccess, setIsSuccess]         = useState(false);
-  const [counselorId, setCounselorId]     = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(urlDraftId);
-
-  // Recipient selection: 'counselor' | 'teacher' | 'both'
-  const [recipient, setRecipient] = useState<'counselor' | 'teacher' | 'both'>('counselor');
-  const [teachers, setTeachers]   = useState<{ user_id: string; full_name: string }[]>([]);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
 
   // Form fields
   const [title, setTitle]               = useState(slotLabel ?? "");
@@ -120,40 +109,6 @@ const SubmitEssay = () => {
   // Full essay analysis
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalysing, setIsAnalysing]       = useState(false);
-
-  
-  useEffect(() => {
-  const fetchCounselorAndTeachers = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const [assignmentResult, profileResult] = await Promise.all([
-      supabase
-        .from("student_counselor_assignments")
-        .select("counselor_id")
-        .eq("student_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("school_id")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
-
-    if (assignmentResult.data?.counselor_id) {
-      setCounselorId(assignmentResult.data.counselor_id);
-    }
-
-    const schoolId = profileResult.data?.school_id;
-    if (schoolId) {
-      const { data: teacherData } = await (supabase as any)
-        .rpc("get_teachers_by_school", { school_id_param: schoolId });
-      if (teacherData && teacherData.length > 0) setTeachers(teacherData);
-    }
-  };
-
-  fetchCounselorAndTeachers();
-}, []);
 
   useEffect(() => {
     
@@ -192,7 +147,7 @@ const SubmitEssay = () => {
 
       const payload = {
         student_id:    user.id,
-        counselor_id:  counselorId,
+        counselor_id:  null,
         essay_title:   title.trim(),
         essay_prompt:  prompt.trim() || null,
         essay_content: content.trim(),
@@ -300,26 +255,15 @@ const SubmitEssay = () => {
     }
   };
 
-  // ── Submit ────────────────────────────────────────────────
+  // ── Finalize ──────────────────────────────────────────────
+  // Saves the essay as final. AI analysis is the feedback path — there is
+  // no reviewer to send to on the student-only platform.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (isPreviewMode) {
-      toast.info("Preview mode — essay submission is disabled");
-      return;
-    }
 
     if (!title.trim())   { toast.error("Please add an essay title");         return; }
     if (!content.trim()) { toast.error("Please add your essay content");     return; }
     if (isOverLimit)     { toast.error("Your essay exceeds the word limit"); return; }
-    if ((recipient === 'counselor' || recipient === 'both') && !counselorId) {
-      toast.error("No counselor found. Please contact support.");
-      return;
-    }
-    if ((recipient === 'teacher' || recipient === 'both') && !selectedTeacherId) {
-      toast.error("Please select a teacher to send to.");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -333,7 +277,6 @@ const SubmitEssay = () => {
       let essayId: string | null = currentDraftId;
 
       if (currentDraftId) {
-        // Promote existing draft to submitted
         const { error } = await (supabase
           .from("essay_feedback")
           .update({
@@ -341,7 +284,7 @@ const SubmitEssay = () => {
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
             target_school: targetSchool.trim() || null,
-            status:        "pending",
+            status:        "finalized",
           } as any)
           .eq("id", currentDraftId) as any);
         if (error) throw error;
@@ -350,11 +293,11 @@ const SubmitEssay = () => {
           .from("essay_feedback")
           .insert({
             student_id:    user.id,
-            counselor_id:  (recipient === 'teacher') ? null : counselorId,
+            counselor_id:  null,
             essay_title:   essayTitle,
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
-            status:        "pending",
+            status:        "finalized",
           })
           .select()
           .single();
@@ -367,7 +310,7 @@ const SubmitEssay = () => {
           .from("application_essays")
           .update({
             essay_feedback_id: essayId,
-            status:            "in_review",
+            status:            "finalized",
             updated_at:        new Date().toISOString(),
           })
           .eq("id", slotId);
@@ -375,53 +318,11 @@ const SubmitEssay = () => {
         if (slotError) console.error("Failed to link essay to slot:", slotError);
       }
 
-      // Share with teacher if selected
-      if ((recipient === 'teacher' || recipient === 'both') && selectedTeacherId && essayId) {
-        const { error: shareError } = await (supabase as any)
-          .from("essay_teacher_shares")
-          .insert({
-            essay_feedback_id: essayId,
-            teacher_id:        selectedTeacherId,
-            student_id:        user.id,
-          });
-        if (shareError) console.error("Failed to share with teacher:", shareError);
-      }
-
       setIsSuccess(true);
-      toast.success("Essay submitted successfully!");
+      toast.success("Essay saved.");
       celebrate('essay_submitted');
-
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
-          supabase.from("profiles").select("full_name, email").eq("user_id", user.id).maybeSingle(),
-          counselorId
-            ? supabase.from("profiles").select("full_name, email").eq("user_id", counselorId).maybeSingle()
-            : Promise.resolve({ data: null }),
-        ]);
-
-        if ((recipient === 'counselor' || recipient === 'both') && counselorId) {
-          await fetch(`${SUPABASE_URL}/functions/v1/send-new-essay-notification`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-            body: JSON.stringify({
-              counselorEmail:  counselorProfile?.email || "no-email@unknown.com",
-              counselorName:   counselorProfile?.full_name || "Counselor",
-              studentName:     studentProfile?.full_name || "Your student",
-              essayLabel:      essayTitle,
-              applicationName: targetSchool.trim() || (slotLabel ?? undefined),
-              appUrl:          window.location.origin,
-            }),
-          });
-        }
-      } catch (notifyError) {
-        console.error("Failed to send essay notification:", notifyError);
-      }
     } catch (error: any) {
-      toast.error(error.message || "Failed to submit essay");
+      toast.error(error.message || "Failed to save essay");
     } finally {
       setIsSubmitting(false);
     }
@@ -441,15 +342,11 @@ const SubmitEssay = () => {
               </div>
             </div>
             <div>
-              <h2 className="font-serif text-3xl text-foreground leading-tight">Sent.</h2>
+              <h2 className="font-serif text-3xl text-foreground leading-tight">Saved.</h2>
               <p className="font-serif italic text-muted-foreground mt-3">
                 {slotId
                   ? "Linked to your application."
-                  : recipient === 'teacher'
-                  ? "Your teacher has it. They'll read soon."
-                  : recipient === 'both'
-                  ? "Counselor and teacher — both have it."
-                  : "Your counselor has it. They'll read soon."}
+                  : "Kept in My Work — come back to it any time."}
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -478,7 +375,7 @@ const SubmitEssay = () => {
                     setSelectionFeedback(null);
                   }}
                 >
-                  Submit another
+                  Write another
                 </Button>
               )}
             </div>
@@ -522,14 +419,14 @@ const SubmitEssay = () => {
             ? <>The final version.</>
             : slotId
               ? <>Writing for {slotLabel}.</>
-              : <>Send it, when it's ready.</>
+              : <>Draft, analyze, save.</>
         }
         subtitle={
           isReadonly
-            ? <>Approved by your counselor — {slotLabel ?? "essay"}</>
+            ? <>Finalized — {slotLabel ?? "essay"}</>
             : slotId
               ? undefined
-              : <>Your counselor will read and write back.</>
+              : <>Use the AI analysis for feedback, then save when it's ready.</>
         }
       />
 
@@ -537,7 +434,7 @@ const SubmitEssay = () => {
         <div className="mb-6 flex items-center gap-2 px-3 py-2 hairline bg-[color:var(--pn-sage)]/10 rounded-lg w-fit">
           <CheckCircle className="h-4 w-4 text-[color:var(--pn-sage)] shrink-0" />
           <span className="text-sm text-[color:var(--pn-sage)]">
-            Approved. No further edits needed.
+            Finalized. No further edits.
           </span>
         </div>
       )}
@@ -790,73 +687,6 @@ const SubmitEssay = () => {
             </HairlineCard>
           </motion.div>
 
-          {/* Recipient */}
-          {!isReadonly && (
-            <motion.div variants={sectionVariants}>
-              <HairlineCard>
-                <div className="flex items-center gap-3 mb-6">
-                  <Send className="h-5 w-5 text-foreground/60" />
-                  <div>
-                    <h2 className="font-serif text-xl text-foreground leading-tight">Who reads it.</h2>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Choose your reader</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    {([
-                      { value: 'counselor', label: 'My Counselor', icon: GraduationCap },
-                      { value: 'teacher',   label: 'A Teacher',    icon: Users },
-                      { value: 'both',      label: 'Both',         icon: Send },
-                    ] as const).map(({ value, label, icon: Icon }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setRecipient(value)}
-                        className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg text-sm transition-all hairline ${
-                          recipient === value
-                            ? "bg-white/[0.08] text-foreground"
-                            : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {(recipient === 'teacher' || recipient === 'both') && (
-                    <div className="space-y-2 pt-1">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Select teacher</p>
-                      {teachers.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic font-serif">
-                          No teachers found at your school. Ask your counselor to add one.
-                        </p>
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          {teachers.map((t) => (
-                            <button
-                              key={t.user_id}
-                              type="button"
-                              onClick={() => setSelectedTeacherId(t.user_id)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all hairline ${
-                                selectedTeacherId === t.user_id
-                                  ? "bg-white/[0.08] text-foreground"
-                                  : "bg-white/[0.02] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground"
-                              }`}
-                            >
-                              <Users className="h-3.5 w-3.5 shrink-0" />
-                              {t.full_name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </HairlineCard>
-            </motion.div>
-          )}
-
           {/* Submit */}
           <motion.div variants={sectionVariants} className="flex gap-3 pb-6">
             {isReadonly ? (
@@ -904,12 +734,12 @@ const SubmitEssay = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
+                      Saving...
                     </>
                   ) : (
                     <>
                       <FileText className="h-4 w-4 mr-2" />
-                      Submit Essay
+                      Save as Final
                     </>
                   )}
                 </Button>

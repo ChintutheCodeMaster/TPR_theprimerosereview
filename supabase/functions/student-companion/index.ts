@@ -29,14 +29,11 @@ const MAX_HISTORY_TURNS = 12;
 // ── Route map (mirror of client-side allowlist) ─────────────────────────────
 const ROUTE_MAP: Record<string, string> = {
   "/student-dashboard": "Home / overview of their whole college journey.",
-  "/student-personal-area": "Personal work area — essay drafts and tasks assigned by their counselor.",
+  "/student-personal-area": "Personal work area — their essay drafts and self-managed deadlines.",
   "/student-stats": "Personal stats — application progress, essay completion, deadlines at a glance.",
   "/student-profile": "Edit their profile (name, grade, contact, test scores).",
-  "/student-messages": "Chat with their counselor / parent.",
-  "/student-recommendation-letters": "Manage recommendation letter requests.",
-  "/student-feedback": "See counselor feedback on their essays.",
   "/add-application": "Add a new college application.",
-  "/submit-essay": "Submit an essay for counselor review.",
+  "/submit-essay": "Analyze an essay with the AI — get scored feedback on structure, voice, and content.",
   "/personal-essay": "Draft their personal statement.",
   "/edit-essay": "Edit an existing essay draft.",
   "/primrose-lab": "Primrose Lab — AI writing playground (Step 1 of the essay journey).",
@@ -73,12 +70,12 @@ const TOOLS: AnthropicTool[] = [
   },
   {
     name: "get_deadlines",
-    description: "Look up the student's next upcoming deadlines — merges application deadlines and counselor-assigned tasks. Call when the student asks what's due, what's next, or how much time they have.",
+    description: "Look up the student's next upcoming deadlines — application deadlines and any self-created tasks. Call when the student asks what's due, what's next, or how much time they have.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "get_essay_status",
-    description: "Look up the student's essay progress — counts by status (draft / in review / feedback received / submitted) plus their 3 most recently touched essays. Call when they ask about writing progress or which essays need attention.",
+    description: "Look up the student's essay progress — counts by status plus their 3 most recently touched essays. Call when they ask about writing progress or which essays need attention.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -343,16 +340,14 @@ serve(async (req: Request) => {
       return json({ error: "Invalid or expired token" }, 401);
     }
 
-    // 2. Role gate — must be student. Preview mode (counselor/principal/admin
-    // acting as student) is allowed so previewing works end-to-end.
+    // 2. Role gate — student-only platform.
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data: roleRow } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
-    const role = roleRow?.role;
-    if (!role || !["student", "counselor", "principal", "admin"].includes(role)) {
+    if (roleRow?.role !== "student") {
       return json({ error: "Forbidden" }, 403);
     }
 

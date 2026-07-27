@@ -6,9 +6,6 @@ export const COMPANION_ROUTES: readonly string[] = [
   "/student-personal-area",
   "/student-stats",
   "/student-profile",
-  "/student-messages",
-  "/student-recommendation-letters",
-  "/student-feedback",
   "/add-application",
   "/submit-essay",
   "/personal-essay",
@@ -29,11 +26,8 @@ export const WRITING_HEAVY_ROUTES: readonly string[] = [
   "/personal-essay",
 ] as const;
 
-// Route-prefix check that also treats /preview/* as student routes so
-// counselors previewing the student experience see the rail.
 export function isStudentRoute(pathname: string): boolean {
-  const p = pathname.startsWith("/preview") ? pathname.replace(/^\/preview/, "") : pathname;
-  return COMPANION_ROUTES.some((r) => p === r || p.startsWith(r + "/"));
+  return COMPANION_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
 }
 
 export function isWritingHeavy(pathname: string): boolean {

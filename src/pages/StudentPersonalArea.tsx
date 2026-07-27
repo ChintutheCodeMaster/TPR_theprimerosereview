@@ -84,24 +84,8 @@ const StudentPersonalArea = () => {
   } = useStudentPersonalArea();
 
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab]               = useState(() => searchParams.get("tab") ?? "essays");
-  const [selectedEssay, setSelectedEssay]       = useState<EssayFeedback | null>(null);
-  const [feedbackSource, setFeedbackSource]     = useState<'counselor' | 'teacher'>('counselor');
-  const [teacherFeedback, setTeacherFeedback]   = useState<any | null>(null);
-
-  useEffect(() => {
-    if (!selectedEssay) { setTeacherFeedback(null); setFeedbackSource('counselor'); return; }
-    const fetchTeacherFeedback = async () => {
-      const { data } = await (supabase as any)
-        .from('essay_teacher_shares')
-        .select('feedback_items, track_changes, personal_message, sent_at, teacher_status')
-        .eq('essay_feedback_id', selectedEssay.id)
-        .eq('teacher_status', 'reviewed')
-        .maybeSingle();
-      setTeacherFeedback(data ?? null);
-    };
-    fetchTeacherFeedback();
-  }, [selectedEssay?.id]);
+  const [activeTab, setActiveTab]         = useState(() => searchParams.get("tab") ?? "essays");
+  const [selectedEssay, setSelectedEssay] = useState<EssayFeedback | null>(null);
 
   const { applications, isLoading: isLoadingApplications } = useApplications();
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithProfile | null>(null);
@@ -226,12 +210,11 @@ const StudentPersonalArea = () => {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-white/[0.02] hairline p-1 h-auto">
+        <TabsList className="grid w-full grid-cols-4 bg-white/[0.02] hairline p-1 h-auto">
           <TabsTrigger value="essays" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Essays</TabsTrigger>
           <TabsTrigger value="feedback" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Feedback</TabsTrigger>
           <TabsTrigger value="tasks" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Tasks</TabsTrigger>
           <TabsTrigger value="applications" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Applications</TabsTrigger>
-          <TabsTrigger value="messages" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-foreground data-[state=active]:shadow-none text-muted-foreground">Messages</TabsTrigger>
         </TabsList>
 
         {/* ── Essays Tab ── */}
@@ -378,7 +361,7 @@ const StudentPersonalArea = () => {
           ) : sentFeedback.length === 0 ? (
             <HairlineCard variant="sage" className="p-12 text-center">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
-              <p className="font-serif italic text-muted-foreground">No news. Your counselor is reading.</p>
+              <p className="font-serif italic text-muted-foreground">No AI analysis yet — run one from an essay draft.</p>
             </HairlineCard>
           ) : (
             <motion.div
@@ -470,33 +453,6 @@ const StudentPersonalArea = () => {
         {/* ── Tasks Tab ── */}
         <TabsContent value="tasks" className="space-y-6">
           <StudentActionItemsSection />
-        </TabsContent>
-
-        {/* ── Messages Tab ── */}
-        <TabsContent value="messages" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="font-serif text-2xl text-foreground leading-tight">Threads with your counselor.</h2>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-2">The quiet back-channel</p>
-            </div>
-            <Button className="bg-transparent hairline hover:bg-white/[0.03] text-foreground shadow-none">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              New Message
-            </Button>
-          </div>
-          <HairlineCard variant="pink" className="p-12 text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-            <h3 className="font-serif text-lg text-foreground mb-2">Nothing here yet.</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-              Say hello, or ask about a draft. Your counselor is on the other end.
-            </p>
-            <Button
-              onClick={() => navigate('/student-messages')}
-              className="bg-transparent hairline hover:bg-white/[0.04] text-foreground shadow-none"
-            >
-              Check if you have messages
-            </Button>
-          </HairlineCard>
         </TabsContent>
 
         {/* ── Applications Tab ── */}
@@ -731,108 +687,35 @@ const StudentPersonalArea = () => {
 
             {/* ── Right: feedback panel ── */}
             <div className="w-[320px] shrink-0 flex flex-col">
-              <div className="px-4 py-3 hairline-b bg-white/[0.015] shrink-0 space-y-2">
+              <div className="px-4 py-3 hairline-b bg-white/[0.015] shrink-0">
                 <h3 className="text-sm font-serif text-foreground flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-[color:var(--pn-pink)]" />
-                  Feedback
+                  AI Feedback
                 </h3>
-                <div className="flex rounded-lg hairline overflow-hidden text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setFeedbackSource('counselor')}
-                    className={`flex-1 py-1.5 transition-colors ${
-                      feedbackSource === 'counselor'
-                        ? 'bg-white/[0.08] text-foreground'
-                        : 'bg-transparent text-muted-foreground hover:bg-white/[0.03]'
-                    }`}
-                  >
-                    Counselor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFeedbackSource('teacher')}
-                    className={`flex-1 py-1.5 transition-colors ${
-                      feedbackSource === 'teacher'
-                        ? 'bg-white/[0.08] text-foreground'
-                        : 'bg-transparent text-muted-foreground hover:bg-white/[0.03]'
-                    }`}
-                  >
-                    Teacher
-                    {teacherFeedback && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[color:var(--pn-sage)] inline-block" />}
-                  </button>
-                </div>
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3 space-y-3">
-
-                  {/* ── Counselor feedback ── */}
-                  {feedbackSource === 'counselor' && (
-                    essayFeedback.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                        <p className="font-serif italic text-sm">No news. Your counselor is reading.</p>
-                      </div>
-                    ) : (
-                      essayFeedback.map((fb) => (
-                        <div key={fb.id} className="space-y-2">
-                          {fb.personal_message && (
-                            <div className="hairline bg-white/[0.02] p-3 rounded-xl">
-                              <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Personal Note</p>
-                              <p className="text-xs text-foreground font-serif italic">{fb.personal_message}</p>
-                            </div>
-                          )}
-                          {fb.track_changes?.length > 0 && (
-                            <div className="rounded-xl hairline p-3 space-y-2 bg-white/[0.02]">
-                              <p className="text-xs flex items-center gap-1.5 text-foreground">
-                                <Strikethrough className="h-3.5 w-3.5" />
-                                Suggested Edits ({fb.track_changes.length})
-                              </p>
-                              {fb.track_changes.map((change) => (
-                                <div key={change.id} className="space-y-0.5 text-xs hairline-t pt-1.5">
-                                  <del className="text-[color:var(--pn-pink)] line-through block">{change.originalText}</del>
-                                  <ins className="text-[color:var(--pn-sage)] no-underline block">{change.suggestedText}</ins>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {fb.feedback_items.map((item, idx) => (
-                            <div key={item.id ?? idx} className="p-2.5 rounded-xl hairline bg-white/[0.02] space-y-0.5">
-                              {item.criterionName && (
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.criterionName}</p>
-                              )}
-                              <p className="text-xs leading-snug text-foreground">{item.text}</p>
-                            </div>
-                          ))}
-                          <p className="text-[10px] text-muted-foreground text-right pt-1">
-                            Received: {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
-                          </p>
-                        </div>
-                      ))
-                    )
-                  )}
-
-                  {/* ── Teacher feedback ── */}
-                  {feedbackSource === 'teacher' && (
-                    !teacherFeedback ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                        <p className="font-serif italic text-sm">Your teacher hasn't weighed in yet.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {teacherFeedback.personal_message && (
+                  {essayFeedback.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                      <p className="font-serif italic text-sm">No AI analysis yet.</p>
+                    </div>
+                  ) : (
+                    essayFeedback.map((fb) => (
+                      <div key={fb.id} className="space-y-2">
+                        {fb.personal_message && (
                           <div className="hairline bg-white/[0.02] p-3 rounded-xl">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Personal Note</p>
-                            <p className="text-xs text-foreground font-serif italic">{teacherFeedback.personal_message}</p>
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--pn-pink)] mb-1">Note</p>
+                            <p className="text-xs text-foreground font-serif italic">{fb.personal_message}</p>
                           </div>
                         )}
-                        {teacherFeedback.track_changes?.length > 0 && (
+                        {fb.track_changes?.length > 0 && (
                           <div className="rounded-xl hairline p-3 space-y-2 bg-white/[0.02]">
                             <p className="text-xs flex items-center gap-1.5 text-foreground">
                               <Strikethrough className="h-3.5 w-3.5" />
-                              Suggested Edits ({teacherFeedback.track_changes.length})
+                              Suggested Edits ({fb.track_changes.length})
                             </p>
-                            {teacherFeedback.track_changes.map((change: any) => (
+                            {fb.track_changes.map((change) => (
                               <div key={change.id} className="space-y-0.5 text-xs hairline-t pt-1.5">
                                 <del className="text-[color:var(--pn-pink)] line-through block">{change.originalText}</del>
                                 <ins className="text-[color:var(--pn-sage)] no-underline block">{change.suggestedText}</ins>
@@ -840,7 +723,7 @@ const StudentPersonalArea = () => {
                             ))}
                           </div>
                         )}
-                        {(teacherFeedback.feedback_items ?? []).map((item: any, idx: number) => (
+                        {fb.feedback_items.map((item, idx) => (
                           <div key={item.id ?? idx} className="p-2.5 rounded-xl hairline bg-white/[0.02] space-y-0.5">
                             {item.criterionName && (
                               <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.criterionName}</p>
@@ -849,12 +732,11 @@ const StudentPersonalArea = () => {
                           </div>
                         ))}
                         <p className="text-[10px] text-muted-foreground text-right pt-1">
-                          Received: {teacherFeedback.sent_at ? new Date(teacherFeedback.sent_at).toLocaleDateString() : 'Recently'}
+                          {fb.sent_at ? new Date(fb.sent_at).toLocaleDateString() : 'Recently'}
                         </p>
                       </div>
-                    )
+                    ))
                   )}
-
                 </div>
               </ScrollArea>
             </div>

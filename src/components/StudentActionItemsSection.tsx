@@ -319,18 +319,13 @@ export const StudentActionItemsSection = () => {
                 >
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium ${c.text} leading-snug`}>{task.task}</p>
-                    {task.counselor_id && (
-                      <p className="text-xs opacity-50 mt-0.5 italic">Assigned by counselor</p>
-                    )}
                   </div>
-                  {!task.counselor_id && (
-                    <button
-                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
-                      onClick={() => deleteTask.mutate(task.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                  <button
+                    className="shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+                    onClick={() => deleteTask.mutate(task.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               );
             })}
