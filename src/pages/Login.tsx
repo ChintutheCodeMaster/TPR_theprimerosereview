@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import primroseLogo from "@/assets/primrose-logo.png";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 const dashboardByRole: Record<string, string> = {
   counselor: '/dashboard',
@@ -124,6 +125,17 @@ const Login = () => {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-foreground">Sign in</h1>
                 <p className="text-sm text-muted-foreground mt-1">Welcome back to Primrose.</p>
+              </div>
+
+              <GoogleSignInButton mode="login" />
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
               </div>
 
               <form onSubmit={handleAuth} className="space-y-4">

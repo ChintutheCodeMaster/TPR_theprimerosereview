@@ -17,6 +17,7 @@ import Index from "./pages/Index";
 // import Landing from "./pages/Landing"; // Deprecated: role-picker landing replaced by unified /login. Kept for possible revert.
 // import Auth from "./pages/Auth"; // Deprecated: role-selector auth replaced by unified /login. Kept for possible revert.
 import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import { GatePage } from "@/components/lander/GatePage";
 import { V5Page } from "@/components/lander/v5/V5Page";
 import Demo from "./pages/Demo";
@@ -103,7 +104,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { data: schoolLogoUrl } = useSchoolLogo();
   const logoSrc = schoolLogoUrl ?? clientLogo;
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const noSidebarRoutes = ['/', '/v5', '/auth', '/login', '/demo', '/product-demo', '/demo-maker', '/reset-password'];
+  const noSidebarRoutes = ['/', '/v5', '/auth', '/auth/callback', '/login', '/demo', '/product-demo', '/demo-maker', '/reset-password'];
   const isPreviewMode = location.pathname.startsWith('/preview/');
   const isStudentRoute =
   [
@@ -229,6 +230,7 @@ const App = () => {
           <Route path="/v5" element={<V5Page />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth" element={<Navigate to="/login" replace />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/teacher-rec/:token" element={<TeacherRecommendationPage />} />
