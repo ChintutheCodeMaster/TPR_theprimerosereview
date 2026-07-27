@@ -243,7 +243,7 @@ export function AppSidebar() {
               {open && (
                 <div>
                   <h1 className="font-serif text-lg text-foreground leading-none">The Primrose Review</h1>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">CRM Platform</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-1">Student Platform</p>
                 </div>
               )}
             </div>

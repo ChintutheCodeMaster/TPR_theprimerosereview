@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { PENDING_SIGNUP_ROLE_KEY } from '@/components/auth/GoogleSignInButton';
 
 const dashboardByRole: Record<string, string> = {
   counselor: '/dashboard',
@@ -32,6 +33,7 @@ export default function AuthCallback() {
       }
 
       const user = session.user;
+      const pendingSignupRole = sessionStorage.getItem(PENDING_SIGNUP_ROLE_KEY);
 
       setStatus('Loading your workspace…');
       const { data: roleRow } = await supabase
@@ -40,11 +42,39 @@ export default function AuthCallback() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const role = roleRow?.role as string | undefined;
+      let role = roleRow?.role as string | undefined;
+
+      if (!role && pendingSignupRole === 'student') {
+        setStatus('Setting up your student account…');
+
+        const { error: roleInsertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: user.id, role: 'student' });
+
+        if (roleInsertError) {
+          sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
+          await supabase.auth.signOut();
+          toast.error(roleInsertError.message ?? 'Could not create your account.');
+          navigate('/signup', { replace: true });
+          return;
+        }
+
+        const { error: profileInsertError } = await supabase
+          .from('student_profiles')
+          .insert({ user_id: user.id });
+
+        if (profileInsertError && profileInsertError.code !== '23505') {
+          console.error('Failed to seed student_profiles:', profileInsertError);
+        }
+
+        role = 'student';
+        sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
+      }
+
+      sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
 
       // signInWithOAuth silently creates an auth.users row for any Google email.
-      // Only accept users who have a user_roles row provisioned by the normal
-      // signup/invite flows — otherwise sign them out.
+      // Reject anyone landing here without a role and without a pending signup intent.
       if (!role) {
         await supabase.auth.signOut();
         toast.error('No Primrose account found for this Google email. Please sign up first.');

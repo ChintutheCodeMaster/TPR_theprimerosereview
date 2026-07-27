@@ -8,6 +8,8 @@ interface Props {
   mode: 'login' | 'signup';
 }
 
+export const PENDING_SIGNUP_ROLE_KEY = 'primrose.pending_signup_role';
+
 function GoogleMark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 18 18" aria-hidden>
@@ -27,6 +29,12 @@ export function GoogleSignInButton({ mode }: Props) {
     setBusy(true);
 
     try {
+      if (mode === 'signup') {
+        sessionStorage.setItem(PENDING_SIGNUP_ROLE_KEY, 'student');
+      } else {
+        sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -34,10 +42,12 @@ export function GoogleSignInButton({ mode }: Props) {
         },
       });
       if (error) {
+        sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
         toast.error(error.message ?? 'Could not start Google sign-in.');
         setBusy(false);
       }
     } catch (err) {
+      sessionStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
       toast.error(err instanceof Error ? err.message : 'Could not start Google sign-in.');
       setBusy(false);
     }

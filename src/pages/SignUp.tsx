@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { backgroundStep } from "@/data/steps/background";
 import { ArrowLeft, GraduationCap, Users, UserCircle, Building2, Check, ChevronsUpDown, Search, Plus, X, BookOpen } from "lucide-react";
 import primroseLogo from "@/assets/primrose-logo.png";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 const COUNTRIES = [
   "United States", "United Kingdom", "Canada", "Australia",
@@ -438,18 +439,38 @@ useEffect(() => {
 
           {/* Step 1: Role selection */}
           {!selectedRole && (
-            <div className="grid grid-cols-2 gap-3">
-              {(['counselor', 'student', 'principal', 'parent'] as const).map((role) => (
-                <button
-                  key={role}
-                  onClick={() => setSelectedRole(role)}
-                  className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-all"
-                >
-                  {getRoleIcon(role)}
-                  <span className="text-sm font-medium">{getRoleLabel(role)}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                <GoogleSignInButton mode="signup" />
+                <p className="text-xs text-muted-foreground text-center">
+                  Signing up with Google creates a student account.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or continue with email</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {/* Student-only pivot 2026-07-27: other role cards hidden. Restore
+                    ['counselor', 'principal', 'parent'] here to bring them back. */}
+                {(['student'] as const).map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(role)}
+                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-all"
+                  >
+                    {getRoleIcon(role)}
+                    <span className="text-sm font-medium">{getRoleLabel(role)}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           {/* Step 2: Registration form based on role */}
