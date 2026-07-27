@@ -9,14 +9,7 @@ import { toast } from "sonner";
 import primroseLogo from "@/assets/primrose-logo.png";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
-const dashboardByRole: Record<string, string> = {
-  counselor: '/dashboard',
-  student: '/student-guide',
-  parent: '/parent-portal',
-  principal: '/principal-dashboard',
-  teacher: '/teacher-dashboard',
-  admin: '/superadmin',
-};
+const STUDENT_DESTINATION = '/student-guide';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -64,17 +57,16 @@ const Login = () => {
 
       if (roleError || !roleData) {
         await supabase.auth.signOut();
-        throw new Error('No role found for this account. Contact your administrator.');
+        throw new Error('No Primrose student account found for this email.');
       }
 
-      const destination = dashboardByRole[roleData.role];
-      if (!destination) {
+      if (roleData.role !== 'student') {
         await supabase.auth.signOut();
-        throw new Error(`Unknown role: ${roleData.role}`);
+        throw new Error('Primrose is now a student-only platform. This account is not a student.');
       }
 
       toast.success('Welcome back!');
-      navigate(destination);
+      navigate(STUDENT_DESTINATION);
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
     } finally {

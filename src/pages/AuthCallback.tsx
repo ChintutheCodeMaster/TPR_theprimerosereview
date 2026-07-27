@@ -5,14 +5,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { PENDING_SIGNUP_ROLE_KEY } from '@/components/auth/GoogleSignInButton';
 
-const dashboardByRole: Record<string, string> = {
-  counselor: '/dashboard',
-  student: '/student-guide',
-  parent: '/parent-portal',
-  principal: '/principal-dashboard',
-  teacher: '/teacher-dashboard',
-  admin: '/superadmin',
-};
+const STUDENT_DESTINATION = '/student-guide';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -82,15 +75,14 @@ export default function AuthCallback() {
         return;
       }
 
-      const destination = dashboardByRole[role];
-      if (!destination) {
+      if (role !== 'student') {
         await supabase.auth.signOut();
-        toast.error(`Unknown role: ${role}`);
+        toast.error('Primrose is now a student-only platform. This account is not a student.');
         navigate('/login', { replace: true });
         return;
       }
 
-      navigate(destination, { replace: true });
+      navigate(STUDENT_DESTINATION, { replace: true });
     })();
   }, [navigate]);
 
