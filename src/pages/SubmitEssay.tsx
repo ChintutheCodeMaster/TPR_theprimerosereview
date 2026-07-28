@@ -276,6 +276,10 @@ const SubmitEssay = () => {
 
       let essayId: string | null = currentDraftId;
 
+      const aiAnalysisPayload = analysisResult
+        ? JSON.parse(JSON.stringify(analysisResult))
+        : null;
+
       if (currentDraftId) {
         const { error } = await (supabase
           .from("essay_feedback")
@@ -285,6 +289,7 @@ const SubmitEssay = () => {
             essay_content: content.trim(),
             target_school: targetSchool.trim() || null,
             status:        "finalized",
+            ai_analysis:   aiAnalysisPayload,
           } as any)
           .eq("id", currentDraftId) as any);
         if (error) throw error;
@@ -298,6 +303,7 @@ const SubmitEssay = () => {
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
             status:        "finalized",
+            ai_analysis:   aiAnalysisPayload,
           })
           .select()
           .single();
