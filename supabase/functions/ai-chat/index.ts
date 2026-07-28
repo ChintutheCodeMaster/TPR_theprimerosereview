@@ -24,6 +24,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
+
+
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
@@ -46,6 +48,8 @@ serve(async (req) => {
       });
     }
 
+    
+
     return new Response(response.body, {
       headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
     });
@@ -56,6 +60,4 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-
-  
 });
