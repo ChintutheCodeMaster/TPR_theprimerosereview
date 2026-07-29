@@ -23,7 +23,13 @@ import {
   sendCompanionMessage,
   type CompanionMessage,
 } from "@/hooks/useCompanionSend";
-import { COMPANION_ROUTES, SESSION_STORAGE_KEY } from "@/components/companion/constants";
+import {
+  COMPANION_ROUTES,
+  REC_DISMISS_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+  TAB_STORAGE_KEY,
+  type CompanionTab,
+} from "@/components/companion/constants";
 
 type PageContextExtras = Record<string, unknown>;
 
@@ -67,6 +73,12 @@ type CompanionContextValue = {
   sendMessage: (text: string) => Promise<void>;
   resetSession: () => void;
   publishPageContext: (extras: PageContextExtras | null) => void;
+  // Tab + recommendations
+  activeTab: CompanionTab;
+  setActiveTab: (next: CompanionTab) => void;
+  hasChatUnread: boolean;
+  dismissedRecs: Set<string>;
+  dismissRec: (id: string) => void;
 };
 
 const CompanionSessionContext = createContext<CompanionContextValue | null>(null);
@@ -85,6 +97,11 @@ export function useCompanionSession(): CompanionContextValue {
       sendMessage: async () => {},
       resetSession: () => {},
       publishPageContext: () => {},
+      activeTab: "chat",
+      setActiveTab: () => {},
+      hasChatUnread: false,
+      dismissedRecs: new Set(),
+      dismissRec: () => {},
     };
   }
   return ctx;
@@ -108,6 +125,13 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
   const pageExtrasRef = useRef<PageContextExtras | null>(null);
   const hydratedRef = useRef(false);
 
+  // Tab + rec dismissal state
+  const [activeTab, setActiveTabState] = useState<CompanionTab>("chat");
+  const [dismissedRecs, setDismissedRecs] = useState<Set<string>>(() => new Set());
+  const [lastSeenMessageId, setLastSeenMessageId] = useState<string | null>(null);
+  const tabHydratedRef = useRef(false);
+  const recsHydratedRef = useRef(false);
+
   // ── Hydrate from sessionStorage on mount ──────────────────────────────────
   useEffect(() => {
     try {
@@ -116,12 +140,39 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed?.messages)) {
           dispatch({ type: "hydrate", messages: parsed.messages });
+          const last = parsed.messages[parsed.messages.length - 1];
+          if (last?.id) setLastSeenMessageId(last.id);
         }
       }
     } catch {
       /* ignore corrupt session */
     } finally {
       hydratedRef.current = true;
+    }
+
+    try {
+      const tab = sessionStorage.getItem(TAB_STORAGE_KEY);
+      if (tab === "chat" || tab === "path" || tab === "preview") {
+        setActiveTabState(tab);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      tabHydratedRef.current = true;
+    }
+
+    try {
+      const raw = sessionStorage.getItem(REC_DISMISS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setDismissedRecs(new Set(parsed.filter((v): v is string => typeof v === "string")));
+        }
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      recsHydratedRef.current = true;
     }
   }, []);
 
@@ -139,6 +190,34 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
     }
   }, [state.messages]);
 
+  useEffect(() => {
+    if (!tabHydratedRef.current) return;
+    try {
+      sessionStorage.setItem(TAB_STORAGE_KEY, activeTab);
+    } catch {
+      /* ignore */
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!recsHydratedRef.current) return;
+    try {
+      sessionStorage.setItem(
+        REC_DISMISS_STORAGE_KEY,
+        JSON.stringify(Array.from(dismissedRecs)),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [dismissedRecs]);
+
+  // When Chat becomes active, mark the newest message as seen.
+  useEffect(() => {
+    if (activeTab !== "chat") return;
+    const latest = state.messages[state.messages.length - 1];
+    setLastSeenMessageId(latest?.id ?? null);
+  }, [activeTab, state.messages]);
+
   // ── Page-context publishing (route-scoped) ────────────────────────────────
   const publishPageContext = useCallback((extras: PageContextExtras | null) => {
     pageExtrasRef.current = extras;
@@ -154,8 +233,22 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
   }, []);
   const toggleOpen = useCallback(() => setOpenState((v) => !v), []);
 
+  const setActiveTab = useCallback((next: CompanionTab) => {
+    setActiveTabState(next);
+  }, []);
+
+  const dismissRec = useCallback((id: string) => {
+    setDismissedRecs((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
   const resetSession = useCallback(() => {
     dispatch({ type: "reset" });
+    setLastSeenMessageId(null);
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
     } catch {
@@ -231,6 +324,13 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
     [location.pathname, navigate, sending, state.messages],
   );
 
+  const hasChatUnread = useMemo(() => {
+    if (activeTab === "chat") return false;
+    const latest = state.messages[state.messages.length - 1];
+    if (!latest || latest.role !== "assistant") return false;
+    return latest.id !== lastSeenMessageId;
+  }, [activeTab, state.messages, lastSeenMessageId]);
+
   const value = useMemo<CompanionContextValue>(
     () => ({
       messages: state.messages,
@@ -241,8 +341,27 @@ export function CompanionSessionProvider({ children }: { children: ReactNode }) 
       sendMessage,
       resetSession,
       publishPageContext,
+      activeTab,
+      setActiveTab,
+      hasChatUnread,
+      dismissedRecs,
+      dismissRec,
     }),
-    [state.messages, sending, isOpen, setOpen, toggleOpen, sendMessage, resetSession, publishPageContext],
+    [
+      state.messages,
+      sending,
+      isOpen,
+      setOpen,
+      toggleOpen,
+      sendMessage,
+      resetSession,
+      publishPageContext,
+      activeTab,
+      setActiveTab,
+      hasChatUnread,
+      dismissedRecs,
+      dismissRec,
+    ],
   );
 
   return (

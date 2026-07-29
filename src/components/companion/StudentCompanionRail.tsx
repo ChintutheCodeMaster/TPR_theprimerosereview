@@ -13,8 +13,14 @@ import {
   isWritingHeavy,
 } from "./constants";
 import { CompanionHeader } from "./CompanionHeader";
-import { CompanionChat } from "./CompanionChat";
+import { CompanionTabs } from "./CompanionTabs";
+import { CompanionMessages } from "./CompanionMessages";
+import { CompanionPathPanel } from "./CompanionPathPanel";
+import { CompanionPreviewPanel } from "./CompanionPreviewPanel";
+import { CompanionRecommendationCard } from "./CompanionRecommendationCard";
+import { CompanionComposer, type CompanionComposerHandle } from "./CompanionComposer";
 import { CompanionCollapsedButton } from "./CompanionCollapsedButton";
+import { useCompanionNextSteps } from "@/hooks/useCompanionNextSteps";
 
 // The rail self-gates on role so a role-state flicker at the App level
 // doesn't unmount the provider and drop the conversation.
@@ -22,9 +28,17 @@ export function StudentCompanionRail() {
   const location = useLocation();
   const { user, isAuthenticated, isLoading } = useAuthState();
   const isMobile = useIsMobile();
-  const { messages, isOpen, setOpen, toggleOpen, resetSession } = useCompanionSession();
+  const {
+    messages,
+    isOpen,
+    setOpen,
+    resetSession,
+    activeTab,
+    setActiveTab,
+  } = useCompanionSession();
 
   const routeOpenTouched = useRef<Record<string, boolean>>({});
+  const composerRef = useRef<CompanionComposerHandle>(null);
 
   // ── Look up role — cached via React Query so it survives remounts ─────────
   const { data: role, isSuccess: roleResolved } = useQuery({
@@ -49,6 +63,9 @@ export function StudentCompanionRail() {
     if (!isStudentSurface) return false;
     return role === "student";
   }, [role, roleResolved, isStudentSurface]);
+
+  // Prefetch next-steps when the rail mounts so switching to Path feels instant.
+  useCompanionNextSteps(location.pathname, shouldRender);
 
   // ── Collapse defaults & per-route memory ─────────────────────────────────
   useEffect(() => {
@@ -98,6 +115,33 @@ export function StudentCompanionRail() {
 
   const ease = [0.22, 1, 0.36, 1] as const;
 
+  const handlePickSuggestion = (text: string) => {
+    setActiveTab("chat");
+    composerRef.current?.setDraft(text);
+  };
+
+  const handleBeforeSubmit = () => {
+    if (activeTab !== "chat") setActiveTab("chat");
+  };
+
+  const railBody = (
+    <>
+      <CompanionHeader
+        onClose={() => setOpen(false)}
+        onReset={resetSession}
+        canReset={messages.length > 0}
+      />
+      <CompanionTabs />
+      {activeTab === "chat" && (
+        <CompanionMessages onPickSuggestion={handlePickSuggestion} />
+      )}
+      {activeTab === "path" && <CompanionPathPanel />}
+      {activeTab === "preview" && <CompanionPreviewPanel />}
+      <CompanionRecommendationCard />
+      <CompanionComposer ref={composerRef} onBeforeSubmit={handleBeforeSubmit} />
+    </>
+  );
+
   // Mobile: overlay drawer from the left. Desktop: inline column.
   if (isMobile) {
     return (
@@ -139,12 +183,7 @@ export function StudentCompanionRail() {
                 exit={{ x: "-100%" }}
                 transition={{ duration: 0.32, ease }}
               >
-                <CompanionHeader
-                  onClose={() => setOpen(false)}
-                  onReset={resetSession}
-                  canReset={messages.length > 0}
-                />
-                <CompanionChat />
+                {railBody}
               </motion.div>
             </>
           )}
@@ -173,13 +212,8 @@ export function StudentCompanionRail() {
             opacity: { duration: 0.25, ease, delay: 0.05 },
           }}
         >
-          <div className="w-[340px] lg:w-[360px] h-full flex flex-col pb-[132px]">
-            <CompanionHeader
-              onClose={() => setOpen(false)}
-              onReset={resetSession}
-              canReset={messages.length > 0}
-            />
-            <CompanionChat />
+          <div className="w-[340px] lg:w-[360px] h-full flex flex-col">
+            {railBody}
           </div>
         </motion.aside>
       ) : (

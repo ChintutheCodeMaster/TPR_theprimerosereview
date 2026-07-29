@@ -165,7 +165,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         {/* Footer spans full width below sidebar + content */}
-        <AppFooter />
+      {/* <AppFooter /> */}
       </div>
     </SidebarProvider>
   );

@@ -36,3 +36,7 @@ export function isWritingHeavy(pathname: string): boolean {
 
 export const SESSION_STORAGE_KEY = "pp:companion:session";
 export const COLLAPSE_STORAGE_PREFIX = "pp:companion:open:";
+export const TAB_STORAGE_KEY = "pp:companion:tab";
+export const REC_DISMISS_STORAGE_KEY = "pp:companion:rec-dismissed";
+
+export type CompanionTab = "chat" | "path" | "preview";
