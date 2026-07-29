@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import primroseLogo from "@/assets/primrose-logo.png";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const STUDENT_DESTINATION = '/student-guide';
 
@@ -113,74 +114,100 @@ const Login = () => {
               </button>
             </>
           ) : (
-            <>
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-foreground">Sign in</h1>
-                <p className="text-sm text-muted-foreground mt-1">Welcome back to Primrose.</p>
-              </div>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign in</TabsTrigger>
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
+              </TabsList>
 
-              <GoogleSignInButton mode="login" />
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">or</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleAuth} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="Enter your email"
-                  />
+              <TabsContent value="signin" className="space-y-6 mt-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-foreground">Sign in</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Welcome back to Primrose.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <button
-                      type="button"
-                      className="text-xs text-primary hover:underline"
-                      onClick={() => { setForgotEmail(email); setShowForgotPassword(true); }}
-                    >
-                      Forgot password?
-                    </button>
+                <GoogleSignInButton mode="login" />
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Enter your password"
-                    minLength={6}
-                  />
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                  </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Please wait...' : 'Sign In'}
-                </Button>
-              </form>
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="Enter your email"
+                    />
+                  </div>
 
-              <div className="text-center pt-2 border-t border-border">
-                <span className="text-sm text-muted-foreground">Don't have an account? </span>
-                <button
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => { setForgotEmail(email); setShowForgotPassword(true); }}
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="Enter your password"
+                      minLength={6}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Please wait...' : 'Sign In'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signup" className="space-y-6 mt-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-foreground">Create an account</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Join Primrose as a student in seconds.</p>
+                </div>
+
+                <GoogleSignInButton mode="signup" />
+                <p className="text-xs text-muted-foreground text-center -mt-3">
+                  Signing up with Google creates a student account.
+                </p>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+
+                <Button
                   type="button"
-                  className="text-sm text-primary font-medium hover:underline"
+                  variant="outline"
+                  className="w-full h-11"
                   onClick={() => navigate('/signup')}
                 >
-                  Sign up here
-                </button>
-              </div>
-            </>
+                  Continue with email
+                </Button>
+              </TabsContent>
+            </Tabs>
           )}
         </Card>
       </div>
