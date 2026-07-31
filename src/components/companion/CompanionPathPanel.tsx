@@ -19,7 +19,7 @@ export function CompanionPathPanel() {
     data: steps,
     isLoading,
     isError,
-    refetch,
+    regenerate,
     isFetching,
   } = useCompanionNextSteps(location.pathname, activeTab === "path");
 
@@ -32,7 +32,7 @@ export function CompanionPathPanel() {
         </div>
         <button
           type="button"
-          onClick={() => refetch()}
+          onClick={() => regenerate()}
           disabled={isFetching}
           className="h-6 w-6 rounded-md flex items-center justify-center text-white/40 hover:text-white/85 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
           title="Regenerate"
@@ -57,7 +57,7 @@ export function CompanionPathPanel() {
           <div>Couldn't load your next steps.</div>
           <button
             type="button"
-            onClick={() => refetch()}
+            onClick={() => regenerate()}
             className="mt-2 text-primary hover:underline"
           >
             Try again
