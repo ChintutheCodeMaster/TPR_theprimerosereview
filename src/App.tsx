@@ -24,6 +24,7 @@ import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentGuide from "./pages/StudentGuide";
+import StudentFAQ from "./pages/StudentFAQ";
 import StudentPersonalArea from "./pages/StudentPersonalArea";
 import StudentStats from "./pages/StudentStats";
 import ParentPortal from "./pages/ParentPortal";
@@ -331,6 +332,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
                 <StudentEditProfile />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/student-faq" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentFAQ />
               </ProtectedRoute>
             </AppLayout>
           } />

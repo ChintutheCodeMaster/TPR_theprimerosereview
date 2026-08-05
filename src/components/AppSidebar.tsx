@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft, Trophy, Calculator, ChevronDown, ChevronRight, Sparkles, Wrench, Mic } from "lucide-react";
+import { GraduationCap, Users, FileText, Calendar, BarChart3, MessageSquare, Bell, UserCircle, Award, Home, PartyPopper, Settings, Building2, ShieldAlert, Star, Zap, FlaskConical, Eye, ArrowLeft, Trophy, Calculator, ChevronDown, ChevronRight, Sparkles, Wrench, Mic, HelpCircle } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,7 @@ const studentBottomItems: NavItem[] = [{
   icon: UserCircle,
 }];
 
+const faqItem: NavItem = { title: "FAQ & Help", url: "/student-faq", icon: HelpCircle };
 const feedbackItem: NavItem = { title: "Feedback", url: "/student-feedback", icon: Star };
 
 const studentStandaloneItems = [...studentTopItems, ...studentBottomItems, feedbackItem];
@@ -157,7 +158,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/evaluation-engine', '/weekly-challenge', '/student-profile', '/interview-simulator'];
+const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/student-faq', '/evaluation-engine', '/weekly-challenge', '/student-profile', '/interview-simulator'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
 const teacherRoutes = ['/teacher-dashboard', '/teacher-essays'];
@@ -343,6 +344,7 @@ export function AppSidebar() {
                       </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
+                  {renderMenuItem(faqItem)}
                   {renderMenuItem(feedbackItem)}
                 </SidebarMenu>
               </SidebarGroupContent>
