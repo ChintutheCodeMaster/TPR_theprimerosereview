@@ -7,6 +7,7 @@ import {
   Calendar,
   AlertTriangle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const getIconBgColor = (color: string) => {
@@ -29,9 +30,7 @@ const getChangeColor = (type: string) => {
 
 export const DashboardStats = () => {
   const { data, isLoading } = useDashboardStats();
-
-   console.log("isLoading:", isLoading);
-  console.log("data:", data);
+  const navigate = useNavigate();
 
   const stats = [
     {
@@ -41,6 +40,7 @@ export const DashboardStats = () => {
       changeType: "neutral" as const,
       icon: Users,
       color: "primary",
+      to: "/students",
     },
     {
       title: "Essays in Review",
@@ -49,6 +49,7 @@ export const DashboardStats = () => {
       changeType: "positive" as const,
       icon: FileText,
       color: "secondary",
+      to: "/essays?status=active",
     },
     {
       title: "Upcoming Deadlines",
@@ -57,6 +58,7 @@ export const DashboardStats = () => {
       changeType: "neutral" as const,
       icon: Calendar,
       color: "warning",
+      to: "/check-deadlines",
     },
     {
       title: "At Risk Students",
@@ -67,6 +69,7 @@ export const DashboardStats = () => {
         : ("negative" as const),
       icon: AlertTriangle,
       color: "destructive",
+      to: "/students?status=at-risk",
     },
   ];
 
@@ -95,7 +98,16 @@ export const DashboardStats = () => {
         return (
           <Card
             key={stat.title}
-            className="p-6 hover:shadow-card-hover transition-all duration-300 animate-fade-in group"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(stat.to)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate(stat.to);
+              }
+            }}
+            className="p-6 hover:shadow-card-hover transition-all duration-300 animate-fade-in group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <div className="flex items-center justify-between">

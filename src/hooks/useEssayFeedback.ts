@@ -244,7 +244,7 @@ export function useEssayFeedback(essay: Essay, isOpen: boolean, onClose: () => v
         try {
           const [{ data: studentProfile }, { data: counselorProfile }] = await Promise.all([
             supabase.from('profiles').select('email').eq('user_id', essay.studentId ?? '').maybeSingle(),
-            supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle(),
+            supabase.from('profiles').select('full_name, email').eq('user_id', user.id).maybeSingle(),
           ]);
 
           const { data: { session } } = await supabase.auth.getSession();
@@ -260,6 +260,7 @@ export function useEssayFeedback(essay: Essay, isOpen: boolean, onClose: () => v
                 studentEmail: studentProfile?.email || 'no-email@unknown.com',
                 studentName: essay.studentName,
                 counselorName: counselorProfile?.full_name || 'Your counselor',
+                counselorEmail: counselorProfile?.email || user.email || undefined,
                 essayLabel: essay.title,
                 personalMessage: personalMessage || '',
                 appUrl: window.location.origin,

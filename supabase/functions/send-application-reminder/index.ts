@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildCounselorFrom } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -169,14 +170,15 @@ serve(async (req: Request) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Get counselor name
+    // Get counselor name + email
     const { data: counselorProfile } = await admin
       .from("profiles")
-      .select("full_name")
+      .select("full_name, email")
       .eq("user_id", user.id)
       .maybeSingle();
 
     const counselorName = counselorProfile?.full_name ?? "Your Counselor";
+    const counselorEmail = counselorProfile?.email ?? user.email ?? undefined;
     const baseUrl = appUrl ?? "https://primrosereview.com";
 
     // Send one email per recipient in parallel
@@ -198,7 +200,7 @@ serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "The Primrose Review <team@primrosecrm.com>",
+            ...buildCounselorFrom(counselorName, counselorEmail),
             to: studentUser.email,
             subject: `Application deadline reminder from ${counselorName} — The Primrose Review`,
             html,

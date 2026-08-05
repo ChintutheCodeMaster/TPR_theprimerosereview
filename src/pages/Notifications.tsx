@@ -29,6 +29,7 @@ import {
   Archive,
   MoreHorizontal,
   Pause,
+  Loader2,
 } from "lucide-react";
 
 type AppNotification = {
@@ -55,6 +56,7 @@ const Notifications = () => {
   const [studentFilter, setStudentFilter] = useState("all");
   const [showRead, setShowRead] = useState(true);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // ─────────────────────────────────────────
   // Helpers
@@ -77,6 +79,8 @@ const Notifications = () => {
   // ─────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
+      setIsLoading(true);
+      try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
       const userId = userData.user.id;
@@ -284,6 +288,9 @@ const Notifications = () => {
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setNotifications(derived);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     load();
@@ -483,6 +490,13 @@ const Notifications = () => {
           </Button>
         </div>
       </div>
+
+      {isLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading notifications — bear with us…</span>
+        </div>
+      )}
 
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Filter,
@@ -126,7 +126,8 @@ const Students = () => {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [searchParams] = useSearchParams()
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all")
   const [gpaFilter, setGpaFilter] = useState("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const { toast } = useToast()

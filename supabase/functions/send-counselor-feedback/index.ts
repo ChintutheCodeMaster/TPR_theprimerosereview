@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildCounselorFrom } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,6 +106,7 @@ serve(async (req) => {
       studentEmail,
       studentName,
       counselorName,
+      counselorEmail,
       essayLabel,
       applicationName,
       personalMessage,
@@ -135,7 +137,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "The Primrose Review <team@primrosecrm.com>",
+        ...buildCounselorFrom(counselorName, counselorEmail),
         to: studentEmail,
         subject: `${counselorName} left feedback on your essay — The Primrose Review`,
         html,

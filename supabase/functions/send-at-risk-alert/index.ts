@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildCounselorFrom } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -280,7 +281,9 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
+  senderIdentity?: { from: string; reply_to?: string },
 ): Promise<void> {
+  const identity = senderIdentity ?? buildCounselorFrom();
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -288,7 +291,7 @@ async function sendEmail(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "The Primrose Review <team@primrosecrm.com>",
+      ...identity,
       to: to,
       subject,
       html,
@@ -327,20 +330,22 @@ serve(async (req) => {
 
     const baseUrl = appUrl || "https://primrosereview.com";
     const reasons: string[] = riskReasons || [];
+    const counselorIdentity = buildCounselorFrom(counselorName, counselorEmail);
 
     const sends: Promise<void>[] = [];
 
-    // Always send to student
+    // Always send to student (from counselor)
     sends.push(
       sendEmail(
         RESEND_API_KEY,
         studentEmail,
         `Action needed on your college applications — The Primrose Review`,
         studentAlertHtml(studentName, counselorName, reasons, baseUrl),
+        counselorIdentity,
       ),
     );
 
-    // Send to parent if provided
+    // Send to parent if provided (from counselor)
     if (parentEmail && parentName) {
       sends.push(
         sendEmail(
@@ -348,11 +353,12 @@ serve(async (req) => {
           parentEmail,
           `Important update about ${studentName}'s applications — The Primrose Review`,
           parentAlertHtml(parentName, studentName, counselorName, reasons, baseUrl),
+          counselorIdentity,
         ),
       );
     }
 
-    // Send confirmation to counselor if provided
+    // Send confirmation to counselor if provided (system email — generic From)
     if (counselorEmail) {
       sends.push(
         sendEmail(

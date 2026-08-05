@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildCounselorFrom } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,7 +102,7 @@ serve(async (req) => {
   }
 
   try {
-    const { studentEmail, studentName, counselorName, refereeName, appUrl } =
+    const { studentEmail, studentName, counselorName, counselorEmail, refereeName, appUrl } =
       await req.json();
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -121,7 +122,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "The Primrose Review <team@primrosecrm.com>",
+        ...buildCounselorFrom(counselorName, counselorEmail),
         to: studentEmail,
         subject: `Your recommendation letter from ${refereeName} is ready — The Primrose Review`,
         html,

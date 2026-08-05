@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EssayFeedbackModal } from "@/components/EssayFeedbackModal";
 import { CounselorFeedbackHistory } from "@/components/CounselorFeedbackHistory";
+import { AIDetectionPanel } from "@/components/AIDetectionPanel";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -121,9 +123,10 @@ const EssayDialog = ({ essay, onOpenFeedback, onUpdateStatus }: EssayDialogProps
       </DialogHeader>
 
       <Tabs defaultValue="review" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="review">Review</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="ai-detection">AI Detection</TabsTrigger>
         </TabsList>
 
         <TabsContent value="review" className="space-y-4">
@@ -221,6 +224,14 @@ const EssayDialog = ({ essay, onOpenFeedback, onUpdateStatus }: EssayDialogProps
           <CounselorFeedbackHistory essayId={essay.id} />
         </TabsContent>
 
+        <TabsContent value="ai-detection" className="space-y-4 min-w-0 overflow-hidden">
+          <AIDetectionPanel
+            essayId={essay.id}
+            essayContent={essay.content}
+            essayPrompt={essay.prompt}
+          />
+        </TabsContent>
+
       </Tabs>
 
       <div className="flex gap-2 pt-4 border-t border-border">
@@ -238,7 +249,8 @@ const Essays = () => {
   const [essays, setEssays] = useState<Essay[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [searchParams] = useSearchParams()
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all")
   const [sortBy, setSortBy] = useState("updatedAt")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [feedbackModalEssay, setFeedbackModalEssay] = useState<Essay | null>(null)
@@ -352,7 +364,11 @@ const fetchEssays = async () => {
     const matchesSearch =
       essay.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       essay.studentName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || essay.status === statusFilter
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active'
+        ? ['draft', 'in_progress', 'pending'].includes(essay.status)
+        : essay.status === statusFilter)
     return matchesSearch && matchesStatus
   }).sort((a, b) => {
     if (sortBy === 'aiScore') return (b.aiScore || 0) - (a.aiScore || 0)
@@ -431,6 +447,7 @@ const fetchEssays = async () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active (In Review + Attention)</SelectItem>
                   <SelectItem value="in_progress">In Review</SelectItem>
                   <SelectItem value="pending">Needs Attention</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>

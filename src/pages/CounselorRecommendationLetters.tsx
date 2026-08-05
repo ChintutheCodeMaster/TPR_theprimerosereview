@@ -190,7 +190,7 @@ const CounselorRecommendationLetters = () => {
         const { data: { user: counselor } } = await supabase.auth.getUser();
         const { data: counselorProfile } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, email")
           .eq("user_id", counselor?.id)
           .maybeSingle();
 
@@ -199,6 +199,7 @@ const CounselorRecommendationLetters = () => {
             studentEmail: selectedRequest.profiles?.email ?? "",
             studentName: selectedRequest.profiles?.full_name ?? "Student",
             counselorName: counselorProfile?.full_name ?? "Your counselor",
+            counselorEmail: counselorProfile?.email || counselor?.email || undefined,
             refereeName: selectedRequest.referee_name,
             appUrl: window.location.origin,
           },
@@ -452,13 +453,14 @@ const CounselorRecommendationLetters = () => {
                         try {
                           const { data: { user: counselor } } = await supabase.auth.getUser();
                           const { data: counselorProfile } = await supabase
-                            .from("profiles").select("full_name").eq("user_id", counselor?.id ?? "").maybeSingle();
+                            .from("profiles").select("full_name, email").eq("user_id", counselor?.id ?? "").maybeSingle();
                           await supabase.functions.invoke("notify-teacher-revision", {
                             body: {
                               teacherEmail: selectedRequest.teacher_email ?? "",
                               teacherName: selectedRequest.referee_name,
                               studentName: selectedRequest.profiles?.full_name ?? "Student",
                               counselorName: counselorProfile?.full_name ?? "Your counselor",
+                              counselorEmail: counselorProfile?.email || counselor?.email || undefined,
                               revisionNote: content.slice(0, 200),
                               teacherUrl: `${window.location.origin}/teacher-rec/${selectedRequest.teacher_token}`,
                             },
