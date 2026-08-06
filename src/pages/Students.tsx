@@ -36,7 +36,9 @@ import {
   Loader2,
   Send,
   Pencil,
+  Sparkles,
 } from "lucide-react";
+import { StudentSummaryModal } from "@/components/StudentSummaryModal";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -130,6 +132,7 @@ const Students = () => {
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all")
   const [gpaFilter, setGpaFilter] = useState("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
+  const [summaryStudent, setSummaryStudent] = useState<Student | null>(null)
   const { toast } = useToast()
   const { criteria } = useAtRiskCriteria()
   const navigate = useNavigate()
@@ -866,14 +869,25 @@ const Students = () => {
                           <AtRiskBadge student={student} />
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={e => { e.stopPropagation(); navigate(`/counselor/edit-student/${student.id}`); }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              title="AI summary"
+                              onClick={e => { e.stopPropagation(); setSummaryStudent(student); }}
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={e => { e.stopPropagation(); navigate(`/counselor/edit-student/${student.id}`); }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     </DialogTrigger>
@@ -915,6 +929,15 @@ const Students = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary shrink-0"
+                            title="AI summary"
+                            onClick={e => { e.stopPropagation(); setSummaryStudent(student); }}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -977,6 +1000,16 @@ const Students = () => {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {summaryStudent && (
+        <StudentSummaryModal
+          studentId={summaryStudent.id}
+          studentName={summaryStudent.name}
+          avatarUrl={summaryStudent.avatar_url}
+          isOpen={!!summaryStudent}
+          onClose={() => setSummaryStudent(null)}
+        />
       )}
     </div>
   )
