@@ -158,7 +158,7 @@ const principalItems = [{
 }];
 
 // Routes that belong to each role
-const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/student-messages', '/personal-essay', '/student-feedback', '/student-faq', '/evaluation-engine', '/weekly-challenge', '/student-profile', '/interview-simulator'];
+const studentRoutes = ['/student-dashboard', '/primrose-lab', '/scholarship-finder', '/tuition-calculator', '/student-personal-area', '/student-recommendation-letters', '/student-stats', '/submit-essay', '/add-application', '/archived-applications', '/student-messages', '/personal-essay', '/student-feedback', '/student-faq', '/evaluation-engine', '/weekly-challenge', '/student-profile', '/interview-simulator'];
 const parentRoutes = ['/parent-portal', '/school-activities', '/parent-messages'];
 const principalRoutes = ['/principal-dashboard', '/principal-students', '/principal-counselors', '/principal-activities', '/principal-at-risk-criteria', '/principal-settings'];
 const teacherRoutes = ['/teacher-dashboard', '/teacher-essays'];

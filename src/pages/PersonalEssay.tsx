@@ -25,6 +25,7 @@ import {
   Users,
   GraduationCap,
 } from "lucide-react";
+import { LIMIT_TYPE_LABELS, LIMIT_TYPE_SHORT_LABELS, countUnits, type EssayLimitType } from "@/types/applicationEssays";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const WORD_LIMIT_OPTIONS = [250, 500, 650, 750, 1000];
@@ -47,10 +48,12 @@ const PersonalEssay = () => {
   const [content, setContent] = useState("");
   const [wordLimit, setWordLimit] = useState<number | null>(650);
   const [customWordLimit, setCustomWordLimit] = useState("");
+  const [limitType, setLimitType] = useState<EssayLimitType>("words");
 
+  const unitCount = countUnits(content, limitType);
   const wordCount = content.trim() === "" ? 0 : content.trim().split(/\s+/).length;
   const effectiveWordLimit = wordLimit ?? (customWordLimit ? parseInt(customWordLimit) : null);
-  const isOverLimit = effectiveWordLimit ? wordCount > effectiveWordLimit : false;
+  const isOverLimit = effectiveWordLimit ? unitCount > effectiveWordLimit : false;
 
   const [selectedText, setSelectedText] = useState("");
   const [selectionFeedback, setSelectionFeedback] = useState<string | null>(null);
@@ -104,7 +107,7 @@ const PersonalEssay = () => {
     const loadDraft = async () => {
       const { data, error } = await (supabase
         .from("essay_feedback")
-        .select("essay_title, essay_prompt, essay_content, word_limit, status")
+        .select("essay_title, essay_prompt, essay_content, word_limit, limit_type, status")
         .eq("id", urlDraftId)
         .single() as any);
       if (error || !data || data.status !== "draft") return;
@@ -118,6 +121,7 @@ const PersonalEssay = () => {
         setWordLimit(null);
         setCustomWordLimit(String(wl));
       }
+      if (data.limit_type) setLimitType(data.limit_type as EssayLimitType);
     };
     loadDraft();
   }, [urlDraftId]);
@@ -210,6 +214,7 @@ const PersonalEssay = () => {
         essay_prompt: prompt.trim() || null,
         essay_content: content.trim(),
         word_limit: effectiveWordLimit || null,
+        limit_type: limitType,
         status: "draft",
       };
 
@@ -241,7 +246,7 @@ const PersonalEssay = () => {
     e.preventDefault();
     if (!title.trim())   { toast.error("Please add an essay title");         return; }
     if (!content.trim()) { toast.error("Please add your essay content");     return; }
-    if (isOverLimit)     { toast.error("Your essay exceeds the word limit"); return; }
+    if (isOverLimit)     { toast.error(`Your essay exceeds the ${LIMIT_TYPE_LABELS[limitType]} limit`); return; }
     if ((recipient === 'counselor' || recipient === 'both') && !counselorId) {
       toast.error("No counselor found. Please contact support.");
       return;
@@ -265,6 +270,8 @@ const PersonalEssay = () => {
             essay_title:   title.trim(),
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
+            word_limit:    effectiveWordLimit || null,
+            limit_type:    limitType,
             status:        "pending",
           } as any)
           .eq("id", currentDraftId) as any);
@@ -280,6 +287,8 @@ const PersonalEssay = () => {
             essay_title:   title.trim(),
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
+            word_limit:    effectiveWordLimit || null,
+            limit_type:    limitType,
             status:        "pending",
           } as any) as any);
         if (error) throw error;
@@ -430,10 +439,30 @@ const PersonalEssay = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Hash className="h-5 w-5 text-primary" />
-                  Word Limit
+                  Limit
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Type</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["words", "chars_with_spaces", "chars_no_spaces"] as EssayLimitType[]).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setLimitType(t)}
+                        className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+                          limitType === t
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                        }`}
+                      >
+                        {LIMIT_TYPE_SHORT_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   {WORD_LIMIT_OPTIONS.map((limit) => (
                     <button
@@ -446,7 +475,7 @@ const PersonalEssay = () => {
                           : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
                       }`}
                     >
-                      {limit} words
+                      {limit} {LIMIT_TYPE_LABELS[limitType]}
                     </button>
                   ))}
                   <button
@@ -465,7 +494,7 @@ const PersonalEssay = () => {
                   <span className="text-sm text-muted-foreground">Or custom:</span>
                   <Input
                     type="number"
-                    placeholder="e.g. 800"
+                    placeholder={limitType === "words" ? "e.g. 800" : "e.g. 3500"}
                     value={customWordLimit}
                     onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
                     className="w-32"
@@ -487,7 +516,7 @@ const PersonalEssay = () => {
                       variant="outline"
                       className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
                     >
-                      {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
+                      {unitCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} {LIMIT_TYPE_LABELS[limitType]}
                     </Badge>
                     {isOverLimit && <Badge variant="destructive">Over limit</Badge>}
                     {wordCount >= 200 && (

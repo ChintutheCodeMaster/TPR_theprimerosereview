@@ -10,7 +10,7 @@ import { useStudentPersonalArea, type EssayFeedback } from "@/hooks/useStudentPe
 import { StudentActionItemsSection } from "@/components/StudentActionItemsSection";
 import type { TrackedChange } from "@/components/EssayFeedbackModal";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, GraduationCap } from "lucide-react";
+import { Plus, GraduationCap, Archive } from "lucide-react";
 import { useApplications } from "@/hooks/useApplications";
 import { supabase } from "@/integrations/supabase/client";
 import { ApplicationDetailModal } from "@/components/ApplicationDetailModal";
@@ -221,12 +221,12 @@ const StudentPersonalArea = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="essays">Essays</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
+          {/* <TabsTrigger value="messages">Messages</TabsTrigger> */}
         </TabsList>
 
         {/* ── Essays Tab ── */}
@@ -469,7 +469,7 @@ const StudentPersonalArea = () => {
           <StudentActionItemsSection />
         </TabsContent>
 
-        {/* ── Messages Tab ── */}
+        {/* ── Messages Tab (commented out) ──
         <TabsContent value="messages" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Messages with Counselor</h2>
@@ -494,15 +494,22 @@ const StudentPersonalArea = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        */}
 
         {/* ── Applications Tab ── */}
         <TabsContent value="applications" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">My Applications</h2>
-            <Button onClick={() => navigate('/add-application')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Application
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/archived-applications')}>
+                <Archive className="h-4 w-4 mr-2" />
+                Archived
+              </Button>
+              <Button onClick={() => navigate('/add-application')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Application
+              </Button>
+            </div>
           </div>
 
           {isLoadingApplications ? (

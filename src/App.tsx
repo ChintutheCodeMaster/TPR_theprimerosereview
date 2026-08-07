@@ -44,6 +44,7 @@ import Signup from "./pages/SignUp";
 import SubmitEssay from "./pages/SubmitEssay";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AddApplication from "./pages/AddApplication";
+import ArchivedApplications from "./pages/ArchivedApplications";
 import EditEssay from "./pages/EditEssay";
 import StudentMessages from "./pages/StudentMessages";
 import ParentMessages from "./pages/ParentMessages";
@@ -397,6 +398,14 @@ const App = () => {
             <AppLayout>
               <ProtectedRoute allowedRoles={['student']}>
                 <AddApplication />
+              </ProtectedRoute>
+            </AppLayout>
+          } />
+
+          <Route path="/archived-applications" element={
+            <AppLayout>
+              <ProtectedRoute allowedRoles={['student']}>
+                <ArchivedApplications />
               </ProtectedRoute>
             </AppLayout>
           } />

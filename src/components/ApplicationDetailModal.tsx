@@ -17,6 +17,7 @@ import { useApplicationEssays } from "@/hooks/useApplicationEssays";
 import { useSubmitApplication } from "@/hooks/useSubmitApplication";
 import { useApplicationRecommendations } from "@/hooks/useApplicationRecommendations";
 import { useApplications } from "@/hooks/useApplications";
+import { useQueryClient } from "@tanstack/react-query";
 import { ApplicationHeader } from "@/components/application-detail/ApplicationHeader";
 import { EssaysPanel } from "@/components/application-detail/EssaysPanel";
 import { RecommendationsPanel } from "@/components/application-detail/RecommendationsPanel";
@@ -44,6 +45,7 @@ export const ApplicationDetailModal = ({
 
   const { submitApplication } = useSubmitApplication();
   const { updateApplication } = useApplications();
+  const queryClient = useQueryClient();
 
   const {
     recommendations, isLoading: isLoadingRecs,
@@ -79,7 +81,13 @@ export const ApplicationDetailModal = ({
   const handleArchive = () => {
     updateApplication.mutate(
       { id: application.id, archived: true } as any,
-      { onSuccess: () => { setShowArchiveConfirm(false); onClose(); } }
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["applications", "archived"] });
+          setShowArchiveConfirm(false);
+          onClose();
+        },
+      }
     );
   };
 
@@ -192,8 +200,8 @@ export const ApplicationDetailModal = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Archive this application?</AlertDialogTitle>
             <AlertDialogDescription>
-              {application.school_name} will be hidden from your applications list.
-              Your essays and drafts are kept — you can restore the application later from Supabase.
+              {application.school_name} will be moved to your Archived Applications list.
+              Your essays and drafts are kept — you can restore it any time from the Archived page.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
