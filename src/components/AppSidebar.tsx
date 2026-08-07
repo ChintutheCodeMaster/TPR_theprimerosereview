@@ -84,9 +84,9 @@ const feedbackItem: NavItem = { title: "Feedback", url: "/student-feedback", ico
 const studentStandaloneItems = [...studentTopItems, ...studentBottomItems, feedbackItem];
 
 const essayJourneySteps: (NavItem & { step: number })[] = [
-  { step: 1, title: "Primrose Lab", url: "/primrose-lab", icon: FlaskConical },
-  { step: 2, title: "Evaluation Engine", url: "/evaluation-engine", icon: Zap },
-  { step: 3, title: "Submit Essay", url: "/student-personal-area", icon: Sparkles, tourId: "tour-nav-my-work" },
+  { step: 1, title: "My Work", url: "/student-personal-area", icon: Sparkles, tourId: "tour-nav-my-work" },
+  { step: 2, title: "Primrose Lab", url: "/primrose-lab", icon: FlaskConical },
+  { step: 3, title: "Evaluation Engine", url: "/evaluation-engine", icon: Zap },
 ];
 
 const additionalToolItems: NavItem[] = [

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Plus } from "lucide-react";
 import type { useApplicationEssays } from "@/hooks/useApplicationEssays";
+import type { EssayLimitType } from "@/types/applicationEssays";
 
 interface AddSlotFormProps {
   applicationId: string;
@@ -10,9 +11,19 @@ interface AddSlotFormProps {
   createSlot: ReturnType<typeof useApplicationEssays>["createSlot"];
 }
 
+const LIMIT_TYPE_OPTIONS: { value: EssayLimitType; label: string }[] = [
+  { value: "words",             label: "Words" },
+  { value: "chars_with_spaces", label: "Characters (with spaces)" },
+  { value: "chars_no_spaces",   label: "Characters (no spaces)" },
+];
+
 export const AddSlotForm = ({ applicationId, onDone, createSlot }: AddSlotFormProps) => {
-  const [label, setLabel] = useState("");
-  const [limit, setLimit] = useState("");
+  const [label, setLabel]         = useState("");
+  const [limit, setLimit]         = useState("");
+  const [limitType, setLimitType] = useState<EssayLimitType>("words");
+
+  const numberPlaceholder =
+    limitType === "words" ? "e.g. 650" : "e.g. 3500";
 
   return (
     <div className="border border-dashed border-border rounded-xl p-4 space-y-3 bg-muted/30">
@@ -27,10 +38,29 @@ export const AddSlotForm = ({ applicationId, onDone, createSlot }: AddSlotFormPr
         />
       </div>
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Word limit (optional)</label>
+        <label className="text-xs text-muted-foreground mb-1 block">Limit type</label>
+        <div className="flex flex-wrap gap-1.5">
+          {LIMIT_TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setLimitType(opt.value)}
+              className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+                limitType === opt.value
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background hover:bg-muted"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Limit (optional)</label>
         <Input
           type="number"
-          placeholder="e.g. 650"
+          placeholder={numberPlaceholder}
           value={limit}
           onChange={(e) => setLimit(e.target.value)}
           className="h-8 text-sm w-32"
@@ -46,6 +76,7 @@ export const AddSlotForm = ({ applicationId, onDone, createSlot }: AddSlotFormPr
                 application_id: applicationId,
                 essay_label: label.trim(),
                 word_limit: limit ? parseInt(limit) : undefined,
+                limit_type: limitType,
               },
               { onSuccess: onDone }
             )

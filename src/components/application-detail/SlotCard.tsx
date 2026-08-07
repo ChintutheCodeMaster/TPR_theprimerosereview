@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, PenLine, Trash2 } from "lucide-react";
 import { FeedbackBanner } from "./FeedbackBanner";
 import { SlotStatusBadge } from "./SlotStatusBadge";
-import type { ApplicationEssaySlotWithDraft, EssaySlotStatus } from "@/types/applicationEssays";
+import { LIMIT_TYPE_LABELS, type ApplicationEssaySlotWithDraft, type EssaySlotStatus } from "@/types/applicationEssays";
 
 interface SlotCardProps {
   slot: ApplicationEssaySlotWithDraft;
@@ -34,7 +34,9 @@ export const SlotCard = ({ slot, onStartWriting, onEditDraft, onEditFeedback, on
           <div className="min-w-0">
             <p className="font-semibold text-sm truncate">{slot.essay_label}</p>
             {slot.word_limit && (
-              <p className="text-xs text-muted-foreground mt-0.5">{slot.word_limit} word limit</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {slot.word_limit} {LIMIT_TYPE_LABELS[slot.limit_type ?? "words"]} limit
+              </p>
             )}
           </div>
         </div>

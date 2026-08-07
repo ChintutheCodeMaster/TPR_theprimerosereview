@@ -28,7 +28,10 @@ import {
   Send,
   Users,
   GraduationCap,
+  HelpCircle,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { LIMIT_TYPE_LABELS, LIMIT_TYPE_SHORT_LABELS, countUnits, type EssayLimitType } from "@/types/applicationEssays";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const WORD_LIMIT_OPTIONS = [250, 500, 650, 750, 1000];
@@ -69,6 +72,7 @@ const SubmitEssay = () => {
   const slotLabel     = searchParams.get("label");
   const slotPrompt    = searchParams.get("prompt");
   const slotWordLimit = searchParams.get("wordLimit");
+  const slotLimitType = (searchParams.get("limitType") as EssayLimitType | null) ?? null;
   const urlDraftId    = searchParams.get("draftId");
   const urlSchoolName = searchParams.get("schoolName");
   const isReadonly    = searchParams.get("readonly") === "true";
@@ -93,11 +97,13 @@ const SubmitEssay = () => {
     slotWordLimit ? parseInt(slotWordLimit) : null
   );
   const [customWordLimit, setCustomWordLimit] = useState("");
+  const [limitType, setLimitType]       = useState<EssayLimitType>(slotLimitType ?? "words");
 
-  // Word count
+  // Limit tracking (words / characters with/without spaces)
+  const unitCount          = countUnits(content, limitType);
   const wordCount          = content.trim() === "" ? 0 : content.trim().split(/\s+/).length;
   const effectiveWordLimit = wordLimit ?? (customWordLimit ? parseInt(customWordLimit) : null);
-  const isOverLimit        = effectiveWordLimit ? wordCount > effectiveWordLimit : false;
+  const isOverLimit        = effectiveWordLimit ? unitCount > effectiveWordLimit : false;
 
   // Selection-based coaching
   const [selectedText, setSelectedText]         = useState("");
@@ -148,7 +154,7 @@ const SubmitEssay = () => {
     const loadDraft = async () => {
       const { data, error } = await (supabase
         .from("essay_feedback")
-        .select("essay_title, essay_prompt, essay_content, target_school, word_limit, status")
+        .select("essay_title, essay_prompt, essay_content, target_school, word_limit, limit_type, status")
         .eq("id", urlDraftId)
         .single() as any);
       if (error || !data) return;
@@ -164,6 +170,7 @@ const SubmitEssay = () => {
         setWordLimit(null);
         setCustomWordLimit(String(wl));
       }
+      if (data.limit_type) setLimitType(data.limit_type as EssayLimitType);
     };
     loadDraft();
   }, [urlDraftId]);
@@ -185,6 +192,7 @@ const SubmitEssay = () => {
         essay_content: content.trim(),
         target_school: targetSchool.trim() || null,
         word_limit:    effectiveWordLimit || null,
+        limit_type:    limitType,
         status:        "draft",
       };
 
@@ -298,7 +306,7 @@ const SubmitEssay = () => {
 
     if (!title.trim())   { toast.error("Please add an essay title");         return; }
     if (!content.trim()) { toast.error("Please add your essay content");     return; }
-    if (isOverLimit)     { toast.error("Your essay exceeds the word limit"); return; }
+    if (isOverLimit)     { toast.error(`Your essay exceeds the ${LIMIT_TYPE_LABELS[limitType]} limit`); return; }
     if ((recipient === 'counselor' || recipient === 'both') && !counselorId) {
       toast.error("No counselor found. Please contact support.");
       return;
@@ -328,12 +336,14 @@ const SubmitEssay = () => {
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
             target_school: targetSchool.trim() || null,
+            word_limit:    effectiveWordLimit || null,
+            limit_type:    limitType,
             status:        "pending",
           } as any)
           .eq("id", currentDraftId) as any);
         if (error) throw error;
       } else {
-        const { data: essayData, error: essayError } = await supabase
+        const { data: essayData, error: essayError } = await (supabase
           .from("essay_feedback")
           .insert({
             student_id:    user.id,
@@ -341,10 +351,12 @@ const SubmitEssay = () => {
             essay_title:   essayTitle,
             essay_prompt:  prompt.trim() || null,
             essay_content: content.trim(),
+            word_limit:    effectiveWordLimit || null,
+            limit_type:    limitType,
             status:        "pending",
-          })
+          } as any)
           .select()
-          .single();
+          .single() as any);
         if (essayError) throw essayError;
         essayId = essayData?.id ?? null;
       }
@@ -565,15 +577,35 @@ const SubmitEssay = () => {
               </CardContent>
             </Card>
 
-            {/* Word Limit */}
+            {/* Limit */}
             {!isReadonly && <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Hash className="h-5 w-5 text-primary" />
-                  Word Limit
+                  Limit
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Type</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["words", "chars_with_spaces", "chars_no_spaces"] as EssayLimitType[]).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setLimitType(t)}
+                        className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+                          limitType === t
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
+                        }`}
+                      >
+                        {LIMIT_TYPE_SHORT_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   {WORD_LIMIT_OPTIONS.map((limit) => (
                     <button
@@ -586,7 +618,7 @@ const SubmitEssay = () => {
                           : "border-border bg-muted/30 hover:bg-muted/60 text-foreground"
                       }`}
                     >
-                      {limit} words
+                      {limit} {LIMIT_TYPE_LABELS[limitType]}
                     </button>
                   ))}
                   <button
@@ -606,7 +638,7 @@ const SubmitEssay = () => {
                   <span className="text-sm text-muted-foreground">Or custom:</span>
                   <Input
                     type="number"
-                    placeholder="e.g. 800"
+                    placeholder={limitType === "words" ? "e.g. 800" : "e.g. 3500"}
                     value={customWordLimit}
                     onChange={(e) => { setCustomWordLimit(e.target.value); setWordLimit(null); }}
                     className="w-32"
@@ -629,7 +661,7 @@ const SubmitEssay = () => {
                       variant="outline"
                       className={isOverLimit ? "text-destructive border-destructive" : "text-muted-foreground"}
                     >
-                      {wordCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} words
+                      {unitCount} {effectiveWordLimit ? `/ ${effectiveWordLimit}` : ""} {LIMIT_TYPE_LABELS[limitType]}
                     </Badge>
                     {isOverLimit && <Badge variant="destructive">Over limit</Badge>}
                     {!isReadonly && wordCount >= 50 && (
@@ -851,6 +883,21 @@ const SubmitEssay = () => {
                 <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                   <ScanText className="h-4 w-4 text-primary" />
                   Essay Analysis
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" aria-label="About this score" className="text-muted-foreground hover:text-foreground">
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs">
+                        <p className="text-xs leading-relaxed">
+                          AI scoring is a directional guide — even a perfect 100 does not guarantee admission.
+                          Aim for <b>80+</b> before sending your essay to your counsellor for review.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </h2>
                 <button
                   type="button"

@@ -71,6 +71,8 @@ const StudentDashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [challengePopup, setChallengePopup] = useState<ActiveChallenge | null>(null)
+  const [activeChallenge, setActiveChallenge] = useState<ActiveChallenge | null>(null)
+  const [, setNowTick] = useState(0)
   const [resultsPopup, setResultsPopup] = useState<ChallengeResult | null>(null)
 
   useEffect(() => {
@@ -78,6 +80,13 @@ const StudentDashboard = () => {
     fetchResultsPopup()
     fetchChallengePopup()
   }, [])
+
+  // Re-render the timer badge every minute
+  useEffect(() => {
+    if (!activeChallenge) return
+    const id = setInterval(() => setNowTick(t => t + 1), 60_000)
+    return () => clearInterval(id)
+  }, [activeChallenge])
 
   const fetchChallengePopup = async () => {
     try {
@@ -92,6 +101,8 @@ const StudentDashboard = () => {
       const challenge = challenges?.[0]
       if (!challenge) return
 
+      setActiveChallenge(challenge)
+      if (localStorage.getItem(`seen_challenge_${challenge.id}`)) return
       setChallengePopup(challenge)
     } catch {
       // silently ignore — popup is non-critical
@@ -99,7 +110,19 @@ const StudentDashboard = () => {
   }
 
   const dismissChallengePopup = () => {
+    if (challengePopup) localStorage.setItem(`seen_challenge_${challengePopup.id}`, '1')
     setChallengePopup(null)
+  }
+
+  const formatChallengeCountdown = (endsAt: string): string => {
+    const diff = new Date(endsAt).getTime() - Date.now()
+    if (diff <= 0) return 'Closed'
+    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor((diff % 86400000) / 3600000)
+    const mins = Math.floor((diff % 3600000) / 60000)
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${mins}m`
+    return `${mins}m`
   }
 
   const fetchResultsPopup = async () => {
@@ -427,6 +450,16 @@ const StudentDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {activeChallenge && (
+                <button
+                  onClick={() => navigate('/weekly-challenge')}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary transition-colors border border-primary/30 bg-primary/5 rounded-full px-3 py-1.5 hover:bg-primary/10"
+                  title="Go to the Primrose Challenge"
+                >
+                  <Trophy className="h-3.5 w-3.5" />
+                  Challenge ends in {formatChallengeCountdown(activeChallenge.ends_at)}
+                </button>
+              )}
               <button
                 onClick={startStudentTour}
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors border border-border rounded-full px-3 py-1.5 hover:border-primary/40"

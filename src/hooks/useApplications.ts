@@ -57,10 +57,11 @@ export const useApplications = () => {
 
       // ── STUDENT ─────────────────────────────
       if (role === "student") {
-        const { data, error } = await supabase
+        const { data, error } = await ((supabase as any)
           .from("applications")
           .select(APPLICATION_SELECT)
-          .order("deadline_date", { ascending: true });
+          .eq("archived", false)
+          .order("deadline_date", { ascending: true }));
 
         if (error) throw error;
         appsData = data ?? [];
@@ -70,11 +71,12 @@ export const useApplications = () => {
       if (role === "counselor") {
         if (studentIds.length === 0) return [];
 
-        const { data, error } = await supabase
+        const { data, error } = await ((supabase as any)
           .from("applications")
           .select(APPLICATION_SELECT)
           .in("student_id", studentIds)
-          .order("deadline_date", { ascending: true });
+          .eq("archived", false)
+          .order("deadline_date", { ascending: true }));
 
         if (error) throw error;
         appsData = data ?? [];
@@ -82,10 +84,11 @@ export const useApplications = () => {
 
       // ── ADMIN ───────────────────────────────
       if (role === "admin") {
-        const { data, error } = await supabase
+        const { data, error } = await ((supabase as any)
           .from("applications")
           .select(APPLICATION_SELECT)
-          .order("deadline_date", { ascending: true });
+          .eq("archived", false)
+          .order("deadline_date", { ascending: true }));
 
         if (error) throw error;
         appsData = data ?? [];

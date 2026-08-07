@@ -41,16 +41,18 @@ export const EssaysPanel = ({
 
   const handleStartWriting = (slot: ApplicationEssaySlotWithDraft) => {
     onClose();
+    const limitTypeParam = slot.limit_type ? `&limitType=${slot.limit_type}` : "";
     navigate(
-      `/submit-essay?slotId=${slot.id}&applicationId=${application.id}&label=${encodeURIComponent(slot.essay_label)}&schoolName=${encodeURIComponent(application.school_name)}${slot.essay_prompt ? `&prompt=${encodeURIComponent(slot.essay_prompt)}` : ""}${slot.word_limit ? `&wordLimit=${slot.word_limit}` : ""}`
+      `/submit-essay?slotId=${slot.id}&applicationId=${application.id}&label=${encodeURIComponent(slot.essay_label)}&schoolName=${encodeURIComponent(application.school_name)}${slot.essay_prompt ? `&prompt=${encodeURIComponent(slot.essay_prompt)}` : ""}${slot.word_limit ? `&wordLimit=${slot.word_limit}` : ""}${limitTypeParam}`
     );
   };
 
   const handleEditDraft = (slot: ApplicationEssaySlotWithDraft) => {
     if (!slot.essay_feedback_id) return;
     onClose();
+    const limitTypeParam = slot.limit_type ? `&limitType=${slot.limit_type}` : "";
     navigate(
-      `/submit-essay?draftId=${slot.essay_feedback_id}&slotId=${slot.id}&applicationId=${application.id}&label=${encodeURIComponent(slot.essay_label)}&schoolName=${encodeURIComponent(application.school_name)}${slot.essay_prompt ? `&prompt=${encodeURIComponent(slot.essay_prompt)}` : ""}${slot.word_limit ? `&wordLimit=${slot.word_limit}` : ""}`
+      `/submit-essay?draftId=${slot.essay_feedback_id}&slotId=${slot.id}&applicationId=${application.id}&label=${encodeURIComponent(slot.essay_label)}&schoolName=${encodeURIComponent(application.school_name)}${slot.essay_prompt ? `&prompt=${encodeURIComponent(slot.essay_prompt)}` : ""}${slot.word_limit ? `&wordLimit=${slot.word_limit}` : ""}${limitTypeParam}`
     );
   };
 

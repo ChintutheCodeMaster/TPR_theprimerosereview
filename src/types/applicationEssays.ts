@@ -6,6 +6,26 @@ export type EssaySlotStatus =
   | "sent"
   | "approved";
 
+export type EssayLimitType = "words" | "chars_with_spaces" | "chars_no_spaces";
+
+export const LIMIT_TYPE_LABELS: Record<EssayLimitType, string> = {
+  words:             "words",
+  chars_with_spaces: "characters (with spaces)",
+  chars_no_spaces:   "characters (no spaces)",
+};
+
+export const LIMIT_TYPE_SHORT_LABELS: Record<EssayLimitType, string> = {
+  words:             "Words",
+  chars_with_spaces: "Chars (w/ spaces)",
+  chars_no_spaces:   "Chars (no spaces)",
+};
+
+export const countUnits = (text: string, type: EssayLimitType): number => {
+  if (type === "words")             return text.split(/\s+/).filter(Boolean).length;
+  if (type === "chars_with_spaces") return text.length;
+  return text.replace(/\s/g, "").length; // chars_no_spaces
+};
+
 /** A single required-essay slot belonging to one application */
 export interface ApplicationEssaySlot {
   id: string;
@@ -16,6 +36,7 @@ export interface ApplicationEssaySlot {
   essay_label: string;       // e.g. "Why Us?", "Personal Statement"
   essay_prompt: string | null;
   word_limit: number | null;
+  limit_type: EssayLimitType;
 
   // Link to the written draft (null = student hasn't started yet)
   essay_feedback_id: string | null;
@@ -48,6 +69,7 @@ export interface CreateApplicationEssaySlotPayload {
   essay_label: string;
   essay_prompt?: string;
   word_limit?: number;
+  limit_type?: EssayLimitType;
   display_order?: number;
 }
 

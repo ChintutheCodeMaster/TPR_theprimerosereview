@@ -81,9 +81,10 @@ export const useApplicationEssays = (applicationId: string | null) => {
           essay_label: payload.essay_label,
           essay_prompt: payload.essay_prompt ?? null,
           word_limit: payload.word_limit ?? null,
+          limit_type: payload.limit_type ?? "words",
           display_order: payload.display_order ?? 0,
           status: "not_started",
-        })
+        } as any)
         .select()
         .single();
 
@@ -106,6 +107,7 @@ export const useApplicationEssays = (applicationId: string | null) => {
         essay_label: p.essay_label,
         essay_prompt: p.essay_prompt ?? null,
         word_limit: p.word_limit ?? null,
+        limit_type: p.limit_type ?? "words",
         display_order: p.display_order ?? i,
         status: "not_started",
       }));
